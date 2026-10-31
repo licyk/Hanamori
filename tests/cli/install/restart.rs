@@ -1,6 +1,7 @@
 //! Native Windows coverage of replacement while an installed executable is running.
 use super::{installed, Catalog};
 use crate::support::{copy_executable, exec_probe, success};
+use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 
 struct Running(Child);
@@ -28,6 +29,8 @@ fn replacement_closes_only_users_of_the_old_installation_after_preparation() {
         copy_executable(exec_probe(), &program);
         Running(
             Command::new(&program)
+                // Restart Manager must not close the test runner's shared console.
+                .creation_flags(0x08000000)
                 .current_dir(temp.path())
                 .arg(temp.path().join(report))
                 .arg("0")

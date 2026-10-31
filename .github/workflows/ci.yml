@@ -36,4 +36,4 @@ jobs:
       - name: Test library and CLI
         env:
           HANAMORI_REQUIRE_SHELL_TESTS: '1'
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --locked -- --nocapture

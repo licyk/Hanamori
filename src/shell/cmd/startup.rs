@@ -24,7 +24,7 @@ pub fn loader(auto_activate: bool, use_on_cd: bool) -> String {
 @if not cmdextversion 1 (echo Hanamori: CMD initialization requires command extensions 1>&2 & exit /b 0)
 @if "!"=="" (echo Hanamori: CMD initialization requires delayed expansion to be disabled 1>&2 & exit /b 0)
 @for /f "tokens=1 delims==" %%H in ('set ERRORLEVEL 2^>nul') do @if /i "%%H"=="ERRORLEVEL" (echo Hanamori: unset the explicit ERRORLEVEL variable before loading CMD initialization 1>&2 & exit /b 0)
-@"%SystemRoot%\System32\mode.com" con >nul 2>nul
+@type nul 2>nul >CON
 @if errorlevel 1 exit /b 0
 @if not exist "%~dp0hanamori.cmd" goto _hanamori_init_failed
 @if not exist "%SystemRoot%\System32\doskey.exe" goto _hanamori_init_failed
