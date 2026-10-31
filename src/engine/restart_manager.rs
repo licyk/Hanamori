@@ -3,6 +3,7 @@ use anyhow::{ensure, Context, Result};
 use std::{os::windows::ffi::OsStrExt, path::Path, ptr};
 use windows_sys::Win32::{
     Foundation::{ERROR_MORE_DATA, ERROR_SUCCESS},
+    Storage::FileSystem::GetShortPathNameW,
     System::RestartManager::{
         RmEndSession, RmForceShutdown, RmGetList, RmRegisterResources, RmShutdown, RmStartSession,
         CCH_RM_SESSION_KEY, RM_PROCESS_INFO,
@@ -122,11 +123,31 @@ fn file_names(root: &Path) -> Result<Vec<Vec<u16>>> {
             if metadata.is_dir() {
                 pending.push(path);
             } else if metadata.is_file() {
-                files.push(path.as_os_str().encode_wide().chain(Some(0)).collect());
+                files.push(resource_name(&path)?);
             }
         }
     }
     Ok(files)
+}
+
+fn resource_name(path: &Path) -> Result<Vec<u16>> {
+    let name: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    // Restart Manager rejects paths over MAX_PATH even with the extended prefix.
+    if name.len() <= 260 {
+        return Ok(name);
+    }
+    let length = unsafe { GetShortPathNameW(name.as_ptr(), ptr::null_mut(), 0) };
+    if length == 0 {
+        return Err(std::io::Error::last_os_error())
+            .context("cannot get a short path for Windows Restart Manager");
+    }
+    let mut short = vec![0; length as usize];
+    if unsafe { GetShortPathNameW(name.as_ptr(), short.as_mut_ptr(), length) } == 0 {
+        return Err(std::io::Error::last_os_error())
+            .context("cannot get a short path for Windows Restart Manager");
+    }
+    ensure!(short.len() <= 260, "Windows Restart Manager requires a path under 260 characters, but this file has no sufficiently short name: {}; use a shorter installation directory", path.display());
+    Ok(short)
 }
 
 fn check(code: u32, action: &str) -> Result<()> {

@@ -19,13 +19,14 @@ fn replacement_closes_only_users_of_the_old_installation_after_preparation() {
     let catalog = Catalog::new(false, false);
     success(catalog.install(&temp).output().unwrap());
     let root = installed(&temp).path;
+    let worker = "worker executable with a long name exercising Windows Restart Manager resource paths beyond MAX_PATH.exe";
     let other = root.with_file_name(format!(
         "{}-other",
         root.file_name().unwrap().to_string_lossy()
     ));
     std::fs::create_dir(&other).unwrap();
     let spawn = |directory: &std::path::Path, report: &str| {
-        let program = directory.join("worker.exe");
+        let program = directory.join(worker);
         copy_executable(exec_probe(), &program);
         Running(
             Command::new(&program)
@@ -52,7 +53,7 @@ fn replacement_closes_only_users_of_the_old_installation_after_preparation() {
     let failed = broken.install(&temp).arg("--reinstall").output().unwrap();
     assert!(!failed.status.success());
     assert!(held.0.try_wait().unwrap().is_none());
-    assert!(root.join("worker.exe").is_file());
+    assert!(root.join(worker).is_file());
 
     let output = catalog.install(&temp).arg("--reinstall").output().unwrap();
     let messages = format!(
@@ -64,6 +65,6 @@ fn replacement_closes_only_users_of_the_old_installation_after_preparation() {
     assert!(messages.contains(&format!("PID {}", held.0.id())));
     assert!(held.0.try_wait().unwrap().is_some());
     assert!(unrelated.0.try_wait().unwrap().is_none());
-    assert!(!root.join("worker.exe").exists());
+    assert!(!root.join(worker).exists());
     assert_eq!(installed(&temp).path, root);
 }
