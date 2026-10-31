@@ -66,19 +66,19 @@ pub fn generate(
 @call :_hanamori_codepage
 @if errorlevel 65536 goto _hanamori_no_temp
 @set "_HANAMORI_CMD_CP=%errorlevel%"
-@echo CMD trace: codepage %_HANAMORI_CMD_CP% 1>&2
 @del /q "%_HANAMORI_CMD_WORK%\codepage.txt" >nul 2>nul
 @chcp 65001 >nul
 @if errorlevel 1 goto _hanamori_no_temp
 @"{program}" shell cmd-dispatch {options} --codepage %_HANAMORI_CMD_CP% --output "%_HANAMORI_CMD_WORK%\apply.cmd" -- %*
 @set "_HANAMORI_CMD_RESULT=%errorlevel%"
-@echo CMD trace: dispatch %_HANAMORI_CMD_RESULT% 1>&2
 @chcp %_HANAMORI_CMD_CP% >nul
 @if not "%_HANAMORI_CMD_RESULT%"=="0" goto _hanamori_finish
 @if not exist "%_HANAMORI_CMD_WORK%\apply.cmd" goto _hanamori_finish
-@endlocal & call "%_HANAMORI_CMD_WORK%\apply.cmd"
-@echo CMD trace: apply %errorlevel% 1>&2
+@endlocal & call :_hanamori_apply "%_HANAMORI_CMD_WORK%"
 @exit /b %errorlevel%
+:_hanamori_apply
+@call "%~1\apply.cmd"
+@del /q "%~1\apply.cmd" >nul 2>nul & @rd "%~1" >nul 2>nul & @if exist "%~1" echo Hanamori: temporary directory could not be removed 1>&2 & @exit /b %errorlevel%
 :_hanamori_finish
 @rd "%_HANAMORI_CMD_WORK%" 2>nul
 @if exist "%_HANAMORI_CMD_WORK%" echo Hanamori: temporary directory retained because it is not empty or removable 1>&2
@@ -131,9 +131,6 @@ pub fn publish(output: &Path, script: &str) -> Result<()> {
         std::fs::read_dir(parent)?.next().is_none(),
         "CMD temporary directory must be empty; existing files were preserved"
     );
-    // The final line is parsed before self-deletion. Do not recursively remove anything
-    // unexpectedly added to this directory. Keep the environment operation's exit code.
-    let script = format!("@call :_hanamori_entry_apply\r\n@del /q \"%~f0\" >nul 2>nul & @rd \"%~dp0\" >nul 2>nul & @if exist \"%~dp0\" echo Hanamori: temporary directory could not be removed 1>&2 & @exit /b %errorlevel%\r\n:_hanamori_entry_apply\r\n{script}");
     let mut temporary = tempfile::Builder::new()
         .prefix("hanamori-cmd-write-")
         .tempfile_in(parent)?;

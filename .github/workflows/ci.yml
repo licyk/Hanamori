@@ -57,7 +57,7 @@ jobs:
           }
           '@
           $base = Join-Path $env:TEMP ('hanamori-rm-probe-' + [guid]::NewGuid())
-          foreach ($length in @(100, 200, 240, 260, 300)) {
+          foreach ($length in @(140, 200, 240, 260, 300)) {
             $path = Join-Path (Join-Path $base ('a' * ($length - $base.Length - 15))) 'resource.txt'
             [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path)) | Out-Null
             [IO.File]::WriteAllText($path, 'probe')

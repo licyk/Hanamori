@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 /// An ASCII loader: native paths come from %~dp0, not the batch file's code page.
 /// DOSKEY expands the entry variable at invocation time, without CALL's second pass
 /// over the user's arguments. DOSKEY macros are for interactive prompts only.
-/// AutoRun also runs in console-less helpers; failed DOSKEY registration is a quiet no-op.
+/// Probe the entry quietly: DOSKEY and CHCP may report success without a console.
 pub fn loader(auto_activate: bool, use_on_cd: bool) -> String {
     let activation = if use_on_cd {
         "@set \"_HANAMORI_CMD_CD=%~dp0cd.cmd\"\n@\"%SystemRoot%\\System32\\doskey.exe\" /exename=cmd.exe cd=\"%%_HANAMORI_CMD_CD%%\" $* >nul 2>nul\n@call \"%~dp0hanamori.cmd\" use --automatic\n"
@@ -24,9 +24,9 @@ pub fn loader(auto_activate: bool, use_on_cd: bool) -> String {
 @if not cmdextversion 1 (echo Hanamori: CMD initialization requires command extensions 1>&2 & exit /b 0)
 @if "!"=="" (echo Hanamori: CMD initialization requires delayed expansion to be disabled 1>&2 & exit /b 0)
 @for /f "tokens=1 delims==" %%H in ('set ERRORLEVEL 2^>nul') do @if /i "%%H"=="ERRORLEVEL" (echo Hanamori: unset the explicit ERRORLEVEL variable before loading CMD initialization 1>&2 & exit /b 0)
-@chcp >nul 2>nul
-@if errorlevel 1 exit /b 0
 @if not exist "%~dp0hanamori.cmd" goto _hanamori_init_failed
+@call "%~dp0hanamori.cmd" --version >nul 2>nul
+@if errorlevel 1 exit /b 0
 @if not exist "%SystemRoot%\System32\doskey.exe" goto _hanamori_init_failed
 @"%SystemRoot%\System32\doskey.exe" /exename=cmd.exe hanamori="%%_HANAMORI_CMD_ENTRY%%" $* >nul 2>nul
 @if errorlevel 1 exit /b 0
