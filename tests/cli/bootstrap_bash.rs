@@ -130,7 +130,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
         let path: String = key.get_value("Path").unwrap();
         drop(key);
         root.delete_subkey_all(&location).unwrap();
-        success(output);
+        crate::support::assert_success(output);
         assert!(path.ends_with(r";D:\Keep"), "{path}");
         assert_eq!(
             path.split(';').count(),

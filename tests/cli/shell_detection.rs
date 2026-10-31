@@ -43,6 +43,7 @@ fn run_shell(shell: &str) {
     let script = if powershell {
         r#"
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 function Invoke-Hanamori {
     & $env:BIN @args
     if ($LASTEXITCODE -ne 0) { throw "Hanamori failed: $LASTEXITCODE" }
@@ -53,7 +54,7 @@ Invoke-Hanamori env --output hook.txt
 Invoke-Hanamori env --shell bash --output explicit.txt
 Invoke-Hanamori shell activate --dir $env:TOOLS --no-sdk --output activation.txt
 Invoke-Hanamori shell deactivate --output deactivation.txt
-Invoke-Hanamori shell activate --dir $env:TOOLS --no-sdk --plain | Set-Content plain.txt
+Invoke-Hanamori shell activate --dir $env:TOOLS --no-sdk --plain | Set-Content -Encoding UTF8 plain.txt
 Invoke-Hanamori shell init --profile $env:PROFILE_PATH
 Copy-Item $env:PROFILE_PATH initialized.txt
 . $env:PROFILE_PATH
@@ -61,8 +62,8 @@ if ((Get-Command hanamori).CommandType -ne 'Function') { throw 'Profile did not 
 hanamori env --shell powershell --output loaded.txt
 if ($LASTEXITCODE -ne 0) { throw 'Loaded hook failed' }
 Invoke-Hanamori shell deinit --profile $env:PROFILE_PATH
-Invoke-Hanamori shell init --dry-run | Set-Content discovered.txt
-Invoke-Hanamori shell init --shell-executable (Get-Process -Id $PID).Path --dry-run | Set-Content explicit-runtime.txt
+Invoke-Hanamori shell init --dry-run | Set-Content -Encoding UTF8 discovered.txt
+Invoke-Hanamori shell init --shell-executable (Get-Process -Id $PID).Path --dry-run | Set-Content -Encoding UTF8 explicit-runtime.txt
 [IO.File]::WriteAllText((Join-Path (Get-Location) 'expected-profile.txt'), $PROFILE.CurrentUserAllHosts)
 "#
     } else {
@@ -126,6 +127,7 @@ exit "$detection_status"
     }));
     assert!(read(temp.path(), "activation.txt").contains("14.44.35207"));
     assert!(read(temp.path(), "plain.txt").contains("VCToolsVersion=14.44.35207"));
+    assert!(read(temp.path(), "plain.txt").contains(tools.to_str().unwrap()));
     if !powershell {
         assert!(read(temp.path(), "initialized.txt").contains(&format!("--shell {expected}")));
     }

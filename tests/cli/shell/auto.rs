@@ -286,7 +286,6 @@ fn use_on_cd_rejects_a_fixed_directory_and_cmd_requires_persistent_initializatio
 #[test]
 fn cmd_cd_helper_switches_projects_preserves_failures_and_is_recorded_for_removal() {
     use hanamori::shell::{cmd::startup::Bundle, startup::records::Store};
-    use std::os::windows::process::CommandExt;
     let temp = tempfile::tempdir().unwrap();
     let (home, _, _) = fixture(&temp);
     projects(temp.path());
@@ -333,14 +332,8 @@ exit /b 0
 "#;
     let path = temp.path().join("test.cmd");
     std::fs::write(&path, script.replace('\n', "\r\n")).unwrap();
-    let mut command = crate::support::cmd();
-    command
-        .args(["/d", "/v:off", "/c"])
-        .arg(path)
-        .creation_flags(0x10)
-        .env("LOADER", bundle.loader_path())
-        .env_remove("ERRORLEVEL")
-        .env_remove("RANDOM");
+    let mut command = crate::support::console_cmd(&path);
+    command.env("LOADER", bundle.loader_path());
     environment(&mut command, temp.path(), &home);
     assert!(success(command.output().unwrap()).contains("AUTO_OK"));
     let macros = std::fs::read_to_string(temp.path().join("macros.txt")).unwrap();

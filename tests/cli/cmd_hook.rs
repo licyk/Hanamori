@@ -256,7 +256,6 @@ fn cmd_dispatch_rejects_linked_work_directory_and_forwards_native_arguments_and_
 #[cfg(windows)]
 #[test]
 fn windows_batch_entry_switches_and_restores_current_session_and_cleans_temporary_scripts() {
-    use std::os::windows::process::CommandExt;
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     let root = temp.path().join("工具 chain % & !");
@@ -308,10 +307,7 @@ exit /b 0
         .replace('\n', "\r\n"),
     )
     .unwrap();
-    let output = crate::support::cmd()
-        .args(["/d", "/v:off", "/c"])
-        .arg(&script)
-        .creation_flags(0x10)
+    let output = crate::support::console_cmd(&script)
         .env("ENTRY", &entry)
         .env("HANAMORI_HOME", &home)
         .env("TEMP", &temporary)

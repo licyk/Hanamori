@@ -177,7 +177,6 @@ fn windows_consoleless_startup_does_not_attempt_automatic_activation_or_print_er
 #[test]
 fn windows_loader_registers_macro_and_preserves_activation_across_reloads_and_failures() {
     use hanamori::shell::target::DirectoryTarget;
-    use std::os::windows::process::CommandExt;
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path().join("工具 chain % & !");
     common::toolchain(&root, "14.44.35207", None);
@@ -223,38 +222,29 @@ exit /b 0
         .replace('\n', "\r\n"),
     )
     .unwrap();
-    for attempt in 1..=10 {
-        let output = crate::support::cmd()
-            .args(["/d", "/v:off", "/c"])
-            .arg(&script)
-            .creation_flags(0x10) // CREATE_NEW_CONSOLE: DOSKEY requires a real console.
-            .env("_HANAMORI_CMD_TRACE", "1")
-            .env("HANAMORI_LOG", "invalid[")
-            .env("PLAIN", plain.loader_path())
-            .env("AUTO", auto.loader_path())
-            .env("BAD", bad.loader_path())
-            .env("HANAMORI_HOME", temp.path().join("home"))
-            .current_dir(temp.path())
-            .output()
-            .unwrap();
-        if !output.status.success() {
-            eprintln!(
-                "CMD startup failure artifacts retained at {}",
-                temp.keep().display()
-            );
-            panic!(
-                "attempt {attempt}, status {:?}\nstdout {}\nstderr {}",
-                output.status.code(),
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-        let macros = std::fs::read_to_string(temp.path().join("macros.txt")).unwrap();
-        assert!(
-            macros.contains("hanamori=\"%_HANAMORI_CMD_ENTRY%\" $*"),
-            "{macros}"
+    let output = crate::support::console_cmd(&script)
+        .env("_HANAMORI_CMD_TRACE", "1")
+        .env("HANAMORI_LOG", "invalid[")
+        .env("PLAIN", plain.loader_path())
+        .env("AUTO", auto.loader_path())
+        .env("BAD", bad.loader_path())
+        .env("HANAMORI_HOME", temp.path().join("home"))
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    if !output.status.success() {
+        eprintln!(
+            "CMD startup failure artifacts retained at {}",
+            temp.keep().display()
         );
-        assert!(String::from_utf8_lossy(&output.stdout).contains("terminal remains usable"));
-        assert!(String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"));
+        crate::support::assert_success(output);
+        unreachable!();
     }
+    let macros = std::fs::read_to_string(temp.path().join("macros.txt")).unwrap();
+    assert!(
+        macros.contains("hanamori=\"%_HANAMORI_CMD_ENTRY%\" $*"),
+        "{macros}"
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("terminal remains usable"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"));
 }

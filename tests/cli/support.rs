@@ -5,6 +5,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::OnceLock;
 
+#[cfg(windows)]
+mod console;
+#[cfg(windows)]
+pub use console::command as console_cmd;
+
 /// Isolate test configuration while retaining Windows socket and DLL initialization.
 pub fn clear_environment(command: &mut Command) -> &mut Command {
     command.env_clear();
