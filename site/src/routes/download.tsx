@@ -20,6 +20,11 @@ const copy = {
     "build": "从源码构建",
     "start": "首次编译教程",
     "platform": "Windows x64 · MSVC 构建",
+    "install": "PowerShell 一键安装",
+    "installDescription": "在 PowerShell 5.1 或 7 中运行。自动配置用户 PATH、当前 PowerShell 集成与补全，工具链按需安装。",
+    "installGuide": "安装选项与说明",
+    "bashInstall": "MSYS2 / Git Bash",
+    "bashDescription": "配置 Bash 启动入口与补全。安装后重开终端，或执行脚本输出的加载命令。",
     "portable": "便携程序，无需安装 Visual Studio。EXE 可直接运行；ZIP 内为 hanamori.exe。将程序放入自己的工具目录，并按文档配置 PATH。",
     "note": "本文档面向当前开发版本。旧 msvc-installer 资产不包含这里介绍的新命令，不作为新版下载提供。",
     "update": "已安装？运行 hanamori upgrade 检查并更新。",
@@ -39,6 +44,11 @@ const copy = {
     "build": "Build from source",
     "start": "First compilation",
     "platform": "Windows x64 · MSVC build",
+    "install": "Install with PowerShell",
+    "installDescription": "Run in PowerShell 5.1 or 7. Configures your user PATH, current PowerShell integration and completions. Install toolchains when needed.",
+    "installGuide": "Installation options and guide",
+    "bashInstall": "MSYS2 / Git Bash",
+    "bashDescription": "Configures Bash startup and completions. Open a new terminal afterward, or run the printed hook command.",
     "portable": "A portable executable, without a Visual Studio installation. Run the EXE directly, or extract hanamori.exe from the ZIP. Place it in your tools directory and configure PATH using the guide.",
     "note": "These docs describe the current development version. Old msvc-installer assets do not contain the new commands and are not offered as new downloads.",
     "update": "Already installed? Run hanamori upgrade to check and update.",
@@ -88,6 +98,15 @@ function DownloadPage() {
         <span className="download-eyebrow">HANAMORI</span>
         <h1>{text.title}</h1>
         <p className="download-lead">{text.description}</p>
+        <section className="download-card" aria-label={text.install}>
+          <h2>{text.install}</h2>
+          <p>{text.installDescription}</p>
+          <pre className="download-command"><code>irm https://licyk.github.io/Hanamori/install.ps1 | iex</code></pre>
+          <h2>{text.bashInstall}</h2>
+          <p>{text.bashDescription}</p>
+          <pre className="download-command"><code>curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash</code></pre>
+          <p><Link href="/docs/build">{text.installGuide} →</Link></p>
+        </section>
         <section className="download-card" aria-label={text.platform}>
           <Download aria-hidden="true" />
           <h2>{text.platform}</h2>

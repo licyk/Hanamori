@@ -14,6 +14,12 @@ hanamori --manager-dir D:/Tools/Hanamori self uninstall --purge --dry-run
 hanamori --manager-dir D:/Tools/Hanamori self uninstall --purge
 ```
 
+On Windows, the installer records only the user PATH entry it added in the adjacent
+`hanamori.exe.install.json`. Self uninstall removes that entry and receipt, preserving
+other PATH entries and environment-variable references. Entries that existed before
+installation remain user-owned. Moving the executable requires manually cleaning the
+original installation's PATH entry.
+
 The default removes the running executable, its `.outdated` upgrade backup, and recorded
 startup entries belonging to that executable. MSVC, SDKs, configuration and named references
 remain available for a later installation of Hanamori. The executable's parent directory

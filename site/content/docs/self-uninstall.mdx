@@ -19,6 +19,8 @@ hanamori --manager-dir D:/Tools/Hanamori self uninstall --purge
 
 ## 启动入口与会话
 
+Windows 安装脚本在程序旁保存 `hanamori.exe.install.json`，只记录它添加的用户 PATH 条目。卸载会移除该条目和记录，保留原有 PATH 内容与环境变量引用。安装前已存在的 PATH 条目不归安装脚本所有；移动程序后，旧安装位置的 PATH 需要手动清理。
+
 先 `hanamori deactivate`，并关闭其他使用 Hanamori 的终端。新的 `shell init` 将实际入口写入用户数据目录的 `Hanamori/shell/registrations`；Windows 使用 LOCALAPPDATA，Unix 使用 XDG_DATA_HOME 或 `~/.local/share`。Bash 登录桥接和 CMD 辅助脚本也记录在内。
 
 卸载核对区块内容、profile 位置或 CMD loader 归属；修改过的入口会保留并提示。旧版本或手工添加的入口没有记录，需要手动清理，或先以相同 profile/运行时选项重新初始化。手动加入的 PATH、Windows 卸载注册表项不会被修改。重开终端才会丢弃已加载的函数。

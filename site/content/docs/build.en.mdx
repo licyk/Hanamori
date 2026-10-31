@@ -1,8 +1,58 @@
 ---
-title: "Build from source"
-description: "Build the current development version with Rust."
+title: "Install Hanamori or build from source"
+description: "Install with PowerShell, download a portable executable, or build with Rust."
 icon: Download
 ---
+
+## One-command installation
+
+Run in Windows PowerShell 5.1 or PowerShell 7 on Windows x64:
+
+```powershell
+irm https://licyk.github.io/Hanamori/install.ps1 | iex
+```
+
+The script downloads the latest stable release, checks its SHA-256, size and reported version, and installs `%LOCALAPPDATA%\Hanamori\bin\hanamori.exe`. It adds the directory to your user PATH and initializes the current PowerShell profile and session with completions. It requires no administrator privileges and downloads no toolchains. Running inline takes effect immediately; running in a child process requires opening a new terminal afterward.
+
+To choose a release or executable directory:
+
+```powershell
+& ([scriptblock]::Create((irm https://licyk.github.io/Hanamori/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
+```
+
+| Parameter | Meaning |
+| --- | --- |
+| `-Version` | `latest` or a version, with an optional `v` prefix |
+| `-InstallDir` | Directory containing `hanamori.exe` |
+| `-NoPathUpdate` | Skip user and process PATH configuration |
+| `-NoShell` | Skip persistent and current-session PowerShell integration |
+
+Repeat installation replaces the executable and reuses existing configuration. Download or verification failures preserve the previous executable. `HANAMORI_HOME` still selects manager data, independently of the executable directory. Existing PATH entries and profile content are preserved. The installer warns about restrictive execution policies without changing them. Configure other shells through the [shell integration guide](/docs/shell).
+
+Install toolchains when needed with `hanamori install latest --name stable`. Use `hanamori upgrade` for later updates and `hanamori self uninstall` for removal. The development version removes installer-owned PATH entries using the adjacent `.install.json` receipt; older executables may require manual PATH cleanup.
+
+## MSYS2 and Git Bash
+
+Run in MSYS2 or Git Bash on Windows x64:
+
+```bash
+curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+```
+
+The Bash installer reuses the PowerShell download, verification and user PATH setup, then invokes `hanamori shell init --shell bash` with the actual Bash runtime to configure `.bashrc`, login startup and completions. It uses `%LOCALAPPDATA%\Hanamori\bin`, installs no toolchains and leaves PowerShell profiles unchanged.
+
+It requires `cygpath`, `curl` and Windows PowerShell or PowerShell 7. If PowerShell is absent from the MSYS2 PATH, the script checks the Windows system directory. From a checkout, run `bash install.sh` to use the adjacent `install.ps1`.
+
+```bash
+curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash -s -- \
+  --version 0.1.0 --install-dir '/c/Tools/Hanamori'
+```
+
+Options are `--version`, `--install-dir`, `--no-path-update` and `--no-shell`. Installation directories accept MSYS or Windows paths. `--no-shell` skips Bash startup and completion setup; `--no-path-update` skips user PATH configuration.
+
+`curl | bash` runs in a child process. Open a new Bash terminal afterward, or run the printed hook command to use Hanamori immediately in the current terminal. MSYS2 may rebuild PATH at startup; the Bash hook invokes Hanamori by its absolute path.
+
+## Build from source
 
 ```sh
 git clone https://github.com/licyk/Hanamori.git

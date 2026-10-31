@@ -21,3 +21,9 @@ const requiredFiles = [
 await Promise.all(requiredFiles.map((file) => access(join(publicDirectory, file))));
 
 await copyFile(join(publicDirectory, "_shell.html"), join(publicDirectory, "404.html"));
+for (const installer of ["install.ps1", "install.sh"]) {
+  await copyFile(
+    fileURLToPath(new URL(`../../${installer}`, import.meta.url)),
+    join(publicDirectory, installer),
+  );
+}

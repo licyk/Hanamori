@@ -10,7 +10,21 @@ This repository describes the current development version. Historical `msvc-inst
 
 [Releases](https://github.com/licyk/Hanamori/releases) · [Installation](site/content/docs/build.en.mdx) · [First compilation](site/content/docs/quick-start.en.mdx) · [中文文档](site/content/docs/index.mdx) · [English documentation](site/content/docs/index.en.mdx)
 
-After placing `hanamori.exe` in a directory on PATH, use PowerShell:
+Install Hanamori in Windows PowerShell 5.1 or PowerShell 7:
+
+```powershell
+irm https://licyk.github.io/Hanamori/install.ps1 | iex
+```
+
+The script installs the Windows x64 executable into `%LOCALAPPDATA%\Hanamori\bin`, adds that directory to your user PATH, and initializes the current PowerShell profile and session with completions. No administrator privileges are required. Toolchains are installed separately.
+
+For MSYS2 or Git Bash, use the Bash installer:
+
+```bash
+curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+```
+
+It uses the same executable directory and user PATH, and configures Bash startup files and completions. Open a new Bash terminal afterward, or run the printed hook command. It requires `cygpath`, `curl` and Windows PowerShell or PowerShell 7. Install a toolchain when needed:
 
 ```powershell
 hanamori install latest --name stable

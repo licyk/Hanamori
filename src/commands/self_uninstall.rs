@@ -72,6 +72,14 @@ fn print_plan(plan: &Plan) {
             plan.backup.display().to_string(),
         ]);
     }
+    #[cfg(windows)]
+    if let Some(path) = &plan.user_path {
+        rows.push([
+            "Remove".into(),
+            "Installer user PATH entry and receipt".into(),
+            path.entry.clone(),
+        ]);
+    }
     for profile in &plan.startup.profiles {
         rows.push([
             "Remove".into(),

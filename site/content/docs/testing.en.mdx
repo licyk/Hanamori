@@ -34,6 +34,21 @@ CI uses the existing Linux and Windows workflow. Tests use real implementation p
 local HTTP servers, synthetic archives and real available shells. Required-shell mode
 prevents silently treating missing shells as successful integration coverage.
 
+Windows CI includes `cargo test --locked -p hanamori --test cli bootstrap::` for the
+PowerShell 5.1/7 installer. It serves the real built executable through a local HTTP
+fixture and uses temporary profiles and isolated registry keys. Coverage includes
+first and repeated installation, Unicode paths, PATH preservation, skip options,
+and retaining the old executable after download, digest, size or version failures.
+Library tests cover receipt-based PATH cleanup without editing the user's real PATH.
+
+`cargo test --locked -p hanamori --test cli bootstrap_bash::` checks Bash installer arguments
+and platform rejection. On Windows it uses real Git Bash and available MSYS2 Bash to
+install the built EXE through local HTTP fixtures, covering piped installation, both
+path formats, repeat installation, failure preservation, skip options and hook loading
+in a fresh Bash session. Git Bash uses `HANAMORI_TEST_BASH` or its default location.
+MSYS2 uses `HANAMORI_TEST_MSYS2_BASH` or `msys64/usr/bin/bash.exe` on the system drive;
+an unavailable default is explicitly skipped, while a missing explicit runtime fails.
+
 Run `cargo test --locked -p hanamori --lib --test api` for
 extraction, publication and directory discovery coverage. The CAB regression uses a real MSZIP
 archive and decoder, counting underlying bytes read to catch per-file decompression

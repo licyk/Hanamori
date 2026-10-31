@@ -50,6 +50,13 @@
   color: var(--color-fd-muted-foreground);
   font-size: .85rem;
 }
+.download-command {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: .7rem;
+  background: var(--color-fd-muted);
+  font-size: .85rem;
+}
 .download-version a,.download-page p a {
   text-decoration: underline;
   text-underline-offset: 3px;
