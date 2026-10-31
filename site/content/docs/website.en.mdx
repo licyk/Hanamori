@@ -25,7 +25,7 @@ Development runs at `127.0.0.1:3000`; static output is `.output/public`. On a fr
 - `src/lib/releases.ts` accepts exact named assets from stable releases, distinguishing query errors from unavailable downloads.
 - Escape literal angle brackets/braces in MDX prose, or put them inside code blocks.
 
-Analytics scripts are absent by default. Comments activate only when both `VITE_GISCUS_REPO_ID` and `VITE_GISCUS_CATEGORY_ID` are supplied for Hanamori’s own Discussions setup, never the source project’s IDs.
+Analytics scripts are absent by default. Documentation comments use the `Comment` category in Hanamori’s GitHub Discussions, configured in `src/lib/giscus.ts`. Giscus maps discussions by pathname, uses Chinese (`zh-CN`), and follows the system color scheme. No comment-related environment variables are required.
 
 ## Build and deployment
 

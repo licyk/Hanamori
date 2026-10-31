@@ -1,35 +1,16 @@
-import { useTheme } from "fumadocs-ui/provider/base";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-import {
-  GISCUS_ATTRIBUTES,
-  GISCUS_ORIGIN,
-  giscusLanguage,
-  giscusTerm,
-  giscusTheme,
-} from "@/lib/giscus";
-import { useSiteCopy, useSiteLocale } from "@/lib/site-copy";
+import { GISCUS_ATTRIBUTES, GISCUS_ORIGIN } from "@/lib/giscus";
+import { useSiteCopy } from "@/lib/site-copy";
 
-/**
- * giscus discussion for the current documentation page.
- *
- * The page route remounts this per path, so each page loads its own thread
- * from `location.pathname`, normalized by `giscusTerm`. Theme and language
- * changes are posted to the loaded frame instead of reloading it.
- */
 export function DocsComments() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
-  const locale = useSiteLocale();
   const copy = useSiteCopy().docs;
-  const theme = giscusTheme(resolvedTheme);
-  const lang = giscusLanguage(locale);
-  // `next-themes` reports no theme until it has read storage; waiting keeps
-  // the frame from loading once in the wrong palette.
-  const enabled = Boolean(GISCUS_ATTRIBUTES["data-repo-id"] && GISCUS_ATTRIBUTES["data-category-id"]);
-  const isThemeKnown = resolvedTheme !== undefined;
 
-  const mount = useEffectEvent((container: HTMLDivElement) => {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     const script = document.createElement("script");
     script.src = `${GISCUS_ORIGIN}/client.js`;
     script.async = true;
@@ -37,26 +18,9 @@ export function DocsComments() {
     for (const [name, value] of Object.entries(GISCUS_ATTRIBUTES)) {
       script.setAttribute(name, value);
     }
-    script.setAttribute("data-term", giscusTerm(window.location.pathname));
-    script.setAttribute("data-theme", theme);
-    script.setAttribute("data-lang", lang);
     container.append(script);
-  });
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!enabled || !isThemeKnown || !container) return;
-
-    mount(container);
     return () => container.replaceChildren();
-  }, [enabled, isThemeKnown]);
-
-  useEffect(() => {
-    const frame = containerRef.current?.querySelector<HTMLIFrameElement>("iframe.giscus-frame");
-    frame?.contentWindow?.postMessage({ giscus: { setConfig: { theme, lang } } }, GISCUS_ORIGIN);
-  }, [theme, lang]);
-
-  if (!enabled) return null;
+  }, []);
 
   return (
     <section aria-label={copy.comments} className="mt-12 border-t pt-8">
