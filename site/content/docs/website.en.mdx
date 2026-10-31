@@ -37,6 +37,6 @@ The pinned static Server Function middleware requests its cache from the root pa
 
 Custom-domain/root deployments use the default `/`. Static preparation verifies home, download, docs and search output and creates the 404 fallback. New top-level routes must be added to prerender configuration and output checks.
 
-The site workflow builds and uploads a Pages artifact. Deployment requires Pages configured for GitHub Actions and the repository variable `HANAMORI_PAGES_ENABLED=true`. Without that setup it only builds; it does not change repository visibility or implicitly publish the website. Netlify, Cloudflare Pages and Vercel configuration uses the same `.output/public` output and requires separate platform setup.
+The site workflow validates builds for pull requests. Website changes on main or a manual run on main also force-push `.output/public` to the `gh-pages` branch after validation, using the repository secret `GITEE_RSA_PRIVATE_KEY`. The key needs repository write access. In the repository Pages settings, select `Deploy from a branch`, the `gh-pages` branch, and `/ (root)`. Netlify, Cloudflare Pages and Vercel configuration uses the same `.output/public` output and requires separate platform setup.
 
 Check both `/` and `/Hanamori/`: deep-link refreshes, languages, search navigation, theme, mobile layout, reduced motion, and download states for unavailable releases, network errors and matching assets. A working development server is not evidence of a working static deployment.

@@ -37,6 +37,6 @@ VITE_BASE_PATH=/Hanamori/ bun run build
 
 自定义域名或根路径部署使用默认 `/`。静态整理脚本验证首页、下载页、文档和搜索产物，并生成 404 回退。新增顶层页面时同步预渲染配置和检查列表。
 
-GitHub Actions 的 site workflow 验证构建并上传 Pages artifact；实际部署需要仓库 Pages 选择 GitHub Actions，且设置仓库变量 `HANAMORI_PAGES_ENABLED=true`。未配置时仅构建，不隐式公开仓库或发布网站。Netlify、Cloudflare Pages 和 Vercel 的配置同样使用 `.output/public`，需要各平台分别配置项目。
+GitHub Actions 的 site workflow 在 PR 中验证构建；main 分支的网站变更或在 main 上手动运行工作流时，验证通过后使用仓库密钥 `GITEE_RSA_PRIVATE_KEY` 将 `.output/public` 强制推送到 `gh-pages` 分支。密钥需要具有仓库写入权限，仓库 Pages 的 Source 选择 `Deploy from a branch`，分支选择 `gh-pages`，目录选择 `/ (root)`。Netlify、Cloudflare Pages 和 Vercel 的配置同样使用 `.output/public`，需要各平台分别配置项目。
 
 验证根路径与 `/Hanamori/`：深层链接刷新、两种语言、搜索结果跳转、主题、移动布局、减少动画偏好，以及无公开 Release/网络失败/有匹配资产的下载状态。不要把 Node 开发服务器可用当成静态部署已经可用。

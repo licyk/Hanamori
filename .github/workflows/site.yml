@@ -36,21 +36,30 @@ jobs:
         run: |
           bun run check
           bun run test
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: site/.output/public
-
-  deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.HANAMORI_PAGES_ENABLED == 'true'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/configure-pages@v5
-      - uses: actions/deploy-pages@v4
-        id: deployment
+      - name: Configure Git
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          DEPLOY_PRI: ${{ secrets.GITEE_RSA_PRIVATE_KEY }}
+          GIT_USERNAME: ${{ github.repository_owner }}
+          GIT_EMAIL: ${{ github.repository_owner }}@user.github.com
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${DEPLOY_PRI}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global user.name "${GIT_USERNAME}"
+          git config --global user.email "${GIT_EMAIL}"
+      - name: Commit the site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: site/.output/public
+        env:
+          GIT_URL: git@github.com:${{ github.repository }}.git
+        run: |
+          git init
+          git remote add origin "${GIT_URL}"
+          git add -A
+          git commit -m "Site auto generated. Time: $(date +'%Y-%m-%d %H:%M:%S')"
+      - name: Push the site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: site/.output/public
+        run: git push origin HEAD:gh-pages --force
