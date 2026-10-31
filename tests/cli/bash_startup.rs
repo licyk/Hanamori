@@ -83,8 +83,7 @@ fn real_bash_login_and_nonlogin_sessions_load_bashrc_once_and_deinit_restores_us
                 .output()
                 .unwrap(),
         );
-        let original_rc =
-            "rc_count=$(( ${rc_count:-0} + 1 ))\nexport HANAMORI_HOME=$MANAGER_CONFIG";
+        let original_rc = "rc_count=$(( ${rc_count:-0} + 1 ))\nexport PATH=\"$HOME/bin:$PATH\"\nstartup_path=$PATH\nexport HANAMORI_HOME=$MANAGER_CONFIG";
         std::fs::write(home.join(".bashrc"), original_rc).unwrap();
         let login = home.join(existing.unwrap_or(".profile"));
         let original_login = if existing == Some(".bash_profile") {
@@ -155,7 +154,7 @@ export _HANAMORI_BASH_PROFILE_SEEN
 [ "$state" = "$_HANAMORI_STATE" ]
 hanamori deactivate
 [ "${_HANAMORI_STATE+x}" != x ]
-[ "$PATH" = /usr/bin:/bin ]
+[ "$PATH" = "$startup_path" ]
 "#;
         // Re-reading an existing user's explicit source statement legitimately re-runs it.
         let replay = if existing == Some(".bash_profile") {

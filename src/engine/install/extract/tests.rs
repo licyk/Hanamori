@@ -100,11 +100,13 @@ fn persistent_workspace_preserves_existing_data_and_releases_sdk_staging_on_ever
         }
         let work = temp.path().join("persistent workspace");
         let workspace = Workspace::create(Some(&work)).unwrap();
-        for name in ["sdk-staging", "hanamori-sdk-stage-abandoned", "downloads"] {
+        let directories = ["sdk-staging", "hanamori-sdk-stage-abandoned", "downloads"];
+        let mut before = Vec::new();
+        for name in directories {
             std::fs::create_dir(work.join(name)).unwrap();
             std::fs::write(work.join(name).join("keep.txt"), name.as_bytes()).unwrap();
+            before.push(hanamori_test_support::toolchain::inventory(&work.join(name)).unwrap());
         }
-        let before = hanamori_test_support::toolchain::inventory(&work).unwrap();
         let mut installer = Installer::new(InstallOptions::new(&root), |_| {});
         installer.workspace = Some(workspace);
         let progress = ProgressBar::hidden();
@@ -122,11 +124,14 @@ fn persistent_workspace_preserves_existing_data_and_releases_sdk_staging_on_ever
         }
         // Inspect while Installer still owns the persistent workspace: each attempt
         // cleans its SDK scratch tree before the workspace is dropped.
-        assert_eq!(
-            before,
-            hanamori_test_support::toolchain::inventory(&work).unwrap(),
-            "{boundary}"
-        );
+        // Windows prevents reading the held lock file; snapshot only the data trees.
+        for (name, expected) in directories.into_iter().zip(before) {
+            assert_eq!(
+                expected,
+                hanamori_test_support::toolchain::inventory(&work.join(name)).unwrap(),
+                "{boundary}: {name}"
+            );
+        }
         assert_eq!(std::fs::read_dir(&work).unwrap().count(), 4, "{boundary}");
         assert!(!std::fs::read_dir(&root).unwrap().any(|entry| entry
             .unwrap()
