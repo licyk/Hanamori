@@ -1,0 +1,44 @@
+---
+title: "Self-update"
+description: "Update a Windows x64 MSVC build from a verified GitHub Release."
+icon: CircleArrowUp
+---
+
+Windows x64 MSVC builds can update the executable that is currently running from the
+latest stable [GitHub Release](https://github.com/licyk/Hanamori/releases):
+
+```powershell
+hanamori upgrade --check
+hanamori upgrade
+hanamori upgrade --force
+```
+
+`--check` reports the current version, latest version and executable path without
+downloading an executable or writing files. An equal version normally needs no update;
+`--force` allows reinstalling it. Neither mode downgrades a newer build, selects a
+prerelease, or bypasses verification. `--check` and `--force` cannot be combined.
+
+The updater downloads `hanamori-x86_64-pc-windows-msvc.exe` directly. The Release asset
+must supply a SHA-256 digest; its hash and size must match, and the candidate must
+successfully report the expected `hanamori --version` within ten seconds. Missing or
+invalid metadata, download errors and failed verification leave the current executable
+in place. The next invocation after a successful update uses the new version.
+
+The existing `--proxy`, `HANAMORI_PROXY` and configuration `proxy` setting apply to both
+the API query and download. Optional `GITHUB_TOKEN` authenticates only the API request;
+it is not sent to the asset download. Toolchain mirrors, caches, download directories
+and project files do not control self-update. Other platforms/build targets currently
+have no self-update asset.
+
+Updating requires write access to the executable's directory. Staging is created beside
+that executable, and a sibling `<executable>.update.lock` prevents simultaneous updates.
+The lock file may remain after completion; do not delete it to bypass an active update.
+The old executable is renamed to `<executable>.outdated`, retained while its process
+exits, and removed by the next actual update. Close processes still using that backup
+if its removal is blocked. These sibling names are reserved for the updater.
+
+Replacement failure attempts to restore the original executable. The two renames are
+not one atomic operation: if the process is terminated between them and the original
+path is missing, rename `<executable>.outdated` back to the original name before retrying.
+A reported rollback failure also gives the exact restore paths. Self-update does not
+change registered toolchains or shell configuration.

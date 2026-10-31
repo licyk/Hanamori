@@ -1,0 +1,71 @@
+---
+title: "Configuration and storage"
+description: "Global options, environment variables, precedence and directory layout."
+icon: Settings
+---
+
+The manager directory is chosen by `--manager-dir`, then `HANAMORI_HOME`, then the platform
+local-data directory under `Hanamori`. Read `<manager>/config.json` after choosing it:
+
+On Windows, the default is `%LOCALAPPDATA%\Hanamori`. Shell hooks, startup loaders and completion use this same selection rule; they do not save a separate manager binding. Set `HANAMORI_HOME` before loading the hook when you want a custom directory.
+
+```json
+{
+  "toolchains_dir": "D:/Toolchains",
+  "cache_dir": "D:/Caches/Hanamori",
+  "file_workers": 4,
+  "connections": 8,
+  "log": "info"
+}
+```
+
+Unknown fields are ignored; optional `schema_version` is currently `1`. Other values use
+explicit CLI > nonempty environment variable > configuration file > default. Manager
+location is not read back from its own configuration file.
+
+| CLI/config field | Environment | Default |
+| --- | --- | --- |
+| `--toolchains-dir` / `toolchains_dir` | `HANAMORI_TOOLCHAINS_DIR` | `<manager>/toolchains` |
+| `--cache-dir` / `cache_dir` | `HANAMORI_CACHE_DIR` | `<manager>/cache` |
+| `--download-dir` / `download_dir` | `HANAMORI_DOWNLOAD_DIR` | Temporary workspace |
+| `--proxy` / `proxy` | `HANAMORI_PROXY` | None |
+| `--mirror` / `mirror` | `HANAMORI_MIRROR` | None |
+| `--file-workers` / `file_workers` | `HANAMORI_FILE_WORKERS` | 4, range 1–256 |
+| `--connections` / `connections` | `HANAMORI_CONNECTIONS` | 8, range 1–64 |
+| `--log` / `log` | `HANAMORI_LOG` | `info` tracing filter |
+
+CLI relative paths resolve against the invocation directory; file paths resolve against
+the manager directory; environment paths must be absolute. Tildes and variable expressions
+are not expanded by Hanamori. Configuration queries, help and version do not create storage.
+Local selection does not parse unused proxy/download settings. Settings contain preferences,
+not aliases, project declarations or session state.
+
+```sh
+hanamori config show
+hanamori config show --resolved
+hanamori config show --resolved --json
+hanamori cache clean --dry-run --json
+hanamori cache clean
+```
+
+`config show` displays effective values in a table. `--resolved` adds source and derived-path information. Scripts should use `--json`, with `--resolved` when source information is needed.
+The complete payload cache is content-addressed by SHA-256; corrupted entries are fetched
+again. `--download-dir` is a separate persistent workspace for unfinished/resumable downloads.
+A configured mirror changes the payload host/base; fallback uses the original payload URL.
+Cache cleanup skips active or unrecognized entries and does not touch installed tools or
+persistent workspaces. Diagnostics may include complete request URLs; configure credentials
+and handle logs accordingly.
+
+```text
+<manager>/
+  config.json
+  references/<name>.json
+  toolchains/<source>/msvc-<toolset-id>_sdk-<sdk-id-or-none>_x64/
+  cache/
+  toolchains/<source>/.hanamori-locks/
+<installation>/
+  VC/Tools/MSVC/<actual-version>/
+  Windows Kits/10/...              # absent for compiler-only
+```
+
+All local commands and dynamic completion use the configured `toolchains_dir`. Files in `references` name targets; deleting a reference does not delete a toolchain, and deleting a toolchain does not leave a database entry that can block reinstall.

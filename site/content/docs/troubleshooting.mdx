@@ -1,0 +1,32 @@
+---
+title: "故障排查"
+description: "根据实际错误选择检查与恢复步骤。"
+icon: CircleQuestionMark
+---
+
+| 症状 | 处理顺序 |
+| --- | --- |
+| Tab 没有补全候选 | 加载 `completions` 脚本，或执行 `shell init --completions` 后重开终端；见[终端补全](/docs/completions) |
+| Zsh 提示先运行 compinit | 将 Hanamori 启动区块放在框架/compinit 之后，再重新加载；钩子仍可正常使用 |
+| 本地版本或别名没有补全候选 | 核对 --manager-dir / HANAMORI_HOME / 平台默认目录，核对 toolchains_dir，用 list 或 doctor 检查目录和引用；多个安装共用的版本不会被推荐 |
+| PowerShell 不补全 channel 等固定参数值 | 本地动态候选已支持；固定枚举和普通路径仍受静态生成器限制 |
+| 找不到 `hanamori` | 直接调用 EXE；检查当前 PATH；持久配置修改后重开终端 |
+| `use` 提示未加载集成 | 成功生成并在当前 Shell 加载 `env`，或改用不需要钩子的 `exec` |
+| 检测不到 Shell | 显式传 `--shell powershell/bash/zsh/cmd`；不要靠修改 `$SHELL` 或 COMSPEC |
+| Windows Zsh 报 `D:\…` command not found | 直接运行新 EXE，检查 `cygpath`，重新加载 env / 更新 shell init |
+| PowerShell 加载了错误 profile | 明确 `--shell-executable pwsh` 或 `powershell.exe`，也可用 `--profile` |
+| 版本前缀匹配多个组合 | `list --json` 查看候选，使用完整托管目录键 或固定别名 |
+| 无法把实际版本映射到下载 ID | `list-remote` 查询后显式指定 `--toolset-id` / `--sdk-id`，保留项目约束 |
+| 最近项目文件损坏 | 修正该文件；不会自动跳过它使用父级或 default |
+| 下载失败 | 检查错误中 URL、代理、网络；区分完整缓存与下载工作区 |
+| 删除文件后无法使用 | 托管目录缺失或必要文件不全时重新 install；其他损坏加 `--reinstall` |
+| 安装中断留下 .stage / .old | 重新执行同一安装；安装会清理暂存树，必要时还原旧树后重试 |
+| 外部目录移动后路径失效 | `import --dir NEW --name NAME` 更新原引用 |
+| 单个引用文件损坏 | 修正或 `remove NAME` 删除该引用；其他目录继续可用 |
+| 旧版目录未出现在列表 | 新版不读取旧安装数据库；用 `import --dir PATH --name NAME` 引用旧目录，或重新安装 |
+| 更新缺少资产或 digest | 检查是否真正发布新名称资产；不要改名旧负载来跳过验证 |
+| Windows 自删失败 | 查看显示目录的 failure.txt，关闭占用进程后重新运行 uninstall.ps1 |
+
+优先保留完整错误、命令、Shell 类型与 `hanamori --version`。运行 `config show --resolved` 可以查看配置来源；`doctor --json` 只诊断不修复，有错误时仍返回非零状态。分享日志前注意其中可能包含完整请求 URL。
+
+导入目录不能用 `uninstall` 删除，使用 `remove` 取消引用。锁文件存在不代表还被占用；不要手工删除锁来绕过占用错误。先前已完成的卸载不会因后续失败自动回滚。`doctor` 只做布局和必要文件检查，不验证每个已安装文件的哈希。

@@ -1,0 +1,23 @@
+pub(crate) mod alias;
+pub(crate) mod cache;
+pub(crate) mod completions;
+pub(crate) mod config;
+pub(crate) mod current;
+pub(crate) mod doctor;
+pub(crate) mod env;
+pub(crate) mod exec;
+pub(crate) mod import;
+pub(crate) mod install;
+pub(crate) mod list;
+pub(crate) mod list_remote;
+mod output;
+pub(crate) mod remove;
+mod router;
+pub(crate) mod script;
+pub(crate) mod self_uninstall;
+pub(crate) mod shell;
+pub(crate) mod uninstall;
+pub(crate) mod upgrade;
+
+use output::report_status;
+pub use router::run;

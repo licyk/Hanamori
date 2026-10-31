@@ -1,0 +1,103 @@
+---
+title: "Shell integration"
+description: "Initialize, activate and restore a terminal environment."
+icon: Terminal
+---
+
+Add `--completions` to `hanamori env` to register Tab completion with the hook. This is opt-in and supports PowerShell, Bash and Zsh; Zsh requires `compinit` first. Standalone `hanamori completions` is also available. See [terminal completion](/docs/completions).
+
+Initialize once in each shell. By default, initialization only loads the hook; it does not
+select an installation, inspect a project, or access the network. `--auto-activate` calls
+`use` once when loading into an inactive session; failure leaves the terminal usable.
+Opt into `--use-on-cd` to follow project toolchains as the working directory changes.
+
+## Automatic project switching
+
+```sh
+hanamori shell init --shell bash --use-on-cd
+hanamori shell init --shell zsh --use-on-cd
+hanamori shell init --shell powershell --use-on-cd
+```
+
+Choose the command for your shell and reopen it. Temporary hooks also accept `env --use-on-cd`.
+This includes initial selection at startup, so `--auto-activate` is unnecessary. It conflicts
+with `--dir`, which binds a fixed toolchain directory.
+
+On directory changes, the nearest `hanamori-toolchain.json` in the current directory or its
+ancestors wins. Nested projects override their parents. Outside a project, the default
+toolchain is selected; without either a project or a default, the current environment stays
+unchanged. Invalid configuration, ambiguous matches and missing toolchains report errors
+without replacing the environment or downloading tools. An unchanged target produces no
+environment updates or repeated notices.
+
+Zsh switches immediately on directory changes. Bash and PowerShell check when returning to
+the prompt: `cd project; build` does not switch before `build` on the same line. Use
+`hanamori exec` / `hanamori run` for scripts and chained commands. PowerShell handles only
+filesystem locations; place initialization after prompt theme setup.
+
+Manual `use` and `deactivate` remain effective until the next directory change. Reloading
+does not duplicate callbacks; loading a hook without `--use-on-cd` disables tracking while
+keeping the active environment. Editing a project file without changing directories does
+not refresh automatically; run `hanamori use`. See [CMD integration](/docs/cmd) for its limits.
+
+## Shell detection
+
+`env` and `shell init/activate/deactivate/deinit` detect the calling shell when `--shell`
+is omitted. Detection walks up to 16 parent processes, supporting Bash, Zsh, PowerShell
+and CMD. It does not use `$SHELL` or `COMSPEC`, which may describe a different shell.
+An explicit `--shell` wins; if detection fails, the command asks you to specify it.
+The generated hooks keep passing an explicit shell for subsequent `use`/`deactivate`.
+
+On Windows, Bash/Zsh hooks and profile loaders use the current MSYS runtime's `cygpath`
+to translate Hanamori's native executable path before invoking it. Keep `cygpath` on
+PATH. After upgrading from a build that embedded an unconverted Windows path, regenerate
+and apply `env`; if you installed a startup entry, rerun `shell init` with the executable
+directly to replace that loader as well.
+
+PowerShell:
+
+```powershell
+hanamori env --output hanamori-init.ps1
+. ./hanamori-init.ps1
+hanamori use stable
+```
+
+Bash and Zsh:
+
+```sh
+hanamori env --output hanamori-init.sh && . ./hanamori-init.sh
+hanamori use stable
+# The same command detects Zsh when run from Zsh.
+```
+
+Each command selects its manager through `--manager-dir`, then `HANAMORI_HOME`, then the platform default (`%LOCALAPPDATA%\Hanamori` on Windows). A generation-time `--manager-dir` does not pin future commands. Set `HANAMORI_HOME` in your startup configuration to persist a custom manager directory. An explicit `env --dir PATH` still supplies a toolchain directory default for calls without an explicit selector; it does not register that directory or use an encoded `--binding` parameter.
+
+`use`, `exec --using` and `shell activate` share local selection. For a direct,
+unregistered directory, use `--dir`, and supply `--toolset`/`--sdk` or `--no-sdk` if
+its contents are ambiguous. These versions are actual directory versions.
+
+```sh
+hanamori exec --dir D:/Tools/existing --toolset 14.44.35207 --no-sdk -- cl.exe /?
+hanamori shell activate stable --shell bash --output activate.sh
+hanamori shell deactivate --shell bash --output deactivate.sh
+```
+
+Source these one-time scripts in the calling shell. For `KEY=VALUE` inspection, use
+`hanamori shell activate stable --plain`. This skips shell detection and cannot be
+combined with `--shell` or `--output`; its output is not an activation script.
+Failed generation does not replace an existing output file. Calling `use` without
+integration explains how to initialize; a child process cannot modify its parent shell.
+
+Activation preserves the original managed-variable baseline. Switching A → B does not
+accumulate compiler paths; `deactivate` restores the pre-A values. Empty and unset values
+remain distinct where the shell supports them. Switching to compiler-only clears injected
+SDK values. Unrelated environment variables remain intact. Independent terminals can use
+different combinations. `current` reads the active session snapshot rather than resolving
+the default or project again. `current` and deactivation remain usable with a
+broken global configuration or missing installation.
+
+`exec --using SELECTOR -- COMMAND [ARGS...]` works in a clean terminal, forwards literal
+arguments, inherits streams and preserves the child exit status. Use `--` to separate
+child options from manager options. It executes argv, not a shell expression: pipes,
+redirection, expansion and builtins require an explicit shell command. In a loaded PowerShell function, quote the separator as `'--'`. Windows PowerShell
+uses the existing encoded argv launcher to preserve empty strings and quotes.

@@ -1,0 +1,26 @@
+---
+title: "发布流程"
+description: "从真实标签构建 Windows 程序并验证下载资产。"
+icon: Upload
+---
+
+发布是独立步骤，不因文档构建或 main 推送自动发行新版本。现有 [.github/workflows/release.yml](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) 在 `v*` 标签推送时运行，也支持选择既有标签手动触发。
+
+1. 根据项目验收要求完成目标验证，更新工作区版本与由工具生成的锁文件。
+2. 创建对应源码的真实 `v*` 标签，标签版本、Cargo 版本与程序版本应一致。
+3. 流程使用 locked 依赖运行 Windows MSVC 目标测试和构建。
+4. [.github/scripts/release.ps1](https://github.com/licyk/Hanamori/blob/main/.github/scripts/release.ps1) 校验标签/源码身份并打包 EXE、ZIP。
+5. 发布 `hanamori-x86_64-pc-windows-msvc.exe` 和同名 ZIP，ZIP 内为 `hanamori.exe`。
+6. 流程验证 GitHub 报告的 EXE SHA-256 digest 与打包文件一致；另行验证用户能够实际下载。
+
+旧 Release 资产、成功的 CI 或网站上线都不是本次版本已经发布的证明。自我更新和下载页均按新名称匹配资产。下载页从公开 API 查询，不包含 Token；私有仓库的资产无法因此变成公开下载。
+
+在发布前，文档和下载页应继续准确表达“开发版本”和“尚无公开匹配资产”。不要把旧版重命名为新版来满足资产检查。
+
+## crates.io
+
+[.github/workflows/publish.yml](https://github.com/licyk/Hanamori/blob/main/.github/workflows/publish.yml) 独立发布 `hanamori` crate，同样支持 `v*` 标签推送和手动指定既有标签。它复用标签与 Cargo 版本校验，在 Windows MSVC 目标上运行测试，再通过 `cargo publish --locked` 打包、编译验证并上传；不会发布 `hanamori-test-support` 或 `xtask`。
+
+迁移仓库后，在目标 GitHub 仓库的 Actions Secrets 中配置 `CARGO_REGISTRY_TOKEN`，值为有权发布 `hanamori` 的 crates.io API token。不要将 token 写入源码或工作流。首次发布需要创建 crate 的权限；后续发布需要该 crate 的发布权限。两个发布工作流独立运行，GitHub Release 成功不代表 crates.io 已发布成功；失败后可以手动指定同一标签重试尚未发布的渠道。
+
+发布前可在本地执行 `cargo publish --locked --registry crates-io -p hanamori --dry-run`，验证包内源码能够编译而不上传。crates.io 中已经发布的同一版本不能覆盖；确认版本已存在后，不要重复发布该版本。

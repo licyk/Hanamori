@@ -1,0 +1,59 @@
+name: Publish to crates.io
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing v* tag to publish (e.g. v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish Hanamori
+    runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
+        with:
+          rust-version: stable
+
+      - name: Verify release tag and package identity
+        shell: pwsh
+        run: ./.github/scripts/release.ps1 -Stage Verify -Tag $env:RELEASE_TAG
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2.9.3
+
+      - name: Run tests
+        env:
+          HANAMORI_REQUIRE_SHELL_TESTS: '1'
+        run: cargo test --workspace --locked --target x86_64-pc-windows-msvc
+
+      - name: Publish crate
+        shell: pwsh
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CARGO_REGISTRY_TOKEN)) {
+            throw 'Configure the CARGO_REGISTRY_TOKEN repository secret before publishing.'
+          }
+          cargo publish --locked --registry crates-io -p hanamori --target x86_64-pc-windows-msvc

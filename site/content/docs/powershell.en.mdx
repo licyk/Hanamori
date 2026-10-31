@@ -1,0 +1,31 @@
+---
+title: "PowerShell"
+description: "Choose the right 5.1/7 profile and pass scripts and arguments correctly."
+icon: SquareTerminal
+---
+
+Load the current terminal first:
+
+```powershell
+hanamori env --shell powershell --output hanamori-init.ps1
+if ($LASTEXITCODE -ne 0) { throw 'Could not generate the hook' }
+. ./hanamori-init.ps1
+hanamori use stable
+hanamori exec --using stable '--' cl.exe /?
+hanamori deactivate
+```
+
+Dot-sourcing lets the script modify this shell. Do not source an old output file after generation fails. Execution policy may restrict script loading; follow your system’s policy. Hanamori does not permanently relax it for you.
+
+For persistent setup, choose the runtime you actually use:
+
+```powershell
+hanamori shell init --shell powershell --shell-executable pwsh --dry-run
+hanamori shell init --shell powershell --shell-executable pwsh
+# Windows PowerShell 5.1:
+hanamori shell init --shell powershell --shell-executable powershell.exe
+```
+
+Discovery queries that runtime’s user profile with profiles disabled. A discovery failure does not silently edit another runtime’s profile; use `--profile PATH` for an explicit file. Existing UTF-16 encoding is preserved.
+
+Through the wrapper, write the `exec` separator as `'--'`. Inspect `$LASTEXITCODE` for native child status. `shell deinit` affects future loads; restart the terminal to discard the already loaded function.

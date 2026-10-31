@@ -1,0 +1,65 @@
+---
+title: "Architecture"
+description: "Workspace responsibilities, directory discovery and references."
+icon: Network
+---
+
+The environment includes PATH, INCLUDE, LIB, `CC`/`CXX`, `VCToolsVersion`,
+`VCToolsInstallDir`, `VCINSTALLDIR`, `VSCMD_ARG_HOST_ARCH`, `VSCMD_ARG_TGT_ARCH`,
+`DISTUTILS_USE_SDK`, and SDK root/bin/version variables when applicable. POSIX shells get
+POSIX executable paths; compiler-consumed INCLUDE/LIB paths retain Windows form. Hanamori
+does not generate `vcvarsall.bat` or `vcvars64.bat`.
+
+`src/main.rs` parses and exits; `src/cli/` defines the command tree and each command's
+arguments; `src/commands/` runs the commands and prints their output. `src/config.rs`
+resolves typed inputs and retains source diagnostics separately. Everything is one
+`hanamori` crate whose top-level modules form layers that only depend downward:
+
+| Layer | Modules | Responsibility | May use |
+| --- | --- | --- | --- |
+| foundation | `env`, `msbuild`, `fs`, `identity`, `locking`, `serde_helpers`, `version` | Paths, locking, layout, versions and identity | — |
+| archive | `archive` | VSIX, MSI and CAB extraction | — |
+| catalog | `catalog` | Catalog parsing and package selection | foundation |
+| download | `download` | Network transfers, integrity, ranges and cache | foundation |
+| state | `state` | Directory discovery, named references, projects and local selection | foundation |
+| shell | `shell` | Sessions, scripts and startup integration | foundation, state |
+| engine | `engine` | Staged installation, publication, import, diagnosis and uninstall | foundation, archive, catalog, download, state |
+| application | `cli`, `commands`, `config`, `logging`, `runtime`, `self_uninstall`, `upgrade` | Command line, configuration, self-update and self-uninstall | all layers |
+
+The unpublished `test-support` crate holds synthetic payloads, HTTP fixtures and shell
+probes for tests. `cargo xtask check` enforces the structure and runs in CI:
+
+- no dependency cycles between sibling modules at any depth, including code for other
+  platforms; test-only code is exempt;
+- the layer directions in the table;
+- parent modules (`lib.rs` and any file with child modules) contain only `mod`
+  declarations and re-exports, so implementation lives in leaf modules.
+
+Each managed combination occupies `<toolchains-dir>/<source>/msvc-<download ID>_sdk-<ID or none>_x64`. Local commands discover directories and check a small set of required files. Directory names retain download IDs; actual compiler and SDK versions come from the extracted tree. Custom source identity is a stable SHA-256 of the manifest URL, independent of changing manifest contents.
+
+MSBuild combinations insert `_msbuild-<version>` before `_x64`. `catalog/msbuild` selects an explicit VS 2022 C++ package set without recursively installing arbitrary VS dependencies. Payload roles distinguish toolset, SDK and MSBuild; FileTracker's MSI is extracted separately and arranged beside the private engine. The foundation `msbuild` module generates local props/targets from source templates, records the engine package version and defines required-file checks. It does not modify upstream targets, write registry entries or invoke system installers.
+
+`references/<name>.json` stores a managed directory key or an external path with fixed component versions. References do not prove installation exists, and one broken reference does not hide other tools. There is no installation database, file receipt or JSON recovery journal. Shell startup ownership records remain separate. Library installation options are explicit and do not load global user configuration.
+
+## Extraction and publication
+
+Opening a VSIX identifies the compiler directory version, normalizes output paths and
+counts files together. Extraction reuses this metadata and streams files directly into
+the installation transaction's private staging tree. MSI file, directory, component and
+media mappings are prepared once for counting and extraction; discovering CAB downloads
+still requires an earlier read of the MSI media table.
+
+CAB files are read in offset order within each compressed folder, keeping one decoder
+alive across files instead of restarting it for every file. The backend is pinned to
+`cab-superewald 0.6.1`, which exposes folder readers and retains Stored, MSZIP and LZX
+decoding. Only one cabinet is open at a time, and file contents are streamed rather than
+buffered in full.
+
+SDK scratch directories live inside the installation transaction. Arranging `Windows Kits`
+therefore moves data on the same volume instead of copying the whole SDK from a download
+workspace on another drive. Failed extraction discards the staging tree; individual files
+do not need temporary siblings or handling for binaries held open by a running compiler.
+
+Download integrity, archive checksums and output path checks remain enabled. Before publication, the engine checks actual versions and required compiler, header and library files. It does not generate a full file inventory or hash the installed tree.
+
+The target lock protects preparation in a sibling `.<name>.stage` directory on the destination volume. Publication renames the old tree to `.old`, moves the new tree into place, then removes the old tree. Failed preparation preserves existing files. The next install cleans interrupted staging and restores `.old` when the final directory is missing; ordinary reuse also runs this cleanup. Missing managed directories or required files trigger installation. Use `--reinstall` for damage beyond the quick required-file checks.

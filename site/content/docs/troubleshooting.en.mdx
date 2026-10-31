@@ -1,0 +1,32 @@
+---
+title: "Troubleshooting"
+description: "Choose diagnostics and recovery steps based on the actual failure."
+icon: CircleQuestionMark
+---
+
+| Symptom | Next steps |
+| --- | --- |
+| Tab offers no candidates | Load the completion script, or run `shell init --completions` and reopen the terminal; see [terminal completion](/docs/completions) |
+| Zsh asks for compinit | Place the Hanamori block after framework/compinit initialization, then reload it; the toolchain hook remains usable |
+| Missing local versions or aliases | Check --manager-dir / HANAMORI_HOME / platform defaults and check toolchains_dir and inspect directories/references with list or doctor; shared, ambiguous versions are not suggested |
+| PowerShell does not complete fixed values such as channel | Local dynamic candidates are supported; fixed enums and ordinary paths retain static-generator limitations |
+| `hanamori` not found | Invoke the EXE directly; inspect PATH; reopen the terminal after persistent changes |
+| `use` says integration is missing | Successfully generate and source `env`, or use hook-free `exec` |
+| Shell detection fails | Pass `--shell powershell/bash/zsh/cmd`; changing `$SHELL` or COMSPEC is not a fix |
+| Windows Zsh reports `D:\…` command not found | Invoke the new EXE directly, check `cygpath`, reload env / rerun shell init |
+| Wrong PowerShell profile | Choose `--shell-executable pwsh` or `powershell.exe`, or use `--profile` |
+| Ambiguous version prefix | Inspect `list --json` and use an exact managed directory key or fixed alias |
+| Cannot map actual version to download ID | Query `list-remote`, then specify `--toolset-id` / `--sdk-id` while retaining project constraints |
+| Malformed nearest project file | Fix it; it is not skipped in favor of a parent/default |
+| Download failure | Inspect the reported URL, proxy and network; distinguish cache from workspace |
+| Deleted files prevent use | Re-run install for missing managed directories or required files; use `--reinstall` for other damage |
+| Interrupted install left .stage / .old | Repeat the same install; it cleans staging and restores the old tree when needed |
+| External directory moved | Update the reference with `import --dir NEW --name NAME` |
+| A reference file is broken | Fix it or delete it with `remove NAME`; other directories remain usable |
+| Legacy tools missing from list | Old installation databases are ignored; `import --dir PATH --name NAME` references the old tree, or install again |
+| Update asset/digest missing | Verify that a new-named asset was actually published; do not rename old payloads to bypass checks |
+| Windows self removal failed | Read failure.txt in the reported directory, close occupying processes and rerun uninstall.ps1 |
+
+Keep the complete error, command, shell identity and `hanamori --version`. `config show --resolved` shows configuration sources. `doctor --json` diagnoses without repairs and still returns nonzero on errors. Logs may include complete request URLs.
+
+Imports cannot be deleted with `uninstall`; use `remove` to unregister them. An existing lock file does not imply a held lock. Do not remove locks to bypass contention. Doctor checks layout and required files, without hashing every installed file. Earlier completed removals are not rolled back when a later step fails.

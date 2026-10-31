@@ -1,0 +1,53 @@
+---
+title: "Project selection"
+description: "Pin project requirements and understand local resolution."
+icon: FolderGit2
+---
+
+Put `hanamori-toolchain.json` in the project root:
+
+```json
+{
+  "toolset": "14.44.35207",
+  "sdk": "10.0.26100.0"
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `toolset` | Required actual MSVC version or numeric prefix with one to three segments |
+| `sdk` | Actual four-part version; `null` means no SDK; omitted means unconstrained |
+| `msbuild` | Optional boolean: `true` requires MSBuild, `false` excludes it; omitted leaves local selection unconstrained; installation enables it by default with the SDK, or disables it when SDK is `null` |
+| `host`, `target` | Optional, default `x64`; no other architecture is implemented |
+| `vs`, `channel` | Optional source constraints; source-unknown imports cannot satisfy them |
+| `schema_version` | Optional, currently `1` |
+
+Unknown fields are ignored. The nearest file in the current directory or its ancestors
+wins. A malformed nearest file stops selection rather than falling through to a parent
+or the default. Selection priority is explicit selector/directory, then project, then
+`default`. Missing matches fail; several matches list candidates and require a directory key or
+alias. A numeric prefix does not silently pick one SDK or source over another.
+
+`install` also reads the nearest project. Explicit actual-version/SDK options replace
+the corresponding project constraint; omitted fields retain it. Explicit download IDs
+supply payload selection and still must satisfy retained actual-version constraints.
+For example, a project that pins real versions can be installed using catalog IDs:
+
+```sh
+hanamori install --toolset-id 14.44.17.14 --sdk-id 26100
+```
+
+A project file describes a combination, not a promise that upstream will host its
+payloads forever. Keep the original install command, download IDs and cached payloads when needed. An explicit managed directory key selects its own combination without reading the project.
+
+```sh
+hanamori list
+hanamori alias
+hanamori alias 14.44 stable
+hanamori default stable
+hanamori unalias stable
+hanamori unalias default
+hanamori exec --using 14.44 -- cl.exe /?
+```
+
+Reference names contain 1–64 ASCII letters, digits, hyphens or underscores, excluding command names. `default` is the special allowed alias. Removing an absent alias is harmless.

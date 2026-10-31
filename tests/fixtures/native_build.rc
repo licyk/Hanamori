@@ -1,0 +1,6 @@
+#include <winres.h>
+
+101 RCDATA
+BEGIN
+    "hanamori-sdk-resource"
+END

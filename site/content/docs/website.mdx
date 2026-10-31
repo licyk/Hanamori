@@ -1,0 +1,42 @@
+---
+title: "网站维护"
+description: "维护首页、下载页、中英文档和静态部署。"
+icon: Globe
+---
+
+网站位于 `site/`，从 RVC Next 的 Fumadocs/TanStack Start 框架适配。使用 React、Tailwind、MDX、Bun 与 Vitest；保留来源与许可说明于 `site/NOTICE`、`site/LICENSE`，Rust 工作区单独管理。
+
+```sh
+cd site
+bun install --frozen-lockfile
+bun run dev
+bun run build
+bun run check
+bun run test
+```
+
+开发服务器为 `127.0.0.1:3000`，静态产物为 `.output/public`。首次类型检查如尚无路由生成文件，先运行 build 或启动 dev 让路由插件生成；不手工编辑 `src/routeTree.gen.ts`，不提交缓存与构建产物。
+
+## 内容与配置
+
+- `content/docs/PAGE.mdx` 是中文，`PAGE.en.mdx` 是英文，frontmatter 包含 title 和 description。
+- 两份 `meta.json`/`meta.en.json` 使用同一 slug 顺序。公开文档链接为 `/docs/PAGE`，语言切换在同一地址完成，不另建语言路由。
+- 首页文案在 `src/lib/site-copy.ts`，布局与交互组件在 `src/components/`。
+- `src/lib/releases.ts` 只接受指定名称的稳定 Release 资产；查询失败与没有匹配资产分开展示。
+- MDX 正文中的尖括号、花括号需要转义或放入代码块，不能直接当普通 Markdown 使用。
+
+默认不加载统计脚本。评论组件只有同时提供 `VITE_GISCUS_REPO_ID` 和 `VITE_GISCUS_CATEGORY_ID` 才启用，需使用 Hanamori 自己的 Discussions 配置，不沿用来源项目 ID。
+
+## 构建与发布
+
+```sh
+VITE_BASE_PATH=/Hanamori/ bun run build
+```
+
+当前固定版本的静态 Server Function 中间件会把缓存请求指向根路径；`vite.config.ts` 的构建转换为客户端请求补上 base path，缓存文件仍输出到产物根目录。升级这项依赖时，必须重新检查子路径下的文档导航。
+
+自定义域名或根路径部署使用默认 `/`。静态整理脚本验证首页、下载页、文档和搜索产物，并生成 404 回退。新增顶层页面时同步预渲染配置和检查列表。
+
+GitHub Actions 的 site workflow 验证构建并上传 Pages artifact；实际部署需要仓库 Pages 选择 GitHub Actions，且设置仓库变量 `HANAMORI_PAGES_ENABLED=true`。未配置时仅构建，不隐式公开仓库或发布网站。Netlify、Cloudflare Pages 和 Vercel 的配置同样使用 `.output/public`，需要各平台分别配置项目。
+
+验证根路径与 `/Hanamori/`：深层链接刷新、两种语言、搜索结果跳转、主题、移动布局、减少动画偏好，以及无公开 Release/网络失败/有匹配资产的下载状态。不要把 Node 开发服务器可用当成静态部署已经可用。

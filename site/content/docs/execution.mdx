@@ -1,0 +1,23 @@
+---
+title: "单次命令执行"
+description: "无需初始化 Shell，为构建子进程准备工具链环境。"
+icon: Play
+---
+
+```powershell
+hanamori exec --using stable '--' cl.exe /nologo /EHsc /MT hello.cpp
+hanamori exec --dir D:/Tools/existing --toolset 14.44.35207 --no-sdk '--' cl.exe /?
+```
+
+`exec` 支持注册安装和显式未注册目录。`--using` 与 `--dir` 及其组件参数互斥。不指定选择方式时按最近项目文件、默认别名解析。目录有多个组合时，使用实际目录版本 `--toolset`、`--sdk` 或 `--no-sdk` 消除歧义。
+
+`--` 后必须有可执行程序，后续参数按原始 argv 传递，不解释管道、重定向、通配符、变量或 Shell 内建命令。需要这些语法时，显式运行 Shell，例如：
+
+```powershell
+hanamori exec --using stable '--' cmd.exe /d /c 'cl.exe /nologo hello.cpp && hello.exe'
+$LASTEXITCODE
+```
+
+子进程继承标准输入、输出和错误流，退出状态传回调用者。仅子进程获得准备好的环境，父终端不被激活。加载 PowerShell 钩子后，用 `'--'` 保证分隔符传递给 Hanamori；Windows PowerShell 使用已有的编码 argv 转发方式保留空字符串和引号。
+
+当前公开命令是 `exec`，不提供 `run` 别名。用法与[当前会话切换](/docs/shell)不同。

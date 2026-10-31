@@ -1,0 +1,32 @@
+---
+title: "Bash and Zsh"
+description: "Load hooks, handle native Windows paths and configure login startup files."
+icon: SquareChevronRight
+---
+
+```sh
+hanamori env --output hanamori-init.sh && . ./hanamori-init.sh
+hanamori use stable
+hanamori exec --using stable -- cl.exe /?
+hanamori deactivate
+```
+
+Omitting `--shell` detects the calling shell. When explicitly generating a script, choose `--shell bash` or `--shell zsh` to match the shell that will source it.
+
+## Windows paths
+
+A native executable path such as `D:\Tools\hanamori.exe` is not a POSIX command path. Generated hooks use the current MSYS runtime’s `cygpath -u` before invoking it. Keep a working `cygpath` on PATH; a failed conversion stops execution.
+
+After replacing an old hook, call the new executable directly to regenerate and load `env`, or rerun `shell init` to update persistent entries. For example, invoke `/d/Tools/hanamori.exe` in Git Bash/Zsh, quoting paths containing spaces. INCLUDE/LIB consumed by the compiler retain Windows syntax; do not convert every variable to POSIX paths.
+
+## Persistent entries
+
+```sh
+hanamori shell init --shell bash --dry-run
+hanamori shell init --shell bash
+hanamori shell init --shell zsh
+```
+
+Default Bash setup maintains `.bashrc` and a login-profile bridge without repeating user settings in login/non-login sessions. With no usable login file, it creates the lowest-priority `.profile`. Deinitialization can delete that generated file if it becomes empty, retaining user additions. Zsh respects `ZDOTDIR`; explicit `--profile` takes precedence.
+
+Supporting these shells does not mean MSVC executes natively on Linux/macOS. See [platform support](/docs/support).

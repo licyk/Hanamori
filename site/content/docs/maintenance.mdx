@@ -1,0 +1,53 @@
+---
+title: "导入、重装与清理"
+description: "通过目录发现、引用和重新安装管理工具链。"
+icon: Wrench
+---
+
+## 引用外部工具链
+
+```sh
+hanamori import --dir D:/ExistingTools --toolset 14.44.35207 --sdk 10.0.26100.0 --name imported
+hanamori list --json
+hanamori doctor --json
+```
+
+`import` 的 `--name` 必填。命令检查选定组合，只在管理目录的 `references/` 保存路径和实际版本，不修改外部目录。同名引用会更新；移动外部工具链后，以原来的名字重新 import 新路径即可。同一目录的不同组合可以使用不同名字。
+
+## 删除与清理
+
+| 命令 | 行为 |
+| --- | --- |
+| `remove NAME` / `unalias NAME` | 删除一个引用；工具链文件保留，其他引用保留 |
+| `uninstall SELECTOR` | 删除受管目录和指向该目录的引用；拒绝删除外部引用目标 |
+| `cache clean` | 清理完整下载缓存，不改变安装 |
+| `self uninstall` | 删除程序及其启动入口，默认保留工具链 |
+| `self uninstall --purge` | 额外清理受管工具链、完整缓存、配置和引用，保留外部工具链 |
+
+`uninstall` 接受目录键、引用或唯一版本前缀；目标已经缺少文件仍可卸载。目录整体已删除时，使用精确目录键或失效的受管引用也能完成清理。当前会话正在使用目标时先 deactivate；其他终端不被跟踪，Windows 占用错误会直接报告。
+
+```sh
+hanamori remove imported --dry-run --json
+hanamori uninstall stable --dry-run --json
+hanamori uninstall stable
+```
+
+## 重装与中断处理
+
+受管目录不存在、为空或缺少关键文件时，原安装命令会重新安装。普通头文件等未纳入快速检查的损坏，用 `--reinstall` 强制重建。没有逐文件哈希收据，也不依赖旧安装记录。
+
+```sh
+hanamori install --toolset-id 14.44.17.14 --sdk-id 26100
+hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
+hanamori doctor --dir D:/ExistingTools --json
+```
+
+下载、解包和必需文件检查完成后才替换旧受管目录。新内容在同卷暂存，发布时先把旧目录改名，再将新目录就位；失败时恢复旧目录。进程中断留下的 `.stage` / `.old` 目录由下一次对同一目标的安装处理。`doctor` 只报告问题，不修改文件。
+
+Windows 上实际替换目录前，Hanamori 会将旧安装中的文件交给 Windows Restart Manager，查询使用这些文件的进程，打印名称和 PID，并请求关闭；未响应的进程会被强制关闭。操作按目标安装文件限定范围，不按 `MSBuild.exe`、`mspdbsrv.exe` 或 `vctip.exe` 等名称全局结束进程。微软包中的 PDB 服务和遥测程序均完整保留。
+
+关闭操作只发生在新内容解包、校验成功后。首次安装、复用已有安装、`--dry-run` 或准备失败不会关闭进程。重装前保存工作并等待相关构建结束，因为使用该工具链的进程会被结束。无法关闭的进程、目录句柄或权限问题仍会阻止替换，并保留旧安装；根据日志手动处理后重试。退出 Shell 激活不会结束已驻留的进程。
+
+包含 MSBuild 的组合还检查引擎、C++ targets、任务程序集、FileTracker 和生成配置；Windows 上的 `doctor` 会执行引擎版本探测，区分缺失文件与运行时启动失败。其他平台只检查文件。删除这些关键文件后，用 `list` 中的完整目录键重新安装即可修复。`import` 会保留 Hanamori 便携安装的 MSBuild 版本；不会把任意 Visual Studio 目录转换成受支持的独立 MSBuild 安装。
+
+`restore`、`relocate`、`recover` 已移除。旧索引与收据不读取、不迁移、不删除；旧工具链可以通过 `import --name NAME --dir PATH` 引用，新安装使用确定的目录布局。

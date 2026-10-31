@@ -1,0 +1,28 @@
+---
+title: "环境与会话参考"
+description: "了解哪些变量被管理，以及切换和恢复的边界。"
+icon: SlidersHorizontal
+---
+
+Hanamori 准备 PATH、INCLUDE、LIB、`CC`、`CXX`、`VCToolsVersion`、`VCToolsInstallDir`、`VCINSTALLDIR`、`VSCMD_ARG_HOST_ARCH`、`VSCMD_ARG_TGT_ARCH`、`DISTUTILS_USE_SDK`，以及安装了 SDK 时所需的 SDK 根目录、bin 和版本变量。
+
+SDK 工具路径为 `Windows Kits/10/bin/<版本>/x64`，激活或 `exec` 后可按名称运行 `rc.exe`、`mt.exe`。`WindowsSdkVerBinPath` 仍指向不含架构的版本目录。安装完整性检查涵盖这两个工具及其随包 DLL；托管安装缺失这些文件时，重新运行对应的 `install` 可修复。
+
+程序不生成 `vcvarsall.bat` 或 `vcvars64.bat`。POSIX Shell 中可执行路径转换为 POSIX 形式，供编译器读取的 INCLUDE/LIB 保持 Windows 形式。
+
+```sh
+hanamori current --json
+hanamori shell activate stable --plain
+```
+
+`current` 反映当前会话保存的目录键、管理器、根目录和组件版本，不根据修改后的项目或别名重新计算。`--plain` 是即将选择的组合所生成的 `KEY=VALUE` 检查输出，不可直接当 Shell 脚本加载。
+
+首次激活保存原环境基线，切换保留这一基线；退出激活恢复原始值而非猜测 PATH 应该是什么。`exec` 使用同一环境准备逻辑，但只作用于子进程。内部 `_HANAMORI_*` 状态供钩子和子进程使用，不是用户配置接口，不应手工构造或编辑。
+
+遇到无效会话状态时，不要继续叠加激活；保留错误信息，使用干净的新终端检查安装和初始化配置。删除启动入口不自动撤销当前环境，卸载前应先退出激活。
+
+更新 Hanamori 后，如果提示会话变量与当前构建不匹配，请从桌面或开始菜单重新打开终端，再执行 `hanamori use`。当前终端中的子 Shell 会继承旧状态，不能用于清除它。这个错误不表示工具链安装损坏，无需重新安装 MSVC、SDK 或 MSBuild；程序不会猜测并补齐旧会话的原始环境。
+
+选择包含 MSBuild 的组合时，还管理 `VSINSTALLDIR`、`VCTargetsPath`、`MSBuildExtensionsPath`、`MSBuildExtensionsPath32`、`ForceImportAfterCppDefaultProps`、`ForceImportAfterCppTargets`、`UseEnv`、`DisableRegistryUse` 和 `PreferredToolArchitecture`，并把私有 `MSBuild/Current/Bin/amd64` 加入 PATH。切换到普通组合会清除这些设置；停用时恢复激活前的值。`list/current --json` 的 `msbuild` 字段记录所选 MSBuild 版本。
+
+同时设置并管理 `MSBUILDDISABLENODEREUSE=1`，让构建节点在结束后退出，避免驻留的 MSBuild 进程继续占用工具链目录、阻止重装。并行构建仍可使用，但连续构建不能复用之前的节点。此设置用于后续启动的构建，不会结束已经驻留的进程。

@@ -1,0 +1,42 @@
+---
+title: "Website maintenance"
+description: "Maintain the home page, downloads, bilingual docs and static deployments."
+icon: Globe
+---
+
+The independent `site/` project adapts RVC Next’s Fumadocs/TanStack Start framework. It uses React, Tailwind, MDX, Bun and Vitest. Provenance and copied-site licensing are in `site/NOTICE` and `site/LICENSE`; the Rust workspace remains separate.
+
+```sh
+cd site
+bun install --frozen-lockfile
+bun run dev
+bun run build
+bun run check
+bun run test
+```
+
+Development runs at `127.0.0.1:3000`; static output is `.output/public`. On a fresh checkout, generate routes by building or starting dev before a type check if needed. Do not edit `src/routeTree.gen.ts` manually or commit caches/build output.
+
+## Content and configuration
+
+- `content/docs/PAGE.mdx` is Chinese and `PAGE.en.mdx` is English, each with title/description frontmatter.
+- `meta.json` and `meta.en.json` use the same slug order. Links use `/docs/PAGE`; language switches in place, without separate language routes.
+- Home copy is in `src/lib/site-copy.ts`; components live under `src/components/`.
+- `src/lib/releases.ts` accepts exact named assets from stable releases, distinguishing query errors from unavailable downloads.
+- Escape literal angle brackets/braces in MDX prose, or put them inside code blocks.
+
+Analytics scripts are absent by default. Comments activate only when both `VITE_GISCUS_REPO_ID` and `VITE_GISCUS_CATEGORY_ID` are supplied for Hanamori’s own Discussions setup, never the source project’s IDs.
+
+## Build and deployment
+
+```sh
+VITE_BASE_PATH=/Hanamori/ bun run build
+```
+
+The pinned static Server Function middleware requests its cache from the root path. A build transform in `vite.config.ts` prefixes client requests with the base path while keeping cache files at the output root. Recheck documentation navigation under a subpath when upgrading this dependency.
+
+Custom-domain/root deployments use the default `/`. Static preparation verifies home, download, docs and search output and creates the 404 fallback. New top-level routes must be added to prerender configuration and output checks.
+
+The site workflow builds and uploads a Pages artifact. Deployment requires Pages configured for GitHub Actions and the repository variable `HANAMORI_PAGES_ENABLED=true`. Without that setup it only builds; it does not change repository visibility or implicitly publish the website. Netlify, Cloudflare Pages and Vercel configuration uses the same `.output/public` output and requires separate platform setup.
+
+Check both `/` and `/Hanamori/`: deep-link refreshes, languages, search navigation, theme, mobile layout, reduced motion, and download states for unavailable releases, network errors and matching assets. A working development server is not evidence of a working static deployment.

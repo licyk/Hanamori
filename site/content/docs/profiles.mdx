@@ -1,0 +1,29 @@
+---
+title: "启动配置"
+description: "在新终端中动态加载 Hanamori 钩子，并撤销配置。"
+icon: FileCog
+---
+
+```sh
+hanamori shell init --shell bash --dry-run
+hanamori shell init --shell bash
+hanamori shell deinit --shell bash
+hanamori shell init --shell zsh
+hanamori shell init --shell powershell --shell-executable pwsh
+hanamori shell init --completions
+hanamori shell init --use-on-cd --completions
+```
+
+`--use-on-cd` 开启启动及目录变化时的项目工具链选择，默认关闭。更新初始化时需保留此参数，否则后续启动恢复为不自动切换。PowerShell 中请将初始化区块放在提示符主题设置之后。行为和 Shell 差异见 [Shell 集成](/docs/shell)。
+
+`--completions` 将补全一并加入动态 loader，每次启动重新生成，默认关闭。再次初始化时保留此参数，否则会恢复为仅加载钩子。Zsh 的受管理区块应位于 `compinit` 或框架的补全初始化之后。`shell deinit` 和自身卸载会按原有归属记录清理整个区块，当前会话的补全需重开终端才移除。详见[终端补全](/docs/completions)。
+
+`--profile PATH` 明确指定文件；`--shell-executable` 选择用于发现启动文件的运行时，二者互斥。自动检测会使用实际发现的 Shell 程序，区分 PowerShell 5.1 与 7。未指定 `--shell` 时，可识别的运行时文件名也能确定类型；重命名的程序应同时指定类型与运行时路径。
+
+写入的是动态调用 `env` 的 loader，不是某一套工具链的固定环境。管理区块以外的字节、编码与换行保留；重复初始化与撤销保持稳定，修改前保留原文件备份。Bash 会维护交互入口及适当的登录桥接；Zsh 尊重 `ZDOTDIR`。显式指定某个 Bash profile 只处理该文件。
+
+初始化记录实际程序、profile 路径及区块内容，供[自身卸载](/docs/self-uninstall)核对归属。记录放在用户数据目录的 `Hanamori/shell/registrations`，独立于选择的管理器；Unix 非 Unicode 路径也可以保存。
+
+撤销只影响后续加载，不会退出当前工具链，也不会立即移除内存中的函数。当前终端先 `hanamori deactivate`，然后重开终端。`--dry-run` 不写 profile、备份、锁、记录或注册表。CMD 使用不同机制，见[CMD 集成](/docs/cmd)。
+
+启动 loader 不保存管理目录；自定义位置通过 profile 中的 `HANAMORI_HOME` 设置。若从生成过 `--binding` 的旧版升级，按所需选项重新运行 `shell init` 并重开终端；手工保存的钩子和补全脚本也需重新生成。

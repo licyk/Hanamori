@@ -1,0 +1,80 @@
+---
+title: "Testing and native acceptance"
+description: "Run local checks and understand the limits of synthetic tests."
+icon: FlaskConical
+---
+
+Run `cargo test --locked -p hanamori --test cli completions::` for completion coverage:
+real Bash candidates, Zsh's Tab completion in a line editor, PowerShell `CompleteInput`,
+standalone scripts, hooks, profiles, repeated loading, hidden commands and `exec --`.
+Windows also runs PowerShell 5.1. Git Bash defaults to `ProgramFiles/Git/bin/bash.exe`;
+override runtimes with `HANAMORI_TEST_BASH` / `HANAMORI_TEST_ZSH`.
+Unavailable Windows Zsh is explicitly skipped unless an override requires it.
+Rerun generation and actual-shell cases when upgrading `clap_complete`.
+
+`cargo test --locked -p hanamori --test cli completions::dynamic::` uses real directories and imported references
+to check selectors, ambiguous versions, manager precedence, direct directory selection,
+isolated broken references and read-only behavior. The shell suite also covers dynamic candidates,
+quoted paths, equals-form options, HOME changes and exit-code preservation in Bash
+Readline, Zsh's line editor and PowerShell.
+
+Dynamic parsing uses a pinned `clap_complete` Rust engine; its `unstable-dynamic` feature
+is not exposed as a public shell protocol. The internal `shell complete` command only
+queries candidates. Shell adapter templates live in `src/commands/completions/`, while
+static command completion still comes from the same Clap tree. Check both template
+adaptation and dynamic parsing when upgrading; do not edit generated scripts manually.
+
+```sh
+cargo fmt --all --check
+cargo xtask check
+HANAMORI_REQUIRE_SHELL_TESTS=1 cargo test --workspace --locked
+```
+
+CI uses the existing Linux and Windows workflow. Tests use real implementation paths,
+local HTTP servers, synthetic archives and real available shells. Required-shell mode
+prevents silently treating missing shells as successful integration coverage.
+
+Run `cargo test --locked -p hanamori --lib --test api` for
+extraction, publication and directory discovery coverage. The CAB regression uses a real MSZIP
+archive and decoder, counting underlying bytes read to catch per-file decompression
+restarts. It also covers multiple folders, skipped ranges, empty files, corrupt checksums
+and missing files. SDK tests check staging location, failure cleanup and actual file
+progress; transaction tests check successful replacement, preservation on failed preparation and restoration after interrupted publication. The install CLI suite also removes complete trees, cl.exe, SDK libraries and Windows Kits before reinstalling, exercises `--reinstall` for other missing files, and verifies explicit external replacement and preservation on failure.
+
+Synthetic archive read counts show repeated work, not native Windows installation timing.
+For real performance measurements, record versions, storage, cache state and separate
+download/extraction durations, then verify that the resulting toolchain works.
+
+For actual compiler acceptance, install or import two real MSVC/SDK combinations on native
+Windows. Both compiler and SDK directory versions must differ. Use managed directory keys from `list` or named references:
+
+```powershell
+$env:HANAMORI_TEST_MANAGER_DIR = 'D:\HanamoriAcceptance'
+$env:HANAMORI_TEST_TOOLCHAIN_A = 'toolchain-a'
+$env:HANAMORI_TEST_TOOLCHAIN_B = 'toolchain-b'
+cargo test --locked -p hanamori --test cli native_toolchain::two_real_toolchains_compile -- --ignored --nocapture
+```
+
+This ignored gate runs in the sequence A → B (inheriting A) → A from an isolated environment.
+It invokes `rc.exe` by name to compile resources, compiles and links C++ using Windows/standard
+headers, the static CRT and SDK libraries, then invokes `mt.exe` by name to embed a manifest.
+The built program checks the resource and embedded manifest contents. The gate also checks
+distinct/stable compiler fingerprints and unchanged reference contents, using paths with spaces and Unicode.
+It downloads or deletes no tools. Missing inputs or a non-Windows host fail explicitly.
+Cross-compilation, Linux synthetic tests and Wine do not establish native acceptance.
+Interactive PowerShell 5.1/7, Git Bash/Zsh, CMD/AutoRun, independent terminals, cross-volume
+operations and preservation when files are occupied must each be verified with their results recorded.
+
+## Native MSBuild acceptance
+
+`cargo test --locked -p hanamori --test cli install::msbuild` covers real extraction paths using synthetic VSIX/MSI/CAB files, private FileTracker placement, independent combinations, project requirements, missing-file repair, rollback and MSBuild → ordinary → MSBuild environment restoration. Those archives contain no executable MSBuild.
+
+On Windows x64 without Visual Studio/Build Tools, install both A/B combinations with the default components (including MSBuild), set the same three environment variables, then run:
+
+```powershell
+cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild -- --ignored --nocapture
+```
+
+The gate builds `.vcxproj` and `.sln` files referencing a static-library project in A → B (inheriting A) → A order. It exercises Debug/Release, resources, manifests, incremental compilation, changed-library relinking, Clean/Rebuild and evaluated compiler/SDK/targets paths inside the selected installation. An explicitly unavailable SDK must fail. Builds disable node reuse; binary logs reside in the temporary build directory.
+
+Repeat on a host with another Visual Studio installation to check independence, and run the installation guide's build commands from PowerShell and Git Bash/MSYS2. MSBuild examples use `-p:` and `-t:`. If MSYS2 rewrites `cl`'s `/link`, use per-command `MSYS2_ARG_CONV_EXCL='*' cl ...`; installing MSBuild does not address argument conversion. These native checks remain pending; current Linux evidence covers download/extraction and automated regressions only.

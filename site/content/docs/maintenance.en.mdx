@@ -1,0 +1,51 @@
+---
+title: "Import, reinstall and remove"
+description: "Manage directory discovery, references and reinstallation."
+icon: Wrench
+---
+
+## Reference external tools
+
+```sh
+hanamori import --dir D:/ExistingTools --toolset 14.44.35207 --sdk 10.0.26100.0 --name imported
+hanamori list --json
+hanamori doctor --json
+```
+
+Import requires `--name`. It checks the selected combination and saves only its path and actual versions under the manager's `references/`. External files are untouched. Importing again updates that name: after moving an external directory, import its new path with the same name. Different combinations may have separate names.
+
+| Command | Behavior |
+| --- | --- |
+| `remove NAME` / `unalias NAME` | Delete one reference; preserve files and other references |
+| `uninstall SELECTOR` | Delete a managed directory and references to it; reject external targets |
+| `cache clean` | Clean complete download cache entries without changing installations |
+| `self uninstall` | Remove the executable and its startup entries, preserving toolchains by default |
+| `self uninstall --purge` | Also clean managed tools, complete cache entries, config and references; preserve external tools |
+
+Uninstall accepts a directory key, reference or unique version prefix. Missing payload files do not prevent removal. If the entire directory is gone, its exact key or dangling managed reference still allows cleanup. Deactivate a toolchain used by the current session first. Other terminals are not tracked; Windows sharing errors are reported directly.
+
+```sh
+hanamori remove imported --dry-run --json
+hanamori uninstall stable --dry-run --json
+hanamori uninstall stable
+```
+
+## Reinstall and interrupted operations
+
+Rerun installation when a managed directory is absent, empty or missing required files. Use `--reinstall` for arbitrary damage beyond the small required-file check. No per-file hash receipts or installation database are needed.
+
+```sh
+hanamori install --toolset-id 14.44.17.14 --sdk-id 26100
+hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
+hanamori doctor --dir D:/ExistingTools --json
+```
+
+Downloads, extraction and required-file checks finish before replacing an old managed tree. The new tree is staged on the destination volume. Publication renames the old tree aside and moves the new one into place, restoring the old tree on failure. The next installation for that target handles interrupted `.stage` / `.old` directories. Doctor reports issues without changing files.
+
+Before replacing a directory on Windows, Hanamori registers the old installation's files with Windows Restart Manager, queries their users, logs process names and PIDs, and requests shutdown. Unresponsive processes are forcibly closed. Selection is scoped to the installation's files, rather than globally terminating processes named `MSBuild.exe`, `mspdbsrv.exe` or `vctip.exe`. The PDB server and telemetry program from the Microsoft packages remain installed.
+
+Shutdown occurs only after the new contents have been extracted and validated. First installs, reuse, `--dry-run` and preparation failures do not close processes. Save work and finish related builds before reinstalling, as processes using the toolchain will be terminated. Processes that cannot be closed, directory handles or permissions can still block replacement; the old installation is preserved so you can resolve the reported issue and retry. Shell deactivation does not stop resident processes.
+
+MSBuild combinations also check the engine, C++ targets, task assemblies, FileTracker and generated configuration. On Windows, doctor probes the engine version to distinguish runtime startup failures from missing files; other platforms only check files. Reinstall the full key from `list` to repair missing required components. Import preserves the MSBuild version of a Hanamori portable installation; it does not convert an arbitrary Visual Studio directory into a supported standalone MSBuild installation.
+
+The `restore`, `relocate` and `recover` commands were removed. Old indexes and receipts are neither read, migrated nor deleted. Reference old toolchains with `import --name NAME --dir PATH`; new installations use deterministic directory keys.

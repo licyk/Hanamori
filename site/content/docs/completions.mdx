@@ -1,0 +1,104 @@
+---
+title: "终端补全"
+description: "为 PowerShell、Bash 和 Zsh 启用命令、选项和路径补全。"
+icon: Keyboard
+---
+
+Hanamori 从当前版本的命令定义生成补全脚本。按 Tab 可以补全公开命令、嵌套子命令和选项；生成脚本无需安装工具链、读取管理器配置或访问网络。按 Tab 查询本地候选时，只读取相关存储路径配置。
+
+## 随 Shell 初始化启用
+
+```sh
+hanamori shell init --completions
+```
+
+省略 `--shell` 时自动检测调用 Shell，也可以明确指定 `powershell`、`bash` 或 `zsh`。与普通初始化一样，可使用 `--profile PATH` 或 `--shell-executable PATH`，并用 `--dry-run` 预览。
+
+重新打开终端或按命令输出的提示加载 profile。启动配置只保存 loader，每次启动从当前程序生成补全，因此升级后新终端会使用新版命令定义。普通 `shell init` 默认不启用补全；再次执行时需保留 `--completions`，否则受管理区块将恢复为只加载钩子。
+
+Zsh 的 Hanamori 启动区块应位于 `compinit`（或已初始化补全的框架）之后。缺少初始化时只提示并跳过补全，工具链钩子仍然可用；程序不会替用户运行 `compinit`。
+
+## 仅在当前终端使用
+
+PowerShell：
+
+```powershell
+hanamori env --completions --shell powershell --output ./hanamori-init.ps1
+if ($LASTEXITCODE -eq 0) { . ./hanamori-init.ps1 }
+```
+
+Bash：
+
+```bash
+hanamori env --completions --shell bash --output ./hanamori-init.sh && . ./hanamori-init.sh
+```
+
+Zsh：
+
+```zsh
+# 若框架已经调用 compinit，不需要重复初始化。
+autoload -Uz compinit
+compinit
+hanamori env --completions --shell zsh --output ./hanamori-init.zsh && . ./hanamori-init.zsh
+```
+
+这些命令同时加载 `use/deactivate` 钩子和补全。只需要补全时，将 `env --completions` 换成 `completions`；它不会加载环境钩子或激活工具链。
+
+## 单独生成脚本
+
+```sh
+hanamori completions
+hanamori completions --shell bash
+hanamori completions --shell zsh --output ./hanamori-completion.zsh
+hanamori completions --shell powershell --output ./hanamori-completion.ps1
+```
+
+`--shell/-s` 省略时自动检测，失败时要求显式指定。没有 `--output/-o` 时 stdout 只包含注册脚本；写入文件后需在相应 Shell 中加载它。生成的 Zsh 文件用于显式 `source`，不需要复制到系统补全目录。手工保存的脚本不会自动更新，升级后应重新生成并重新加载；重开终端可清除旧补全定义。
+
+同时注册 `hanamori` 和 `hanamori.exe`，支持加载钩子后的同名函数。可执行文件不在 PATH 时，仍可通过路径调用它生成脚本；在 Windows Bash/Zsh 中使用该 Shell 能识别的 POSIX 路径。
+
+## 本地动态候选
+
+三种 Shell 都支持以下本地候选；安装、导入或修改别名后，下次按 Tab 即读取新状态，无须重新生成脚本。
+
+| 输入位置 | 候选 |
+| --- | --- |
+| `use`、`default`、`alias` 的第一个位置参数 | 托管目录键、外部引用键、已有别名（包括 default）、无歧义的完整 MSVC 目录版本 |
+| `exec --using`、`shell activate` 的选择器 | 同上 |
+| `remove`、`unalias` | 已有命名引用 |
+| `uninstall` | 仅可用的托管目录键、托管引用及无歧义实际版本 |
+| `--dir PATH --toolset` | 指定目录下的 MSVC 目录版本 |
+| `--dir PATH --sdk` | 指定目录下的 SDK 目录版本；`--no-sdk` 时不提供候选 |
+
+目录版本补全用于 `use`、`exec`、`import`、`env`、`shell activate` 和 `shell init`，也支持尚未登记的目录。它们是实际安装版本，例如 `14.44.35207` 和 `10.0.26100.0`，不是远端下载 ID。`alias` 的第二个参数是待创建的新名称，不补全已有选择器；安装命令和远端查询也不会混入本地版本。
+
+如果多个安装共用一个 MSVC 版本（例如 SDK 不同），该版本不能唯一选择安装，因此只提供精确目录键和引用。激活候选过滤不可用的目录；remove/unalias 仍可提示目标已经失效的引用。补全不修改文件，也不代替执行时检查。
+
+管理器选择统一遵循当前命令已输入的 `--manager-dir` → `HANAMORI_HOME` → 平台默认目录；Windows 默认为 `%LOCALAPPDATA%\Hanamori`。函数、直接执行程序及补全使用同一规则，修改 HOME 后下次补全即生效。生成脚本时的 `--manager-dir` 不会保存为后备管理器。
+
+支持 `--using=前缀`、带引号或转义的路径。补全只解释光标之前的字面参数，不执行其中的变量展开或命令表达式；需要这些表达式时，可先通过 `HANAMORI_HOME` 选择管理器。
+
+候选查询按 CLI、环境变量、配置文件和默认值选择 `toolchains_dir`，不解析无关代理/日志设置或项目文件，不下载清单、不写文件、不取锁。单个引用损坏只跳过该引用；存储不可读时相关本地候选为空，静态命令和选项补全仍可用。手工保存的动态脚本调用生成时的程序路径；移动程序后应重新生成脚本。
+
+## 支持范围
+
+| 内容 | 行为 |
+| --- | --- |
+| 命令与选项 | PowerShell、Bash、Zsh 均支持，包括 `shell init`、`cache clean`、`self uninstall` 等嵌套命令 |
+| 固定参数值 | Bash/Zsh 提供 `--vs-version`、`--channel`、`--shell` 等命令定义中的候选 |
+| 文件和目录 | Bash/Zsh 使用路径提示与 Shell 的文件补全；包含空格的路径由 Shell 处理 |
+| PowerShell | 支持上述本地动态候选；固定枚举值及普通路径仍受静态生成器限制，静态候选的上下文识别也可能受前置全局选项影响 |
+| 目录键、别名、已安装版本 | 按输入位置扫描托管目录、引用或显式目录 |
+| 远端工具集和 SDK ID | 不联网查询，使用 `list-remote` 查看 |
+| `exec --` 后的内容 | 停止提供 Hanamori 参数；不负责外部程序自己的参数补全 |
+| CMD / Fish | 当前不提供；CMD 请求补全会明确报错 |
+
+候选是输入提示，不代替命令的参数校验。内部 `shell dispatch`、`shell cmd-dispatch`、`shell run` 不出现在候选中。
+
+## 撤销与排查
+
+`hanamori shell deinit` 会移除受管理启动区块，`self uninstall` 也复用其归属记录清理。已加载的补全和函数留在当前会话，重开终端后消失。手工生成的补全文件及自行添加的 `source` 行需自行删除。
+
+没有候选时，先确认已加载脚本、Shell 类型匹配，以及当前二进制包含 `completions` 命令。Zsh 出现 `compinit` 提示时，在初始化补全后重新加载脚本。本地候选为空时，核对管理目录并用 `list --json` / `doctor --json` 诊断目录和引用；补全自身不会显示这些诊断错误。升级后候选过时，请重新生成手工脚本或重开使用动态 loader 的终端。
+
+更多说明：[启动配置](/docs/profiles)、[Shell 集成](/docs/shell)、[故障排查](/docs/troubleshooting)。

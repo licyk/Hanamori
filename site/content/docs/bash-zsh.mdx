@@ -1,0 +1,32 @@
+---
+title: "Bash 与 Zsh"
+description: "加载钩子，处理 Windows 原生路径和登录启动文件。"
+icon: SquareChevronRight
+---
+
+```sh
+hanamori env --output hanamori-init.sh && . ./hanamori-init.sh
+hanamori use stable
+hanamori exec --using stable -- cl.exe /?
+hanamori deactivate
+```
+
+不指定 `--shell` 时自动检测当前 Shell。显式脚本输出请使用与加载它的 Shell 一致的 `--shell bash` 或 `--shell zsh`。
+
+## Windows 路径
+
+Windows 原生程序返回的 `D:\Tools\hanamori.exe` 不是 POSIX 命令路径。生成的钩子在当前 MSYS 运行时中调用 `cygpath -u` 后再执行。必须保留可用的 `cygpath` 在 PATH；转换失败即停止，不继续调用错误路径。
+
+更新旧钩子时，直接调用新程序重新执行 `env` 并加载，或者使用 `shell init` 更新持久入口。例如在 Git Bash/Zsh 中调用 `/d/Tools/hanamori.exe`。包含空格的程序路径要加引号。编译器消费的 INCLUDE/LIB 仍是 Windows 格式，不能把全部变量统一改成 POSIX 路径。
+
+## 持久入口
+
+```sh
+hanamori shell init --shell bash --dry-run
+hanamori shell init --shell bash
+hanamori shell init --shell zsh
+```
+
+默认 Bash 配置维护 `.bashrc` 和实际登录入口的桥接，避免登录/非登录终端重复执行用户设置；没有可用登录文件时创建低优先级 `.profile`。撤销可删除由 Hanamori 创建且撤销后为空的登录文件，保留用户添加的内容。Zsh 使用 `ZDOTDIR` 指定的位置；显式 `--profile` 优先。
+
+这些 Shell 的支持不等同于在 Linux/macOS 原生执行 MSVC。当前编译支持范围见[平台说明](/docs/support)。

@@ -1,0 +1,70 @@
+---
+title: "首次编译"
+description: "从安装工具链到编译、运行一个完整 C++ 程序。"
+icon: Rocket
+---
+
+先[获取 Hanamori](/docs/build)，将 `hanamori.exe` 所在目录加入 PATH。在一个可写的项目目录中打开 PowerShell。以下命令使用微软默认的 VS 2022 release 清单；安装需要网络和磁盘空间。
+
+## 1. 安装工具链
+
+```powershell
+hanamori install latest --name stable
+if ($LASTEXITCODE -ne 0) { throw '安装失败，请先处理错误' }
+hanamori list
+hanamori default stable
+```
+
+`stable` 是你创建的本地别名。安装不会自动激活当前终端，`default` 也只是记录默认选择。最新可用版本取决于所选清单。
+
+## 2. 保存源文件
+
+创建 `hello.cpp`：
+
+```cpp
+#include <windows.h>
+#include <iostream>
+
+int main() {
+    std::cout << "Hello from Hanamori!\n";
+    std::cout << "Process: " << GetCurrentProcessId() << '\n';
+    return 0;
+}
+```
+
+这个例子同时使用 C++ 标准库和 Windows SDK，因此不要给安装加 `--no-sdk`。
+
+## 3. 编译并运行
+
+```powershell
+hanamori exec --using stable '--' cl.exe /nologo /EHsc /MT hello.cpp
+if ($LASTEXITCODE -ne 0) { throw '编译失败' }
+.\hello.exe
+if ($LASTEXITCODE -ne 0) { throw '程序返回了错误状态' }
+```
+
+`exec` 不需要 Shell 初始化，编译环境只传递给子进程。PowerShell 中使用 `'--'`，也能兼容已经加载的 Hanamori 包装函数。预期输出包含 `Hello from Hanamori!`，进程 ID 每次可能不同。
+
+## 4. 在当前终端切换
+
+```powershell
+hanamori env --shell powershell --output hanamori-init.ps1
+if ($LASTEXITCODE -ne 0) { throw '初始化脚本生成失败' }
+. ./hanamori-init.ps1
+hanamori use
+hanamori current
+cl.exe /nologo /EHsc /MT hello.cpp
+hanamori deactivate
+```
+
+`use` 按项目文件或默认值选择；若当前目录存在 `hanamori-toolchain.json`，它优先于默认值。明确指定 `hanamori use stable` 可覆盖项目选择。`deactivate` 恢复激活前的环境。希望新终端自动加载钩子，请看[启动配置](/docs/profiles)。
+
+## 5. 清理练习
+
+```powershell
+hanamori uninstall stable --dry-run
+# 确认整套工具链不再需要后，再执行：
+hanamori uninstall stable
+```
+
+这会删除整个托管安装目录及其别名，不会删除当前目录的 `hello.cpp`。不要把个人文件放入工具链目录。仅想删除 stable 名字时，使用 `remove stable`，目录仍会被 list 发现。详见[导入、重装与清理](/docs/maintenance)。

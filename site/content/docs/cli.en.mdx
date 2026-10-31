@@ -1,0 +1,92 @@
+---
+title: "Command reference"
+description: "All public commands, defaults, conflicts and output conventions."
+icon: ListTree
+---
+
+This page follows the current Clap definitions. See individual guides for environment and directory semantics. `hanamori --help` and `hanamori COMMAND --help` describe the installed build. There is no `run` alias.
+
+## Global options
+
+Public commands accept `--manager-dir PATH`, `--toolchains-dir PATH`, `--cache-dir PATH`, `--download-dir PATH`, `--proxy URL`, `--mirror URL`, `--file-workers N`, `--connections N` and `--log FILTER`. Only consumed settings are resolved. See [configuration](/docs/configuration) for defaults, ranges and environment mappings. `-h/--help` prints help; top-level `-V/--version` prints the version.
+
+## Installation and remote catalogs
+
+Installation includes MSVC + Windows SDK + MSBuild by default. Install help groups destination, versions and components, installation behavior, and catalog options.
+
+| Command/option | Meaning |
+| --- | --- |
+| `install [VERSION]` | Managed directory key, actual version/prefix or latest; project constraints apply; otherwise chooses the channel’s latest |
+| `--dir/-d PATH` | Exact final directory instead of independent managed storage |
+| `--name ALIAS` | Fixed alias; does not activate or change default |
+| `--toolset-id ID` | Exact download ID; conflicts with positional VERSION |
+| `--sdk VER` | Actual SDK version; conflicts with sdk-id and no-sdk |
+| `--sdk-id ID` | SDK download ID; conflicts with sdk and no-sdk |
+| `--no-sdk` | Exclude the SDK and, by default, MSBuild; add `--no-msbuild` if the project explicitly requires MSBuild |
+| `--msbuild` | Explicitly enable MSBuild, overriding the project; enabled with the SDK by default, for VS 2022 x64/v143; conflicts with `--no-sdk` and `--no-msbuild` |
+| `--no-msbuild` | Disable MSBuild, overriding the default and the project; keeps the compiler and SDK by default |
+| `--reinstall` | Replace the whole tree; required for a nonempty external directory |
+| `--arch ARCH` | Defaults to and only accepts `x64/x64` |
+| `--dry-run` | May query manifests; no payload download, installation, reference or workspace writes |
+| `list-remote` | Defaults to VS 2022; `--all` queries VS 2022 and 2026; optional `--toolset-id ID` inspects a selected toolset; supports `--json` |
+
+Both commands accept `--vs-version 2022/2026` (aliases 17/18; default 2022), `--channel release/preview` (aliases stable/insiders; default release), `--manifest URL` (conflicts with both) and `--strict-manifest-integrity`. Install has no `--json` option.
+
+`list-remote --all` groups toolsets and SDKs by VS 2022 and VS 2026, and expands the latest toolset’s packages in each group. It queries release channels by default. Add `--channel preview` (or `insiders`) to query both preview channels instead, without mixing release channels into the result. Identical IDs remain in their source groups. `--all` conflicts with `--vs-version`, `--manifest`, and `--toolset-id`. “All” covers versions still offered by the selected channels for the two supported VS generations, not every historical version Microsoft has ever published.
+
+`--all --json` returns `{ "catalogs": [...] }`. Each entry includes `vs_version`, `channel`, `manifest_url`, and the existing single-source fields `toolsets`, `sdks`, `selected_toolset_id`, and `packages`. A failure in either source fails the whole command without printing a partial list. The warning/strict manifest-integrity policy applies to both sources.
+
+## Local directories and selection
+
+| Command | Parameters and result |
+| --- | --- |
+| `list [--json]` | Discovered directories, aliases, actual versions and availability; no network |
+| `current [--json]` | Current fixed session snapshot, without reselecting project/default |
+| `alias [SELECTOR NAME] [--json]` | Both positionals together assign; otherwise lists mappings |
+| `default [SELECTOR] [--json]` | Set or query a fixed default installation |
+| `unalias NAME` | Remove an alias; absent names are harmless |
+| `use [SELECTOR]` | Change this shell through a loaded hook; accepts direct-directory options below |
+| `deactivate` | Restore this shell through the hook |
+| `exec [--using SELECTOR] -- COMMAND [ARGS...]` | Prepare and run a child, preserving its status; accepts directory options |
+
+SELECTOR is a full managed directory key, external reference key (`@NAME`), alias or unique actual-version prefix. Local selection does not accept latest. Without an explicit choice, use the nearest project, then default.
+
+Direct-directory options are `--dir/-d PATH`, `--toolset VER`, `--sdk VER` and `--no-sdk`. The latter three require dir, and sdk conflicts with no-sdk. Explicit SELECTOR or exec’s using conflicts with all directory options. Component selectors use actual directory versions.
+
+## Shell commands
+
+| Command | Options |
+| --- | --- |
+| `completions` | `--shell/-s SHELL`, `--output/-o PATH`; generates completion without loading a toolchain hook |
+| `env` | `--shell/-s SHELL`, `--output/-o PATH`, `--auto-activate`, `--use-on-cd`, `--completions`, hook toolchain directory defaults |
+| `shell init` | `--shell/-s`, `--profile PATH` or `--shell-executable PATH`, `--auto-activate`, `--use-on-cd`, `--completions`, `--dry-run`, hook toolchain directory defaults |
+| `shell deinit` | `--shell/-s`, `--profile` or `--shell-executable`, `--dry-run` |
+| `shell activate [SELECTOR]` | Direct-directory options, `--shell/-s`, `--output/-o` or `--plain` |
+| `shell deactivate` | `--shell/-s`, `--output/-o` |
+
+SHELL is powershell, bash, zsh or cmd; omitted values trigger detection. Plain skips detection and conflicts with shell/output. Profile and shell-executable conflict; CMD accepts neither.
+
+Hook directory defaults use `--dir PATH` (no short `-d` here), `--toolset VER`, `--sdk VER` or `--no-sdk`. Component options require dir; sdk and no-sdk conflict. Each command selects the manager through `--manager-dir`, `HANAMORI_HOME`, then the platform default. Hook, completion and startup generation do not save a manager directory. Output defaults to stdout; when writing CMD output to a file, its path must end in `.cmd/.bat`. Hidden dispatch/run subcommands serve hooks, not the public interface.
+
+`completions`, `env --completions` and `shell init --completions` support PowerShell, Bash and Zsh; CMD returns an explicit error. Completion is opt-in, reads only manager/toolchain storage configuration and does not use the network, and requires `compinit` in Zsh. Local selectors, existing aliases and component versions in an explicit directory are completed dynamically using the current command/environment manager selection. See [terminal completion](/docs/completions) for value/path support and PowerShell limitations.
+
+## Lifecycle and cleanup
+
+| Command | Required parameters and options |
+| --- | --- |
+| `import` | Required `--dir/-d PATH --name NAME`; optional toolset, sdk or no-sdk, and json |
+| `remove NAME` | `--dry-run`, `--json`; delete a named reference and preserve files |
+| `uninstall SELECTOR` | `--dry-run`, `--json`; delete an entire managed directory and its references; external directories are rejected |
+| `doctor` | `--dir PATH`, `--json`; read-only, nonzero when errors exist |
+| `cache clean` | `--dry-run`, `--json`; clean idle complete cache payloads |
+| `config show` | Configuration table by default; `--resolved` includes sources and derived paths; `--json` prints JSON |
+| `upgrade` | Mutually exclusive `--check` or `--force`; Windows x64 MSVC only |
+| `self uninstall` | `--dry-run`, `--purge`; preserves manager data by default; no json |
+
+Import has no dry-run option; importing the same name updates that reference. Catalog queries and installation may access the network; local management does not automatically install. Do not assume every command supports json or dry-run.
+
+## Output conventions
+
+Information commands use aligned tables or labeled fields by default. `list` marks active and default entries, while `alias` and `default` show target status; directory paths appear on their own lines. Use the command's `--json` option for programmatic access. Disabling logging does not hide query results.
+
+Logs use stderr; JSON and generated scripts use stdout. Exec’s child inherits streams. Failures return nonzero; do not source output from failed generation. Doctor still fails when its JSON reports errors. Previews can list blockers; execution requires resolving them. On Windows, scheduling self removal is not proof that the executable has already been deleted: the helper reports its own result.

@@ -1,0 +1,59 @@
+---
+title: "Shell 集成"
+description: "初始化钩子，在当前终端切换并恢复工具链环境。"
+icon: Terminal
+---
+
+安装完成后，每个终端需要单独初始化。默认只加载钩子，不选择安装、不读取项目，也不访问网络；`--auto-activate` 仅在非活动会话加载钩子时尝试一次，失败不妨碍继续使用终端。需要随目录切换工具链时，显式启用 `--use-on-cd`。
+
+```powershell
+hanamori env --output hanamori-init.ps1
+if ($LASTEXITCODE -eq 0) { . ./hanamori-init.ps1 }
+hanamori use stable
+hanamori current
+hanamori deactivate
+```
+
+Bash/Zsh 中使用 `hanamori env --output hanamori-init.sh && . ./hanamori-init.sh`。
+
+加 `--completions` 可同时注册 Tab 补全；普通初始化默认不启用。支持 PowerShell、Bash、Zsh，Zsh 需先初始化 `compinit`。也可以用独立的 `hanamori completions`，详见[终端补全](/docs/completions)。
+
+## 自动检测与目录选择
+
+`env` 和 `shell init/deinit/activate/deactivate` 不指定 `--shell` 时，沿父进程链最多查找 16 层，选择最近的受支持 Shell。支持 Bash、Zsh、PowerShell、CMD，不使用可能已过时的 `$SHELL` 或 `COMSPEC`。显式 `--shell` 优先，无法检测则要求明确指定。
+
+管理目录按每次命令的 `--manager-dir` → `HANAMORI_HOME` → 平台默认目录选择；Windows 默认为 `%LOCALAPPDATA%\Hanamori`。生成钩子或初始化脚本时传入的 `--manager-dir` 不会固定后续命令的管理目录。需要自定义长期使用的目录，在启动配置中设置 `HANAMORI_HOME`。`env --dir PATH` 仍可为未显式指定选择器的调用保存工具链目录默认值，不会注册目录，也不再使用编码的 `--binding` 参数。
+
+## 会话语义
+
+`use`、`exec --using` 与 `shell activate` 共用本地选择。A → B 的切换保留激活 A 之前的环境基线，不积累编译路径；`deactivate` 恢复这一基线。只编译器组合会清除注入的 SDK 值，无关环境变量不变。在 Shell 支持时，空值与未设置仍有区别。
+
+`current` 读取已经激活的快照，不重新解析项目或 default。不同终端可以使用不同组合。`current`、退出激活和恢复操作不依赖有效的全局配置，也能在安装目录已丢失时用于诊断或恢复环境。
+
+## 随项目自动切换
+
+```sh
+hanamori shell init --shell bash --use-on-cd
+hanamori shell init --shell zsh --use-on-cd
+hanamori shell init --shell powershell --use-on-cd
+```
+
+选择对应 Shell 的一条，重新打开终端后生效。临时加载也可以给 `env` 加上 `--use-on-cd`。它包含启动时的首次选择，无需再加 `--auto-activate`，并且不能与固定工具链目录的 `--dir` 同用。
+
+每次目录变化，从当前目录向上寻找最近的 `hanamori-toolchain.json`；嵌套项目覆盖父项目。没有项目配置时使用 `default`，两者都没有时保持当前环境。配置错误、匹配不唯一或工具链缺失会报告错误并保留环境，不自动下载。目标工具链未变时不重复修改环境或打印提示。
+
+Zsh 在目录变化时立即处理；Bash 和 PowerShell 在返回提示符时检测目录，因此 `cd project; build` 同一行中的 `build` 不会等待自动切换。脚本或同一行连续命令请使用 `hanamori exec` / `hanamori run`。PowerShell 仅处理文件系统目录；初始化区块应放在提示符主题设置之后。
+
+手动 `use` 或 `deactivate` 会保留到下一次目录变化。重复加载不会重复注册钩子；重新加载不带 `--use-on-cd` 的钩子可以停止自动切换，保留当前环境。仅修改当前目录的配置文件不会自动刷新，可执行 `hanamori use`。CMD 的支持范围见 [CMD 集成](/docs/cmd)。
+
+## 一次性脚本
+
+```sh
+hanamori shell activate stable --shell bash --output activate.sh
+hanamori shell deactivate --shell bash --output deactivate.sh
+hanamori shell activate stable --plain
+```
+
+脚本需要在调用者 Shell 中加载，子进程无法直接修改父进程环境。`--plain` 输出 `KEY=VALUE` 供检查，跳过 Shell 检测；它不是激活脚本，与 `--shell`、`--output` 互斥。生成失败不覆盖已有输出文件。没有加载钩子就执行 `use` 会提示初始化方式。
+
+继续阅读：[PowerShell](/docs/powershell)、[Bash/Zsh](/docs/bash-zsh)、[CMD](/docs/cmd)、[持久启动配置](/docs/profiles)。

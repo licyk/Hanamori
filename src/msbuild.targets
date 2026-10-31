@@ -1,0 +1,21 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- MSBuild otherwise prefers the shared Program Files FileTracker installation. -->
+  <PropertyGroup>
+    <HanamoriTrackerPath>$(HanamoriRoot)MSBuild\Current\Bin\amd64\</HanamoriTrackerPath>
+    <CLTrackerFrameworkPath>$(HanamoriTrackerPath)</CLTrackerFrameworkPath>
+    <CLTrackerSdkPath>$(HanamoriTrackerPath)</CLTrackerSdkPath>
+    <LinkTrackerFrameworkPath>$(HanamoriTrackerPath)</LinkTrackerFrameworkPath>
+    <LinkTrackerSdkPath>$(HanamoriTrackerPath)</LinkTrackerSdkPath>
+    <LibTrackerFrameworkPath>$(HanamoriTrackerPath)</LibTrackerFrameworkPath>
+    <LibTrackerSdkPath>$(HanamoriTrackerPath)</LibTrackerSdkPath>
+    <RCTrackerFrameworkPath>$(HanamoriTrackerPath)</RCTrackerFrameworkPath>
+    <RCTrackerSdkPath>$(HanamoriTrackerPath)</RCTrackerSdkPath>
+    <ManifestTrackerFrameworkPath>$(HanamoriTrackerPath)</ManifestTrackerFrameworkPath>
+    <ManifestTrackerSdkPath>$(HanamoriTrackerPath)</ManifestTrackerSdkPath>
+  </PropertyGroup>
+  <Target Name="HanamoriValidateToolchain" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(Platform)' != 'x64' or '$(PlatformToolset)' != 'v143'" Text="Hanamori MSBuild supports x64/v143 native C++ projects." />
+    <Error Condition="'$(VCToolsVersion)' != '$(HanamoriToolsetVersion)'" Text="The project requests a different VCToolsVersion from the selected Hanamori toolchain." />
+    <Error Condition="'$(WindowsTargetPlatformVersion)' != '$(HanamoriSdkVersion)'" Text="The project requests a different Windows SDK from the selected Hanamori toolchain." />
+  </Target>
+</Project>

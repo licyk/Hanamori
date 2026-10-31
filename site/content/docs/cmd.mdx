@@ -1,0 +1,33 @@
+---
+title: "CMD 集成"
+description: "实验性的批处理入口、DOSKEY 与当前用户 AutoRun。"
+icon: FileTerminal
+---
+
+CMD 使用批处理和 DOSKEY 宏，不能使用 POSIX 的 eval。先生成并调用入口：
+
+```bat
+hanamori.exe env --shell cmd --output hanamori-entry.cmd
+call hanamori-entry.cmd
+hanamori use stable
+hanamori current
+hanamori deactivate
+```
+
+交互终端中可以使用 `hanamori` 宏；在另一个 `.bat/.cmd` 文件里要通过 `call "%_HANAMORI_CMD_ENTRY%" use stable` 调用，不能依赖交互 DOSKEY 宏。
+
+原生 Windows 上可以管理当前用户的 AutoRun：
+
+```bat
+hanamori.exe shell init --shell cmd --dry-run
+hanamori.exe shell init --shell cmd
+hanamori.exe shell deinit --shell cmd
+```
+
+原有 AutoRun 内容会保留，Hanamori 只修改自己拥有的调用和收据。`cmd /d` 跳过 AutoRun，此时请显式调用生成的入口。`--profile` 和 `--shell-executable` 不能用来选择 CMD 注册表位置。
+
+`hanamori.exe shell init --shell cmd --use-on-cd` 可在启动时选择项目或默认工具链，并安装交互式 `cd` DOSKEY 宏，在目录成功变化后重新选择。它会接管已有的 `cd` 宏；仅覆盖交互式 `cd`，不覆盖 `chdir`、`pushd/popd`、直接切换盘符和批处理里的目录切换。脚本请使用 `hanamori exec` / `hanamori run`。便携的 `env --shell cmd` 不支持此选项，必须使用持久初始化。
+
+撤销会保留辅助脚本供已打开的终端使用，不修改当前宏和已激活环境；先执行 `deactivate` 再关闭终端。自身卸载可以清理有记录且内容未改动的辅助脚本。
+
+CMD 仍为实验性支持。代码页、引号、交互 DOSKEY、批处理和 AutoRun 的 Windows 原生验收与交叉编译是不同事项。

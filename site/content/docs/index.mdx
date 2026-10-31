@@ -1,0 +1,20 @@
+---
+title: "Hanamori 文档"
+description: "独立安装、选择和管理 MSVC 与 Windows SDK。"
+icon: BookOpen
+---
+
+Hanamori 在独立目录中安装 MSVC 与 Windows SDK，不需要安装 Visual Studio。你可以通过别名或项目文件选择工具链，切换当前终端环境，或为一个构建命令临时准备环境。
+
+<Callout type="info" title="开发版本文档">
+本文档对应当前 main 分支。旧版 msvc-installer 发布包没有这里介绍的新命令和状态格式。请先查看[下载页](/download)确认是否已有匹配的新版本；也可以[从源码构建](/docs/build)。
+</Callout>
+
+<Cards>
+<Card title="首次编译" href="/docs/quick-start">从程序安装到编译、运行完整的 C++ 示例。</Card>
+<Card title="工具链安装" href="/docs/installation">区分下载 ID、实际版本和托管目录键。</Card>
+<Card title="Shell 集成" href="/docs/shell">初始化、切换、恢复，以及持久化启动入口。</Card>
+<Card title="命令参考" href="/docs/cli">查看全部公开命令、参数和输出约定。</Card>
+</Cards>
+
+拥有的每套安装使用专属目录，导入的目录只是只读引用。选择工具链不会自动下载；安装工具链也不会自动激活终端。当前原生编译目标是 Windows x64 主机与 x64 目标，其他平台上的测试不代表可以运行 MSVC。详见[支持范围](/docs/support)。

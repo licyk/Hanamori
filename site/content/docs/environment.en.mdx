@@ -1,0 +1,28 @@
+---
+title: "Environment and session reference"
+description: "Understand managed variables, switching and restoration boundaries."
+icon: SlidersHorizontal
+---
+
+Hanamori prepares PATH, INCLUDE, LIB, `CC`, `CXX`, `VCToolsVersion`, `VCToolsInstallDir`, `VCINSTALLDIR`, `VSCMD_ARG_HOST_ARCH`, `VSCMD_ARG_TGT_ARCH`, `DISTUTILS_USE_SDK`, and SDK root/bin/version variables when an SDK is selected.
+
+The SDK tool path is `Windows Kits/10/bin/<version>/x64`, so activation and `exec` make `rc.exe` and `mt.exe` available by name. `WindowsSdkVerBinPath` still points to the version directory without the architecture. Installation checks include both tools and their bundled DLLs; rerun the corresponding `install` command to repair missing files in a managed installation.
+
+It does not generate `vcvarsall.bat` or `vcvars64.bat`. POSIX shells receive POSIX executable paths, while INCLUDE/LIB consumed by the compiler retain Windows paths.
+
+```sh
+hanamori current --json
+hanamori shell activate stable --plain
+```
+
+`current` reports the directory key, manager, root and component versions saved by this session. It does not re-resolve changed project files or aliases. `--plain` emits `KEY=VALUE` inspection output for a selected combination; it is not a shell script to source.
+
+Initial activation saves the environment baseline. Switching preserves that baseline, and deactivation restores original values rather than guessing PATH. `exec` uses the same preparation logic but applies it only to the child. Internal `_HANAMORI_*` state is for hooks and child processes, not user configuration; do not construct or edit it manually.
+
+If session state is invalid, avoid stacking activations. Retain the error and inspect installation/startup settings from a clean terminal. Removing startup entries does not restore the current environment, so deactivate before uninstalling.
+
+After updating Hanamori, a session-variable mismatch requires opening a fresh terminal from the desktop or Start menu and running `hanamori use` again. A child shell launched from the current terminal inherits the old state. This error does not indicate damaged toolchains: MSVC, SDK and MSBuild do not need reinstalling. Hanamori does not guess missing original environment values from older sessions.
+
+An MSBuild-enabled selection additionally manages `VSINSTALLDIR`, `VCTargetsPath`, `MSBuildExtensionsPath`, `MSBuildExtensionsPath32`, `ForceImportAfterCppDefaultProps`, `ForceImportAfterCppTargets`, `UseEnv`, `DisableRegistryUse` and `PreferredToolArchitecture`, and adds its private `MSBuild/Current/Bin/amd64` to PATH. Switching to an ordinary combination clears these settings; deactivation restores their original values. The `msbuild` field in `list/current --json` records the selected version.
+
+It also sets and manages `MSBUILDDISABLENODEREUSE=1` so build nodes exit after a build instead of keeping the toolchain locked and preventing reinstallation. Parallel builds remain available, but subsequent builds cannot reuse earlier nodes. This applies to newly started builds and does not stop existing resident processes.

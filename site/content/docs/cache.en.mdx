@@ -1,0 +1,22 @@
+---
+title: "Downloads, cache and proxy"
+description: "Separate complete payload caching from resumable download workspaces."
+icon: Database
+---
+
+Complete payloads are stored by SHA-256 content identity after verification. Corrupt entries are fetched again. Independent installations can reuse these files without sharing installed SDK directories.
+
+`--download-dir` selects a separate persistent workspace for unfinished, resumable downloads. It is not the complete cache. The default workspace is temporary; selecting `--cache-dir` does not preserve incomplete fragments automatically.
+
+```sh
+hanamori --cache-dir D:/Caches/Hanamori --download-dir D:/Downloads/Hanamori install latest
+hanamori --proxy http://127.0.0.1:7890 install latest
+hanamori cache clean --dry-run --json
+hanamori cache clean --json
+```
+
+`--file-workers` controls concurrent payloads; `--connections` controls connections per payload. Defaults are 4 and 8. `--mirror` changes the payload host/base path with fallback to the original URL. See [configuration](/docs/configuration) for fields and precedence.
+
+Cleanup recognizes complete files only in the fixed SHA-256 namespace. It preserves unknown files, partial downloads, directories and locks. Busy entries are skipped; incomplete cleanup returns a nonzero status and reports completed removals. Resolve contention and retry. It does not modify toolchains or references or persistent workspaces. Previews take no locks and write no files.
+
+Self-update uses GitHub API and Release assets with the same proxy configuration, but does not use the toolchain mirror, cache or download directory.

@@ -1,0 +1,21 @@
+---
+title: "自我更新"
+description: "从 GitHub Release 验证并替换当前 Windows x64 MSVC 程序。"
+icon: CircleArrowUp
+---
+
+```powershell
+hanamori upgrade --check
+hanamori upgrade
+hanamori upgrade --force
+```
+
+仅 Windows x64 MSVC 构建支持。`--check` 查询版本和程序路径，不下载 EXE、不写文件；`--force` 允许重装相同版本，不能与 `--check` 合用。任何模式都不降级较新构建、不选择 prerelease、不跳过验证。
+
+更新器精确下载最新稳定 Release 的 `hanamori-x86_64-pc-windows-msvc.exe`。资产必须有 SHA-256 digest，哈希与大小必须匹配，候选程序必须在十秒内通过 `hanamori --version` 报告预期版本。缺少新版资产或验证失败时不替换旧程序。旧 msvc-installer 资产不能充当新资产。
+
+代理采用 `--proxy`、`HANAMORI_PROXY` 或配置文件的 proxy。可选 `GITHUB_TOKEN` 仅用于 API 查询，不发送给资产下载请求；它不意味着私有资产下载必然可用。工具链 mirror、cache、download-dir 和项目文件不控制更新。
+
+更新需要程序目录写权限。同目录创建暂存与 `<executable>.update.lock`，旧程序重命名为 `<executable>.outdated`，在下一次实际更新时尝试删除。锁文件可能留下，不要删除它来绕过正在进行的操作；备份被占用时先关闭使用它的进程。
+
+两次 rename 不是原子事务。替换失败尝试恢复原程序；若进程被终止在两次重命名之间，且原程序名已不存在，将 `.outdated` 改回原名再重试。回滚失败会显示具体路径。更新不修改工具链、引用或 Shell 配置；已有旧钩子需要时按[Shell 文档](/docs/bash-zsh)重新生成。

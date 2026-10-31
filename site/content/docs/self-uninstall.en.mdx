@@ -1,0 +1,46 @@
+---
+title: "Uninstall Hanamori"
+description: "Remove this executable, or purge the selected manager’s owned data."
+icon: PackageMinus
+---
+
+To uninstall Hanamori itself:
+
+```sh
+hanamori self uninstall --dry-run
+hanamori self uninstall
+# Also delete the selected manager's owned toolchains and managed data:
+hanamori --manager-dir D:/Tools/Hanamori self uninstall --purge --dry-run
+hanamori --manager-dir D:/Tools/Hanamori self uninstall --purge
+```
+
+The default removes the running executable, its `.outdated` upgrade backup, and recorded
+startup entries belonging to that executable. MSVC, SDKs, configuration and named references
+remain available for a later installation of Hanamori. The executable's parent directory
+is never recursively deleted: a portable copy in Downloads does not give Hanamori ownership
+of Downloads.
+
+`--purge` removes discovered managed toolchain directories under the configured `toolchains_dir`, including incomplete trees. It cleans complete payloads from the configured cache and deletes named references and `config.json`. External imports and directories created by `install --dir` lose their references but keep their files. Managers configured to share the same toolchain storage also share these physical directories, so removal affects them all. A managed directory is removed in full; keep unrelated files elsewhere. Move the executable or manager outside a managed toolchain before purging it. Unknown files, partial download workspaces, profile backups and lock files
+(including `.update.lock`) are retained; remaining directories are not recursively erased.
+A shared cache may lose complete payloads, as with `cache clean`.
+
+Deactivate the current session first and close other terminals using Hanamori. Toolchain
+or cache cleanup failures stop before deleting the program and remaining manager metadata.
+Earlier completed removals are not rolled back. Close programs holding files and resolve the reported error before retrying. Incomplete managed directories can still be uninstalled. A dry run performs no writes, registry edits, lock acquisition or helper launch.
+
+New `shell init` calls record the executable, selected runtime when available, actual profile
+locations and owned content in the user data directory's `Hanamori/shell/registrations`
+directory (`LOCALAPPDATA` on Windows; `XDG_DATA_HOME` or `~/.local/share` on Unix). Bash login
+bridges and CMD helper bundles are included. Self uninstall checks the recorded profile block
+or CMD loader ownership before removal and preserves modified entries with a notice. Entries
+created by older versions or entered manually must be removed manually, or registered by
+rerunning `shell init` with the same profile/runtime options first. Manually configured PATH
+entries and Windows uninstall registry entries are not modified. Restart the shell afterward
+to discard its already loaded hook.
+
+On Windows, a temporary PowerShell script waits for the parent process to exit, then deletes
+the exact executable and backup paths. The CLI reports **scheduled**, not completed, removal;
+the helper reports its result separately. It never kills other processes. If deletion fails,
+it retains `failure.txt`, `files.json` and `uninstall.ps1` in the displayed temporary directory.
+Close processes holding the files and rerun `uninstall.ps1` without arguments. Successful
+cleanup deletes the helper's own files and empty temporary directory.

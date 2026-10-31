@@ -1,0 +1,34 @@
+---
+title: "Release process"
+description: "Build the tagged Windows binary and verify published assets."
+icon: Upload
+---
+
+Publishing remains a separate, explicitly requested step. Use the existing
+[release workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) and
+[release script](https://github.com/licyk/Hanamori/blob/main/.github/scripts/release.ps1): build the actual new `v*` tag with locked
+dependencies and the Windows MSVC target, check that the tag, Cargo version and executable
+version agree, and verify source identity, executable/ZIP names and matching hashes.
+After publishing, the workflow checks that GitHub reports the packaged executable's
+SHA-256 digest. Independently verify downloadable assets as well. A passing CI run or an
+older release asset is not evidence of a publication of this revision.
+
+## crates.io
+
+[.github/workflows/publish.yml](https://github.com/licyk/Hanamori/blob/main/.github/workflows/publish.yml)
+publishes the `hanamori` crate independently, on `v*` tag pushes or manual dispatch with an
+existing tag. It reuses tag/Cargo version verification, runs tests on the Windows MSVC
+target, then packages, verifies the packaged build and uploads with `cargo publish --locked`.
+It does not publish `hanamori-test-support` or `xtask`.
+
+After migrating the repository, configure `CARGO_REGISTRY_TOKEN` in the destination GitHub
+repository's Actions Secrets with a crates.io API token authorized to publish `hanamori`.
+Never put the token in source files or workflow text. The first publication requires
+permission to create the crate; subsequent publications require permission to publish
+that crate. The two publishing workflows run independently: a successful GitHub Release
+does not prove publication on crates.io. Retry the unpublished channel manually with the
+same tag if needed.
+
+Before publishing, run `cargo publish --locked --registry crates-io -p hanamori --dry-run`
+locally to compile the packaged source without uploading. A version already published on
+crates.io cannot be overwritten; do not republish it after confirming it exists.

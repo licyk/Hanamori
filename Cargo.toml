@@ -1,0 +1,88 @@
+[workspace]
+members = [".", "test-support", "xtask"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/licyk/Hanamori"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "string"] }
+clap_complete = { version = "=4.6.11", features = ["unstable-dynamic"] }
+shlex = "2"
+futures-util = "0.3"
+indicatif = "0.17"
+console = "0.15"
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "stream",
+    "gzip",
+] }
+serde_json = "1"
+url = "2"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "process", "time"] }
+cab = { package = "cab-superewald", version = "=0.6.1" }
+msi = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tempfile = "3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "ansi"] }
+dirs = "7"
+serde = { version = "1", features = ["derive"] }
+semver = "1"
+uuid = { version = "1", features = ["v4"] }
+shell-quote = { version = "0.8", default-features = false, features = ["bash"] }
+base64 = "0.23"
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+winreg = { version = "0.56", default-features = false, features = ["transactions"] }
+hanamori-test-support = { path = "test-support" }
+
+[package]
+name = "hanamori"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+description = "Hanamori standalone MSVC toolchain installer and version manager"
+include = ["/src", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+cab.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+dirs.workspace = true
+futures-util.workspace = true
+indicatif.workspace = true
+console.workspace = true
+msi.workspace = true
+reqwest.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+shell-quote.workspace = true
+shlex.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+zip.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_System_RestartManager"] }
+winreg.workspace = true
+
+[dev-dependencies]
+hanamori-test-support.workspace = true
+uuid.workspace = true
+
+[profile.release]
+lto = "thin"
+strip = true

@@ -1,0 +1,22 @@
+---
+title: "下载、缓存与代理"
+description: "区分完整 payload 缓存和可续传下载工作区。"
+icon: Database
+---
+
+完整负载按 SHA-256 内容寻址保存，只有通过验证的下载才能进入缓存；损坏条目重新获取。不同独立安装可复用完整负载，但不会共享已安装 SDK 目录。
+
+`--download-dir` 指定的是独立的持久下载工作区，用于未完成、可续传的下载。它不是完整缓存。默认工作区是临时的，设置 `--cache-dir` 不会自动保留未完成片段。
+
+```sh
+hanamori --cache-dir D:/Caches/Hanamori --download-dir D:/Downloads/Hanamori install latest
+hanamori --proxy http://127.0.0.1:7890 install latest
+hanamori cache clean --dry-run --json
+hanamori cache clean --json
+```
+
+`--file-workers` 限制并行 payload 数，`--connections` 限制每个 payload 的连接数。默认分别为 4 和 8。`--mirror` 替换负载主机/基础路径，失败时回退到原始 URL。具体字段及来源优先级见[配置](/docs/configuration)。
+
+清理只处理固定 SHA-256 命名空间中可识别的完整文件；保留未知文件、部分下载、目录和锁。忙碌文件跳过，部分失败返回非零状态并报告已处理项，可解决占用后重试。不改变工具链或引用或持久下载工作区。预览不取锁、不写文件。
+
+自我更新使用 GitHub API 与 Release 资产，使用同一 proxy 配置，但不使用工具链 mirror、cache 或 download-dir。

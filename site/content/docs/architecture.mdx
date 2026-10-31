@@ -1,0 +1,48 @@
+---
+title: "架构与状态模型"
+description: "Rust 工作区职责、目录发现、引用和调用方向。"
+icon: Network
+---
+
+`src/main.rs` 负责解析和退出，`src/cli/` 定义命令树和各命令参数，`src/commands/` 执行命令并输出结果，`src/config.rs` 将配置解析成显式类型并保存来源诊断。库的安装选项是显式输入，不自行读取用户全局配置。
+
+全部代码位于同一个 `hanamori` crate，顶层模块按层组织，只能依赖下层：
+
+| 层 | 模块 | 职责 | 可依赖 |
+| --- | --- | --- | --- |
+| foundation | `env`、`msbuild`、`fs`、`identity`、`locking`、`serde_helpers`、`version` | 路径、锁、布局、版本与产品身份 | — |
+| archive | `archive` | VSIX、MSI、CAB 解包 | — |
+| catalog | `catalog` | 清单解析和安装包选择 | foundation |
+| download | `download` | 网络、完整性、分段与缓存 | foundation |
+| state | `state` | 目录发现、命名引用、项目请求和本地选择 | foundation |
+| shell | `shell` | 会话、脚本、启动配置与归属记录 | foundation、state |
+| engine | `engine` | 暂存安装、发布、导入、诊断和卸载 | foundation、archive、catalog、download、state |
+| application | `cli`、`commands`、`config`、`logging`、`runtime`、`self_uninstall`、`upgrade` | 命令行、配置、自我更新与自身卸载 | 所有层 |
+
+未发布的 `test-support` crate 提供合成负载、HTTP fixture 与 Shell 测试支持。`cargo xtask check` 在 CI 中检查结构：
+
+- 任意层级的同级模块之间不得循环依赖，其他平台的代码同样检查，仅测试代码除外；
+- 顶层模块遵守上表的依赖方向；
+- 父模块（`lib.rs` 和任何带子模块的文件）只包含 `mod` 声明和重新导出，实现位于叶子模块。
+
+`upgrade` 与 `self_uninstall` 模块提供 GitHub 自我更新与自身卸载编排。网站是独立 `site/` Bun 项目，不加入 Rust 程序运行依赖。
+
+<Mermaid chart={'flowchart TD\n  CLI[CLI and config] --> Engine[Install and lifecycle]\n  CLI --> Shell[Shell and sessions]\n  Engine --> State[Directories and references]\n  Engine --> Catalog[Catalog]\n  Engine --> Download[Downloads and cache]\n  Engine --> Archive[Extraction]\n  Shell --> State'} />
+
+每套托管组合独占 `<toolchains-dir>/<来源>/msvc-<下载 ID>_sdk-<下载 ID 或 none>_x64`。本地命令扫描目录并检查少量必要文件；目录名保存下载 ID，实际 MSVC/SDK 版本从解包结构读取。自定义来源以清单 URL 的稳定 SHA-256 区分，不因清单内容更新改变目录。
+
+MSBuild 组合在 `_x64` 前加入 `_msbuild-<版本>`。`catalog/msbuild` 维护 VS 2022 C++ 所需的明确包集合；不递归安装任意 VS 依赖。负载带 toolset/SDK/MSBuild 角色，FileTracker MSI 独立解包并整理到私有引擎目录。`msbuild` 模块从源模板生成安装内的 props/targets，保存引擎包版本并定义关键文件检查；不修改上游 targets，不写注册表，不运行系统安装器。
+
+`references/<name>.json` 只保存名字指向的托管目录键，或外部路径与固定版本组合。引用不证明安装存在；损坏的单个引用不会遮蔽其他安装。安装数据库、文件收据与 JSON 恢复日志已移除。配置/项目声明仍为 schema 1，Shell 启动入口的归属记录继续保留。验收方法见[测试与原生验收](/docs/testing)。
+
+## 解包与发布
+
+VSIX 打开时统一识别编译器目录版本、规范化输出路径并统计文件，解包复用这些元数据，直接流式写入安装事务的私有暂存树。MSI 的文件、目录、组件和介质映射也在准备阶段解析一次，供计数和解包共用；下载 CAB 前仍需先读取 MSI 的介质表。
+
+CAB 按压缩文件夹中的偏移顺序连续读取，多个文件复用同一解压器，避免每提取一个文件都从头解压。后端固定为提供文件夹读取接口的 `cab-superewald 0.6.1`，保留原有 Stored、MSZIP 和 LZX 解码支持。每次只打开一个 CAB，文件内容不再整体缓存在内存中。
+
+SDK 中间目录位于安装事务内，整理 `Windows Kits` 时在同一卷移动，避免下载临时目录和安装目录跨盘时复制整个 SDK。解包失败由事务丢弃暂存树，不为每个文件创建临时文件或处理已运行编译器的文件占用。
+
+下载负载校验、归档自带校验和输出路径检查保留。发布前检查实际版本与必要编译器、头文件和库，不生成全文件清单或遍历计算安装文件哈希。
+
+安装持有目标目录锁，在同卷 `.<目录名>.stage` 中准备新树，成功后将旧树改名为 `.old`，再发布新树并清理旧树。准备失败保留旧目录；下次安装清理中断残留，必要时先把 `.old` 还原。普通复用也经过此清理流程。托管目录缺失或必要文件不全时重新安装；任意其他损坏用 `--reinstall` 整体替换。

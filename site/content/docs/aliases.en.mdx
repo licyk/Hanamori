@@ -1,0 +1,21 @@
+---
+title: "Aliases and defaults"
+description: "Name fixed installations rather than chaining mutable aliases."
+icon: Tags
+---
+
+```sh
+hanamori alias 14.44 stable
+hanamori default stable
+hanamori alias --json
+hanamori default --json
+hanamori unalias stable
+```
+
+References are separate JSON files under `<manager>/references/`. Managed references contain a directory key; external references contain a path and selected actual versions. They never claim files are installed.
+
+`alias SELECTOR NAME` accepts a managed key, reference, external `@name` key or unique actual-version prefix. It creates or updates a name. `default stable` copies stable's target: redirecting stable later does not change default or an active session.
+
+Names contain 1–64 letters, digits, hyphens or underscores, excluding command names. `default` is allowed. Removing a nonexistent name succeeds. `remove NAME` and `unalias NAME` remove only that reference. Uninstalling a managed directory removes its managed references.
+
+Deleting a directory leaves references dangling without blocking reinstallation. Reinstalling the same key restores them. One malformed reference does not hide other installations; doctor reports it.

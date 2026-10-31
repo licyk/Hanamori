@@ -1,0 +1,41 @@
+---
+title: "Persistent startup profiles"
+description: "Install and remove dynamic startup loaders."
+icon: FileCog
+---
+
+```sh
+hanamori shell init --shell bash --dry-run
+hanamori shell init --shell bash
+hanamori shell deinit --shell bash
+hanamori shell init --shell zsh
+hanamori shell init --shell powershell --shell-executable pwsh
+hanamori shell init --completions
+hanamori shell init --use-on-cd --completions
+```
+
+`--use-on-cd` opts into project toolchain selection at startup and on directory changes.
+Keep this flag when updating initialization; omitting it disables tracking on subsequent
+loads. In PowerShell, place initialization after prompt theme setup. See
+[Shell integration](/docs/shell) for behavior and shell differences.
+
+`--completions` opts into generating fresh completion with the hook on every startup.
+Keep it when updating initialization; omitting it restores hook-only loading. In Zsh,
+place the managed block after `compinit` or your framework's completion setup.
+Deinit and self uninstall clean the whole block using existing ownership records;
+restart the shell to remove completion already loaded in memory.
+See [terminal completion](/docs/completions).
+
+`--profile PATH` selects a specific startup file; `--shell-executable` selects the
+runtime used for profile discovery. With automatic detection, discovery uses the detected
+executable, so PowerShell 7 selects its own profile rather than Windows PowerShell 5.1's.
+If `--shell` is omitted, a recognizable `--shell-executable` name also selects the shell
+type; explicit `--shell` takes precedence. An explicit `--profile` overrides profile
+discovery. For renamed runtimes, specify `--shell` and `--shell-executable` together.
+Initialization stores a loader that calls
+`env`, not a fixed toolchain snapshot. Managed blocks preserve surrounding bytes, encoding
+and newline style. Repeated init/deinit is stable. Bash setup maintains the interactive
+entry and an appropriate login-profile bridge; Zsh respects `ZDOTDIR`. Deinit affects
+future sessions and does not deactivate an open terminal.
+
+Startup loaders do not store a manager directory. Set `HANAMORI_HOME` in your profile to persist a custom location. After upgrading from a version that generated `--binding`, rerun `shell init` with your desired options and reopen the terminal; regenerate manually saved hook and completion scripts too.

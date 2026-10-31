@@ -1,0 +1,92 @@
+---
+title: "命令参考"
+description: "全部公开命令的参数、默认值、冲突和输出约定。"
+icon: ListTree
+---
+
+本页对应当前源码的 Clap 定义。命令之间的环境与目录管理语义见各功能页。`hanamori --help`、`hanamori COMMAND --help` 是已安装版本的实际接口；程序不提供 `run` 别名。
+
+## 全局选项
+
+所有公开命令可接收 `--manager-dir PATH`、`--toolchains-dir PATH`、`--cache-dir PATH`、`--download-dir PATH`、`--proxy URL`、`--mirror URL`、`--file-workers N`、`--connections N`、`--log FILTER`。只解析命令实际消费的配置。默认值、范围和环境映射详见[配置表](/docs/configuration)。`-h/--help` 打印帮助，顶层 `-V/--version` 打印程序版本。
+
+## 安装和远端查询
+
+默认安装 MSVC + Windows SDK + MSBuild。安装帮助按目标目录、版本与组件、安装行为、清单来源分组。
+
+| 命令 | 参数与行为 |
+| --- | --- |
+| `install [VERSION]` | VERSION 为托管目录键、实际版本/前缀或 latest；无显式约束时选择渠道最新，项目可提供约束 |
+| `--dir/-d PATH` | 指定精确最终目录，替代默认独立管理目录 |
+| `--name ALIAS` | 为安装创建固定别名，不激活，不改变 default |
+| `--toolset-id ID` | 精确下载 ID，与位置 VERSION 互斥 |
+| `--sdk VER` | 实际 SDK 版本，与 `--sdk-id`、`--no-sdk` 互斥 |
+| `--sdk-id ID` | SDK 下载 ID，与 `--sdk`、`--no-sdk` 互斥 |
+| `--no-sdk` | 不安装 SDK，默认也不安装 MSBuild；项目明确要求 MSBuild 时须同时加 `--no-msbuild` |
+| `--msbuild` | 显式启用 MSBuild，覆盖项目设置；默认随 SDK 安装，支持 VS 2022 x64/v143；与 `--no-sdk`、`--no-msbuild` 互斥 |
+| `--no-msbuild` | 禁用默认启用的 MSBuild，也覆盖项目要求；默认保留编译器与 SDK |
+| `--reinstall` | 整体重新安装；外部非空目录必须显式指定 |
+| `--arch ARCH` | 默认且目前只接受 `x64/x64` |
+| `--dry-run` | 可以查询清单，不下载负载，不写安装/引用/工作区 |
+| `list-remote` | 默认查询 VS 2022；`--all` 同时查询 VS 2022/2026；可加 `--toolset-id ID` 查看指定工具集的包；支持 `--json` |
+
+这两个命令共用 `--vs-version 2022/2026`（别名 17/18，默认 2022）、`--channel release/preview`（别名 stable/insiders，默认 release）、`--manifest URL`（与前两者互斥）和 `--strict-manifest-integrity`。install 不支持 `--json`。
+
+`list-remote --all` 按 VS 2022、VS 2026 分组列出所选渠道中的工具集和 SDK，并分别展开各组最新工具集的包。默认查询正式渠道；加 `--channel preview`（或 `insiders`）查询两者的预览渠道，不同时混入正式渠道。同名 ID 保留在各自来源组中。它与 `--vs-version`、`--manifest`、`--toolset-id` 互斥。这里的“全部”指当前支持的两代 VS 所选渠道中仍提供的版本，不保证覆盖微软历史上所有已撤下的版本。
+
+`--all --json` 输出 `{ "catalogs": [...] }`；每组包含 `vs_version`、`channel`、`manifest_url`，以及单源查询已有的 `toolsets`、`sdks`、`selected_toolset_id` 和 `packages`。任意来源查询失败会使整个命令失败，不输出部分列表；默认警告/严格清单校验策略对两个来源均生效。
+
+## 本地目录和选择
+
+| 命令 | 参数与结果 |
+| --- | --- |
+| `list [--json]` | 目录扫描结果、别名、实际版本和可用性，不联网 |
+| `current [--json]` | 当前会话固定快照，不重选 default/项目 |
+| `alias [SELECTOR NAME] [--json]` | 两个位置参数一同提供时赋值；否则列出映射 |
+| `default [SELECTOR] [--json]` | 设置或查询固定默认安装 |
+| `unalias NAME` | 删除名字；不存在时无副作用 |
+| `use [SELECTOR]` | 通过已加载钩子修改当前 Shell；支持下面的直接目录选项 |
+| `deactivate` | 通过钩子恢复当前 Shell |
+| `exec [--using SELECTOR] -- COMMAND [ARGS...]` | 准备并执行子进程；支持直接目录选项；保留退出状态 |
+
+SELECTOR 是完整托管目录键、外部引用键（`@NAME`）、别名或唯一实际版本前缀。本地选择不接受 latest。无显式选择时使用最近项目，再使用 default。
+
+直接目录选项为 `--dir/-d PATH`、`--toolset VER`、`--sdk VER`、`--no-sdk`。后三者要求 `--dir`，SDK 版本与 no-sdk 互斥；显式 SELECTOR 或 `exec --using` 与全部目录选项互斥。多个组件必须明确选择，版本为实际目录版本。
+
+## Shell 命令
+
+| 命令 | 选项 |
+| --- | --- |
+| `completions` | `--shell/-s SHELL`、`--output/-o PATH`；生成补全，不加载工具链钩子 |
+| `env` | `--shell/-s SHELL`、`--output/-o PATH`、`--auto-activate`、`--use-on-cd`、`--completions`，以及钩子工具链目录默认值 |
+| `shell init` | `--shell/-s`、`--profile PATH` 或 `--shell-executable PATH`、`--auto-activate`、`--use-on-cd`、`--completions`、`--dry-run`、钩子工具链目录默认值 |
+| `shell deinit` | `--shell/-s`、`--profile` 或 `--shell-executable`、`--dry-run` |
+| `shell activate [SELECTOR]` | 直接目录选项、`--shell/-s`、`--output/-o` 或 `--plain` |
+| `shell deactivate` | `--shell/-s`、`--output/-o` |
+
+SHELL 为 `powershell`、`bash`、`zsh`、`cmd`；省略时检测调用 Shell。`--plain` 不检测，且与 shell/output 互斥。profile 与 shell-executable 互斥，CMD 均不接受它们。
+
+钩子工具链目录默认值使用 `--dir PATH`（此处没有 `-d`）、`--toolset VER`、`--sdk VER` 或 `--no-sdk`；后三者要求 dir，sdk/no-sdk 互斥。管理目录统一按每次命令的 `--manager-dir` → `HANAMORI_HOME` → 平台默认目录选择，生成钩子、补全或初始化脚本时不会保存管理目录。输出默认 stdout；CMD 如写入文件，路径必须以 `.cmd/.bat` 结尾。内部 dispatch/run 子命令供钩子使用，不作为用户接口。
+
+`completions`、`env --completions` 和 `shell init --completions` 仅支持 PowerShell、Bash、Zsh；CMD 明确报错。补全默认关闭，只读取管理器及工具链存储路径相关配置、不联网；Zsh 必须先加载 `compinit`。本地选择器、已有别名及指定目录下的组件版本会动态补全，遵循当前命令和环境的管理目录选择。固定取值、路径和 PowerShell 的能力差异见[终端补全](/docs/completions)。
+
+## 生命周期与清理
+
+| 命令 | 必要参数与可选项 |
+| --- | --- |
+| `import` | 必须 `--dir/-d PATH --name NAME`；可选 `--toolset`、`--sdk` 或 `--no-sdk`、`--json` |
+| `remove NAME` | `--dry-run`、`--json`；删除命名引用，保留目录 |
+| `uninstall SELECTOR` | `--dry-run`、`--json`；删除整个托管目录及指向它的引用；不接受外部目录 |
+| `doctor` | `--dir PATH`、`--json`；只诊断，有错误时非零退出 |
+| `cache clean` | `--dry-run`、`--json`；清理闲置完整缓存负载 |
+| `config show` | 默认显示配置表格；`--resolved` 展示来源和派生关系；`--json` 输出 JSON |
+| `upgrade` | `--check` 或 `--force`，互斥；仅 Windows x64 MSVC |
+| `self uninstall` | `--dry-run`、`--purge`；默认保留管理器数据，无 json 选项 |
+
+`import` 不支持 dry-run；同名导入更新引用。版本查询和安装可能联网；本地管理不自动联网安装。不要假设每个命令都支持 `--json` 或 `--dry-run`。
+
+## 输出约定
+
+信息查询默认使用对齐表格或字段列表。`list` 标记当前激活项和默认项，`alias` 与 `default` 展示引用目标的状态，目录路径单独成行。需要程序解析时使用命令提供的 `--json`；关闭日志不会隐藏查询结果。
+
+普通日志在 stderr，JSON 与生成脚本在 stdout。`exec` 子进程直接继承标准流。失败返回非零，不应加载失败生成的脚本。doctor 即使输出 JSON，发现问题仍失败；预览可以列出阻止项，实际执行才要求全部解决。Windows self uninstall 成功安排辅助脚本不等于程序已经删除，实际结果由脚本报告。

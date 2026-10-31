@@ -1,0 +1,59 @@
+---
+title: "全局配置与存储"
+description: "配置优先级、路径解析、环境变量和目录职责。"
+icon: Settings
+---
+
+管理器位置按 `--manager-dir` → `HANAMORI_HOME` → 平台本地数据目录下的 `Hanamori` 选择。确定位置后读取 `<manager>/config.json`，管理器位置不从自己的配置中反向读取。
+
+Windows 默认目录为 `%LOCALAPPDATA%\Hanamori`。Shell 钩子、启动 loader 和补全共用上述选择规则，不再单独保存管理目录绑定。需要自定义目录时，在加载钩子前设置 `HANAMORI_HOME`。
+
+```json
+{
+  "schema_version": 1,
+  "toolchains_dir": "D:/Toolchains",
+  "cache_dir": "D:/Caches/Hanamori",
+  "file_workers": 4,
+  "connections": 8,
+  "log": "info"
+}
+```
+
+`schema_version` 可省略，目前为 1；未知字段忽略。其他配置按显式 CLI → 非空环境变量 → 配置文件 → 默认值解析。
+
+| CLI / JSON 字段 | 环境变量 | 默认值 |
+| --- | --- | --- |
+| `--toolchains-dir` / `toolchains_dir` | `HANAMORI_TOOLCHAINS_DIR` | `<manager>/toolchains` |
+| `--cache-dir` / `cache_dir` | `HANAMORI_CACHE_DIR` | `<manager>/cache` |
+| `--download-dir` / `download_dir` | `HANAMORI_DOWNLOAD_DIR` | 临时下载工作区 |
+| `--proxy` / `proxy` | `HANAMORI_PROXY` | 无 |
+| `--mirror` / `mirror` | `HANAMORI_MIRROR` | 无 |
+| `--file-workers` / `file_workers` | `HANAMORI_FILE_WORKERS` | 4，范围 1–256 |
+| `--connections` / `connections` | `HANAMORI_CONNECTIONS` | 8，范围 1–64 |
+| `--log` / `log` | `HANAMORI_LOG` | `info` tracing 过滤器 |
+
+CLI 相对路径基于当前工作目录，配置文件中的路径基于管理器目录，环境路径必须为绝对路径。Hanamori 不展开 `~` 或变量表达式。`--proxy` 为 HTTP(S) 代理；mirror 只影响工具链负载 URL，不控制自我更新。
+
+```sh
+hanamori config show
+hanamori config show --resolved
+hanamori config show --resolved --json
+```
+
+`config show` 默认以表格展示配置项和有效值；`--resolved` 增加来源及路径派生关系。脚本读取配置时使用 `--json`，需要来源信息时同时指定 `--resolved`。查询、帮助、版本不创建存储。本地选择不解析无关的代理/下载选项；Shell 初始化和恢复有独立路径，不依赖完整配置可用。
+
+```text
+<manager>/
+  config.json
+  references/<name>.json
+  toolchains/<source>/msvc-<toolset-id>_sdk-<sdk-id-or-none>_x64/
+  cache/
+  toolchains/<source>/.hanamori-locks/
+<installation>/
+  VC/Tools/MSVC/<actual-version>/
+  Windows Kits/10/...              # 只编译器安装中不存在
+```
+
+设置只保存偏好；项目声明、命名引用和会话状态是不同职责。日志写 stderr；结构化结果和脚本写 stdout。诊断可能包含完整请求 URL，请按实际凭据和日志内容处理。
+
+所有本地命令和动态补全共用配置的 `toolchains_dir`。`references` 中的文件只为目标命名，删除引用不删除工具链，删除工具链也不会留下阻止重装的安装数据库记录。

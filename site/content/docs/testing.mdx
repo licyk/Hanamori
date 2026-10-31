@@ -1,0 +1,56 @@
+---
+title: "测试与原生验收"
+description: "运行既有检查，区分本地逻辑测试与真实 Windows 工具链验收。"
+icon: FlaskConical
+---
+
+```sh
+cargo fmt --all --check
+cargo xtask check
+HANAMORI_REQUIRE_SHELL_TESTS=1 cargo test --workspace --locked
+```
+
+PowerShell 中先设置 `$env:HANAMORI_REQUIRE_SHELL_TESTS = '1'`，再运行 Cargo。既有 CI 覆盖 Linux 与 Windows，测试使用真实实现、本地 HTTP 服务、合成安装包和实际可用 Shell。必需 Shell 模式避免把缺少运行时当成成功覆盖。
+
+终端补全可以单独运行 `cargo test --locked -p hanamori --test cli completions::`。测试覆盖真实 Bash 候选、Zsh 行编辑器的 Tab 补全、PowerShell 的 `CompleteInput`，以及独立脚本、钩子、启动配置、重复加载、隐藏命令和 `exec --`。Windows 另外运行 PowerShell 5.1；Git Bash 默认定位 `ProgramFiles/Git/bin/bash.exe`，可通过 `HANAMORI_TEST_BASH`、`HANAMORI_TEST_ZSH` 指定本机运行时。Windows Zsh 缺失时明确跳过；设置覆盖路径后则必须可用。升级 `clap_complete` 后应重新验证这些脚本生成与实际 Shell 用例。
+
+动态补全回归另见 `cargo test --locked -p hanamori --test cli completions::dynamic::`，使用实际目录和外部引用检查选择器、版本歧义、管理器优先级、直接目录、单个损坏引用和只读行为。`completions` 测试也验证真实 Bash Readline/Zsh 行编辑器、PowerShell 中的动态候选、带空格路径、等号参数、HOME 变化和退出码保留。
+
+动态解析使用固定版本的 `clap_complete` Rust 引擎；其 `unstable-dynamic` 功能不作为公开 Shell 协议。内部 `shell complete` 只查询候选，Shell 适配模板在 `src/commands/completions/`，静态命令补全继续由同一 Clap 树生成。升级依赖时同时验证静态模板适配和动态解析，不手工修改生成的脚本。
+
+## 解包回归
+
+运行 `cargo test --locked -p hanamori --lib --test api` 可检查解包、发布和目录发现。CAB 回归使用真实 MSZIP 归档和解码器，统计底层读取字节数，防止逐文件从头解压；同时覆盖跨压缩文件夹、跳过区间、空文件、损坏校验和及缺失文件。SDK 测试检查暂存位置、失败清理和实际文件进度，事务测试检查替换成功、准备失败保留原目录，以及中断后的旧目录还原。`cli` 测试中的 `install` 模块还覆盖删除整套目录、cl.exe、SDK 库或整个 Windows Kits 后重装，非必要文件损坏用 `--reinstall` 修复，外部目录替换授权与失败保留。
+
+合成归档的读取量可以验证算法是否重复工作，但不能直接代表 Windows 上安装真实 MSVC/SDK 的耗时。实际性能验收需记录版本、磁盘、缓存状态及下载和解包各阶段耗时，并确认最终工具链可用。
+
+## Windows 原生工具链
+
+先安装或导入两套真实 MSVC/SDK，编译器和 SDK 目录版本都应不同。从 list 获取目录键或使用命名引用：
+
+```powershell
+$env:HANAMORI_TEST_MANAGER_DIR = 'D:\Hanamori acceptance'
+$env:HANAMORI_TEST_TOOLCHAIN_A = 'toolchain-a'
+$env:HANAMORI_TEST_TOOLCHAIN_B = 'toolchain-b'
+cargo test --locked -p hanamori --test cli native_toolchain::two_real_toolchains_compile -- --ignored --nocapture
+```
+
+该默认忽略的验收会依次 A → B（继承 A）→ A，从隔离的环境中按名称调用 `rc.exe` 编译资源，再编译、链接包含 Windows/标准头文件、静态 CRT、SDK 库的程序，最后用 `mt.exe` 嵌入清单。运行生成的程序会检查资源内容、嵌入的清单、不同且稳定的编译器指纹和未修改的引用，覆盖含空格和 Unicode 的路径。不下载或删除工具链；输入缺失、非 Windows 会明确失败。
+
+交叉编译、Linux 合成测试和 Wine 不能代替原生验收。PowerShell 5.1/7、Git Bash/Zsh、CMD/AutoRun、独立终端、跨卷操作、文件占用时保留旧目录均需分别验证并记录结果。
+
+网站检查见[网站维护](/docs/website)，不要求为了修改 MDX 重新运行全部 Rust 测试。
+
+## MSBuild 原生验收
+
+普通回归使用 `cargo test --locked -p hanamori --test cli install::msbuild`，覆盖真实 VSIX/MSI/CAB 提取路径、FileTracker 整理、独立目录、项目要求、缺失修复、失败回滚及 MSBuild → 普通组合 → MSBuild 的环境恢复。合成归档不包含可执行的 MSBuild。
+
+在没有 Visual Studio/Build Tools 的 Windows x64 主机上，为上述 A/B 两套组合按默认组件安装（包含 MSBuild），设置同样的三个环境变量后执行：
+
+```powershell
+cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild -- --ignored --nocapture
+```
+
+此入口按 A → B（继承 A）→ A 构建带静态库项目引用的 `.vcxproj` 和 `.sln`，覆盖 Debug/Release、资源、清单、增量编译、修改库后重新链接、Clean/Rebuild，并检查编译器、SDK、targets 的求值路径均位于所选安装下。错误的显式 SDK 版本必须失败。构建使用 `-nr:false`，日志在该次临时构建目录内。
+
+还需在装有其他 Visual Studio 的 Windows 主机重复，确认不会借用系统组件，并在 PowerShell、Git Bash/MSYS2 中运行安装文档的构建命令。MSBuild 示例使用 `-p:`、`-t:`；直接调用 `cl` 的 `/link` 被 MSYS2 改写时，用单次命令 `MSYS2_ARG_CONV_EXCL='*' cl ...`，该问题不通过增装 MSBuild 解决。当前 Linux 环境只完成下载解包与自动回归，以上原生验收仍待执行。

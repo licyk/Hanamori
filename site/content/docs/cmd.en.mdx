@@ -1,0 +1,35 @@
+---
+title: "CMD integration"
+description: "Experimental batch entry, DOSKEY and current-user AutoRun."
+icon: FileTerminal
+---
+
+```bat
+hanamori.exe env --shell cmd --output hanamori-entry.cmd
+call hanamori-entry.cmd
+hanamori use stable
+hanamori current
+hanamori deactivate
+```
+
+CMD uses a batch entry and DOSKEY macro, not POSIX evaluation. Inside another batch file,
+use `call "%_HANAMORI_CMD_ENTRY%" use stable` rather than relying on interactive DOSKEY.
+To maintain the current user's AutoRun entry on native Windows:
+
+```bat
+hanamori.exe shell init --shell cmd --dry-run
+hanamori.exe shell init --shell cmd
+hanamori.exe shell deinit --shell cmd
+```
+
+`cmd /d` bypasses AutoRun; explicitly call the generated entry in that case. Existing
+AutoRun content is preserved. `--profile` and `--shell-executable` are not CMD registry
+selectors. Loader files are retained for open sessions after deinit. Native acceptance
+of code pages, quoting, AutoRun and interactive behavior remains a separate gate.
+
+`hanamori.exe shell init --shell cmd --use-on-cd` selects a project/default toolchain at
+startup and installs an interactive `cd` DOSKEY macro to reselect after successful directory
+changes. It replaces an existing `cd` macro. It does not cover `chdir`, `pushd/popd`, drive
+switches or directory changes inside batch scripts; use `hanamori exec` / `hanamori run`
+for scripts. Portable `env --shell cmd` entries do not support this option; persistent
+initialization is required.

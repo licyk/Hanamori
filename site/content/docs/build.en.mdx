@@ -1,0 +1,35 @@
+---
+title: "Build from source"
+description: "Build the current development version with Rust."
+icon: Download
+---
+
+```sh
+git clone https://github.com/licyk/Hanamori.git
+cd Hanamori
+cargo build --locked --release -p hanamori --bin hanamori
+```
+
+On Windows the executable is `target/release/hanamori.exe`. No `aria2c`, `msiexec`, or
+Visual Studio installation is needed to run the installer. Building requires Rust and a linker for the chosen target; the Windows MSVC target needs the corresponding build tools.
+The repository is [licyk/Hanamori](https://github.com/licyk/Hanamori).
+
+Build this revision from source. The existing release workflow produces
+`hanamori-x86_64-pc-windows-msvc.exe` and `hanamori-x86_64-pc-windows-msvc.zip`, whose entry
+is `hanamori.exe`. These are intended artifact names, not evidence that this refactor
+has been published. Historical assets do not establish support for the commands below.
+
+## Portable installation
+
+Use the [download page](/download) to find an actual matching release. Rename the standalone EXE to `hanamori.exe`, or extract it from the ZIP, and place it in a tools directory such as `D:\Tools\Hanamori`. No Rust installation is needed to run a downloaded executable.
+
+For the current PowerShell session:
+
+```powershell
+$env:PATH = "D:\Tools\Hanamori;$env:PATH"
+hanamori --version
+```
+
+For future sessions, add that directory to your user PATH through Windows Environment Variables. Shell initialization creates a command hook; it does not install the executable or permanently edit PATH.
+
+A private repository requires access for cloning and downloading. The website does not provide credentials for private assets. Self-update supports the Windows x64 MSVC build; a different development target does not establish support for installing native MSVC on that host.

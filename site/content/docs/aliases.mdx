@@ -1,0 +1,21 @@
+---
+title: "别名与默认工具链"
+description: "为固定安装命名，而不是创建会随其他别名变化的引用。"
+icon: Tags
+---
+
+```sh
+hanamori alias 14.44 stable
+hanamori default stable
+hanamori alias --json
+hanamori default --json
+hanamori unalias stable
+```
+
+引用分别保存在 `<manager>/references/` 的 JSON 文件中。受管引用只保存目录键；外部引用保存路径和选定的实际版本。引用不表示文件已安装。
+
+`alias SELECTOR NAME` 支持受管目录键、引用、外部 `@name` 键或唯一实际版本前缀，创建或更新名字。`default stable` 复制 stable 当前的目标；之后重定向 stable，不改变 default 或已激活终端。
+
+名字允许 1–64 个字母、数字、连字符或下划线，排除命令名；`default` 可以使用。删除不存在的名字也成功。`remove NAME` 和 `unalias NAME` 只删除这一引用；卸载受管目录会移除指向它的受管引用。
+
+删除目录会让引用失效，但不阻止重新安装。相同目录键重装后引用恢复有效。单个引用文件损坏不影响其他安装的发现，doctor 会报告该问题。

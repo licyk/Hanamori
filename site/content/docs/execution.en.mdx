@@ -1,0 +1,23 @@
+---
+title: "Run a command"
+description: "Prepare a compiler environment for a child process without initializing a shell."
+icon: Play
+---
+
+```powershell
+hanamori exec --using stable '--' cl.exe /nologo /EHsc /MT hello.cpp
+hanamori exec --dir D:/Tools/existing --toolset 14.44.35207 --no-sdk '--' cl.exe /?
+```
+
+`exec` supports registered installations and explicit unregistered directories. `--using` conflicts with `--dir` and its component selectors. With neither, it resolves the nearest project file, then the default. If a directory has multiple combinations, use actual directory versions with `--toolset`, `--sdk` or `--no-sdk`.
+
+A program is required after `--`. Arguments are passed as argv, not interpreted as pipes, redirections, globs, variable expansions or shell builtins. Invoke a shell explicitly when you need those features:
+
+```powershell
+hanamori exec --using stable '--' cmd.exe /d /c 'cl.exe /nologo hello.cpp && hello.exe'
+$LASTEXITCODE
+```
+
+The child inherits stdin, stdout and stderr, and its exit status is returned to the caller. Only the child gets the prepared environment; the parent is not activated. Through a PowerShell hook, quote `'--'` to pass the separator. Windows PowerShell uses the encoded argv forwarding path to preserve empty strings and quotes.
+
+The public command is `exec`; there is no `run` alias. This differs from [activating the current shell](/docs/shell).

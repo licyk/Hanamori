@@ -1,0 +1,70 @@
+---
+title: "First compilation"
+description: "Install a toolchain, compile a complete C++ example and run it."
+icon: Rocket
+---
+
+[Get Hanamori](/docs/build), add its executable directory to PATH, and open PowerShell in a writable project directory. These commands use the default VS 2022 release catalog. Installation needs network access and disk space.
+
+## 1. Install a toolchain
+
+```powershell
+hanamori install latest --name stable
+if ($LASTEXITCODE -ne 0) { throw 'Resolve the installation error first' }
+hanamori list
+hanamori default stable
+```
+
+`stable` is a local alias you create. Installation does not activate this terminal, and `default` only records a selection. Available versions depend on the chosen catalog.
+
+## 2. Save the source
+
+Create `hello.cpp`:
+
+```cpp
+#include <windows.h>
+#include <iostream>
+
+int main() {
+    std::cout << "Hello from Hanamori!\n";
+    std::cout << "Process: " << GetCurrentProcessId() << '\n';
+    return 0;
+}
+```
+
+The example uses both the C++ standard library and Windows SDK. Do not install with `--no-sdk` for this example.
+
+## 3. Build and run
+
+```powershell
+hanamori exec --using stable '--' cl.exe /nologo /EHsc /MT hello.cpp
+if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
+.\hello.exe
+if ($LASTEXITCODE -ne 0) { throw 'The program returned an error' }
+```
+
+`exec` needs no shell initialization: only the child receives the compiler environment. Quoting `'--'` in PowerShell also works through an initialized Hanamori wrapper. Expect `Hello from Hanamori!` and a process ID that may change each run.
+
+## 4. Activate this terminal
+
+```powershell
+hanamori env --shell powershell --output hanamori-init.ps1
+if ($LASTEXITCODE -ne 0) { throw 'Could not generate the initialization script' }
+. ./hanamori-init.ps1
+hanamori use
+hanamori current
+cl.exe /nologo /EHsc /MT hello.cpp
+hanamori deactivate
+```
+
+`use` selects from the nearest project file, then the default. A `hanamori-toolchain.json` overrides the default; `hanamori use stable` explicitly overrides project selection. `deactivate` restores the original environment. To load the hook in new terminals, see [startup profiles](/docs/profiles).
+
+## 5. Optional cleanup
+
+```powershell
+hanamori uninstall stable --dry-run
+# Only when you no longer need this entire installation:
+hanamori uninstall stable
+```
+
+This removes the whole managed installation and its aliases, not `hello.cpp` in your project. Do not store personal files inside toolchain directories. To delete only the stable name, use `remove stable`; the managed directory remains discoverable by list. See [maintenance](/docs/maintenance).

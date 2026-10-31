@@ -1,0 +1,146 @@
+/*
+ * Workspace preview.
+ *
+ * All hover timing comes from the interaction channel (`.page-interactive` /
+ * `.page-interactive-part` in the component); this file only describes
+ * appearance and how the preview compacts on short viewports.
+ */
+
+.product-preview {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  filter: drop-shadow(0 36px 48px rgb(15 22 35 / 28%));
+  transform: perspective(1200px) rotateY(-2deg) rotateX(1deg);
+  transform-origin: center left;
+}
+
+.product-preview::before {
+  position: absolute;
+  z-index: -1;
+  inset: 10% -5% -8% 18%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--page-accent) 34%, transparent);
+  content: "";
+  filter: blur(54px);
+}
+
+/* Stacked under the copy, the perspective tilt reads as a mistake. */
+@container page-section (max-width: 61.999rem) {
+  .product-preview {
+    width: min(44rem, 100%);
+    justify-self: center;
+    transform: none;
+  }
+}
+
+.product-preview-window {
+  animation: home-preview-enter var(--page-enter) var(--page-ease-enter) 160ms both;
+}
+
+@keyframes home-preview-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.product-preview-window {
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 1.3rem;
+  background: var(--page-preview-bg);
+  /* The third shadow is present-but-transparent at rest so the hover state
+   * interpolates shadow-for-shadow rather than across differing list lengths. */
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 7%),
+    0 0 0 1px rgb(29 16 24 / 30%),
+    0 22px 60px rgb(14 20 32 / 0%);
+  color: #eef2fa;
+}
+
+@media (any-hover: hover) {
+  .product-preview:hover .product-preview-window {
+    border-color: rgb(168 200 255 / 24%);
+    box-shadow:
+      inset 0 1px rgb(255 255 255 / 8%),
+      0 0 0 1px rgb(168 200 255 / 10%),
+      0 22px 60px rgb(14 20 32 / 22%);
+  }
+}
+
+.product-preview:focus-within .product-preview-window {
+  border-color: rgb(168 200 255 / 24%);
+}
+
+.terminal-title {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid #ffffff1a;
+  font-size: .85rem;
+}
+.terminal-title button {
+  margin-left: auto;
+  padding: .5rem;
+  border-radius: .5rem;
+  cursor: pointer;
+  transition: background-color var(--page-out) var(--page-ease-out);
+}
+@media (any-hover: hover) {
+  .terminal-title button:hover {
+    background: #ffffff18;
+  }
+}
+.terminal-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: 1rem 1.2rem;
+}
+.terminal-steps button {
+  padding: .4rem .7rem;
+  font-size: .8rem;
+  border-radius: .5rem;
+  cursor: pointer;
+  color: #c7c3d5;
+}
+.terminal-steps button[aria-pressed="true"] {
+  background: #e5b8d324;
+  color: #f5c9df;
+}
+.terminal-content {
+  min-height: 17rem;
+  padding: 1rem 1.4rem;
+  font: .88rem/1.8 ui-monospace, monospace;
+}
+.terminal-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: .5rem 0 1.5rem;
+}
+.terminal-prompt {
+  color: #e6b2c9;
+}
+.terminal-output {
+  color: #b4c4bf;
+}
+.terminal-caption {
+  padding: 1rem 1.4rem;
+  color: #aaa7b7;
+  font-size: .75rem;
+}
+.terminal-progress {
+  height: 3px;
+  background: #e5b8d3;
+  transform-origin: left;
+  animation: terminal-cycle 6s linear both;
+}
+@keyframes terminal-cycle { from {transform:scaleX(0)} to {transform:scaleX(1)} }
+@media (prefers-reduced-motion:reduce) { .terminal-progress { animation:none; } }

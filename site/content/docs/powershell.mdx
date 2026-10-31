@@ -1,0 +1,31 @@
+---
+title: "PowerShell"
+description: "区分 PowerShell 5.1/7 的启动文件，正确传递脚本和参数。"
+icon: SquareTerminal
+---
+
+推荐先在当前终端加载：
+
+```powershell
+hanamori env --shell powershell --output hanamori-init.ps1
+if ($LASTEXITCODE -ne 0) { throw '无法生成钩子' }
+. ./hanamori-init.ps1
+hanamori use stable
+hanamori exec --using stable '--' cl.exe /?
+hanamori deactivate
+```
+
+点号加载让脚本修改当前 Shell。不要在生成失败后继续加载旧文件。执行策略可能限制脚本加载，请按自己的系统策略处理；Hanamori 不替你永久放宽执行策略。
+
+持久配置时选择真正使用的运行时：
+
+```powershell
+hanamori shell init --shell powershell --shell-executable pwsh --dry-run
+hanamori shell init --shell powershell --shell-executable pwsh
+# Windows PowerShell 5.1：
+hanamori shell init --shell powershell --shell-executable powershell.exe
+```
+
+发现过程禁用 profile 执行，查询所选运行时的用户 profile。默认路径不可用时不会偷偷改写另一版本的文件；可以使用 `--profile PATH` 明确指定。已有 UTF-16 profile 的编码会保留。
+
+包装函数中，`exec` 的分隔符写成 `'--'`。用 `$LASTEXITCODE` 检查原生子进程状态。执行 `shell deinit` 后，当前函数仍已加载，需要关闭并重开终端。

@@ -1,0 +1,11 @@
+[package]
+name = "hanamori-test-support"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+cab.workspace = true
+msi.workspace = true

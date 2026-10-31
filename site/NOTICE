@@ -1,0 +1,6 @@
+Hanamori website
+
+Adapted from licyk/rvc-next site at a1dff6b, which traces its website framework to Hanafubuki.
+The copied website source retains the GPL-3.0 license supplied in site/LICENSE.
+This notice applies to the website sources, not to the separate Rust workspace.
+Dependency licenses remain with their respective packages.

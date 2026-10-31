@@ -1,0 +1,56 @@
+.download-page {
+  width: min(56rem,100%);
+  margin: 0 auto;
+  padding: 5rem 1.5rem;
+}
+.download-eyebrow {
+  color: var(--color-fd-muted-foreground);
+  font-size: .8rem;
+  letter-spacing: .2em;
+}
+.download-page h1 {
+  font-size: clamp(2rem,6vw,3.5rem);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  margin: 1rem 0;
+}
+.download-lead {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: var(--color-fd-muted-foreground);
+}
+.download-card {
+  margin: 2.5rem 0 1.5rem;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 1.25rem;
+  padding: clamp(1.2rem,4vw,2.5rem);
+  background: var(--color-fd-card);
+}
+.download-card h2 {
+  margin: 1rem 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+.download-page p {
+  line-height: 1.8;
+  margin: 1rem 0;
+}
+.download-status {
+  padding: 1rem;
+  background: var(--color-fd-muted);
+  border-radius: .7rem;
+}
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin: 1.25rem 0;
+}
+.download-note {
+  color: var(--color-fd-muted-foreground);
+  font-size: .85rem;
+}
+.download-version a,.download-page p a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

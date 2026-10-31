@@ -1,0 +1,20 @@
+---
+title: "Hanamori documentation"
+description: "Install, select and manage standalone MSVC and Windows SDK combinations."
+icon: BookOpen
+---
+
+Hanamori installs MSVC and the Windows SDK in independent directories without a Visual Studio installation. Select a toolchain by alias or project file, activate the current terminal, or prepare an environment for one build command.
+
+<Callout type="info" title="Development-version documentation">
+These docs describe the current main branch. Old msvc-installer releases do not include these commands or state formats. Check [downloads](/download) for a matching new build, or [build from source](/docs/build).
+</Callout>
+
+<Cards>
+<Card title="First compilation" href="/docs/quick-start">Install the program, compile a complete C++ example and run it.</Card>
+<Card title="Install toolchains" href="/docs/installation">Distinguish download IDs, actual versions and managed directory keys.</Card>
+<Card title="Shell integration" href="/docs/shell">Initialize, switch, restore and configure startup profiles.</Card>
+<Card title="Command reference" href="/docs/cli">Find all public commands, options and output conventions.</Card>
+</Cards>
+
+Each owned installation has an exclusive directory. Imports are read-only references. Selecting tools never downloads them, and installing tools does not activate the current terminal. Native compilation currently targets Windows x64 hosts and x64 targets; tests on other platforms do not establish MSVC execution support. See [platform support](/docs/support).

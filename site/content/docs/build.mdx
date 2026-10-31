@@ -1,0 +1,29 @@
+---
+title: "获取程序与源码构建"
+description: "下载便携程序，或使用 Rust 构建当前开发版本。"
+icon: Download
+---
+
+首先查看[下载页](/download)。发布流程约定两个 Windows x64 资产：`hanamori-x86_64-pc-windows-msvc.exe` 与 `hanamori-x86_64-pc-windows-msvc.zip`，ZIP 内的程序为 `hanamori.exe`。直接下载 EXE 后可以改名为 `hanamori.exe`。文件名约定不代表已有对应发布；旧名称的资产不代表支持当前命令。
+
+将程序放在自己的工具目录，例如 `D:\Tools\Hanamori`。临时在 PowerShell 添加 PATH：
+
+```powershell
+$env:PATH = "D:\Tools\Hanamori;$env:PATH"
+hanamori --version
+hanamori --help
+```
+
+需要持久 PATH 时，在 Windows 的用户环境变量设置中加入该目录，然后重开终端。`shell init` 配置启动钩子，不负责给系统 PATH 安装程序。程序是便携的，不需要 Visual Studio、aria2c 或 msiexec 来运行安装器。
+
+## 从源码构建
+
+构建需要 Rust 工具链以及对应目标的链接器和构建依赖；运行已构建的安装器不需要 Rust。仓库为私有状态时，克隆和下载需要访问权限。
+
+```sh
+git clone https://github.com/licyk/Hanamori.git
+cd Hanamori
+cargo build --locked --release -p hanamori --bin hanamori
+```
+
+Windows 上输出为 `target/release/hanamori.exe`。发行流程使用 `x86_64-pc-windows-msvc` 目标，输出在 `target/x86_64-pc-windows-msvc/release/`。程序自我更新仅支持这一目标；GNU 或 Unix 构建不会获得该更新资产。开发与验收见[架构](/docs/architecture)、[测试](/docs/testing)和[发布流程](/docs/release)。

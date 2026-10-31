@@ -1,0 +1,80 @@
+---
+title: "安装与版本选择"
+description: "理解下载标识、实际版本和独立安装目录。"
+icon: PackagePlus
+---
+
+## 三种不同的标识
+
+| 标识 | 示例 | 用途 |
+| --- | --- | --- |
+| 下载 ID | toolset `14.44.17.14`，SDK `26100` | 在指定清单中选择安装包 |
+| 实际版本 | MSVC `14.44.35207`，SDK `10.0.26100.0` | 解包后验证的目录版本，用于本地选择和项目约束 |
+| 目录键 | `vs2022-release/msvc-14.44.17.14_sdk-26100_x64` | 根据来源与下载 ID 确定的受管目录 |
+
+示例只是语法示范，可用性以清单查询为准。远端 JSON 中未知的实际版本为 `null`，程序不会把包版本猜成编译器目录版本。
+
+```sh
+hanamori list-remote
+hanamori list-remote --json
+hanamori list-remote --all
+hanamori list-remote --all --channel preview
+hanamori list-remote --all --json
+hanamori list-remote --toolset-id 14.44.17.14
+hanamori install --toolset-id 14.44.17.14 --sdk-id 26100 --name stable
+hanamori install latest --no-msbuild --name compiler-sdk
+hanamori install latest --no-sdk --name compiler
+hanamori install --vs-version 2026 --channel preview --no-msbuild --dry-run
+```
+
+`--vs-version` 支持 `2022`/`17`、`2026`/`18`；`--channel` 支持 `release`/`stable`、`preview`/`insiders`。默认 VS 2022 release。`--manifest URL` 替代二者，不能同时指定。当前仅实现 `--arch x64/x64`。
+
+`list-remote --all` 按 VS 2022、VS 2026 分组列出所选渠道中的工具集和 SDK，并分别展开各组最新工具集的包。默认查询正式渠道；加 `--channel preview`（或 `insiders`）查询两者的预览渠道，不同时混入正式渠道。同名 ID 保留在各自来源组中。它与 `--vs-version`、`--manifest`、`--toolset-id` 互斥。这里的“全部”指当前支持的两代 VS 所选渠道中仍提供的版本，不保证覆盖微软历史上所有已撤下的版本。
+
+`--all --json` 输出 `{ "catalogs": [...] }`；每组包含 `vs_version`、`channel`、`manifest_url`，以及单源查询已有的 `toolsets`、`sdks`、`selected_toolset_id` 和 `packages`。任意来源查询失败会使整个命令失败，不输出部分列表；默认警告/严格清单校验策略对两个来源均生效。
+
+## 约束与选择
+
+`install [VERSION]` 接受托管目录键、实际 MSVC 版本、数字前缀或 `latest`。`--sdk VERSION` 是实际四段 SDK 版本，`--no-sdk` 排除 SDK，默认也不安装 MSBuild。`--toolset-id` 和 `--sdk-id` 是下载 ID，分别与对应的实际版本命令行参数互斥。
+
+安装会读取最近的[项目文件](/docs/projects)。显式实际版本参数替换相应的项目约束；未指定的约束继续保留。下载 ID 只指定负载，解包后的实际版本仍必须符合项目约束。无法从已知安装映射实际版本到下载 ID 时，程序报错并要求查询清单、显式指定 ID，不会退回 latest。
+
+没有显式版本或项目文件时，从所选渠道安装最新组合；默认引用不是安装输入。
+
+## 目录与重新安装
+
+不含 MSBuild 的受管目录为 `<toolchains-dir>/<source>/msvc-<下载ID>_sdk-<下载ID或none>_x64`；默认含 MSBuild 的目录还带有 `_msbuild-<版本>` 段，默认存储根目录是 `<manager>/toolchains`。自定义来源用清单 URL 的稳定摘要区分，清单内容改变不会改变目录身份。本地命令和补全也遵循配置的工具链存储目录。
+
+目录通过少量必需文件检查后直接复用；目录不存在、为空或缺少关键文件时，自动安装到原位置，已有引用仍有效。`--reinstall` 强制重建，用于普通头文件等快速检查未覆盖的损坏。`--name` 在安装成功后创建或更新引用。
+
+```sh
+hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
+hanamori install --dir D:/Tools/portable --name standalone
+hanamori install --dir D:/Tools/portable --reinstall
+```
+
+`--dir` 是便携安装：接受不存在或空目录；非空外部目录须明确指定 `--reinstall`，这会替换整个目录，请勿存放个人文件。通过显式 `--dir` 或外部引用使用便携安装；uninstall 不删除外部引用目标。
+
+`--dry-run` 可能读取清单，但不下载工具链负载、不创建目录。清单哈希或大小不一致默认告警，`--strict-manifest-integrity` 改为错误。负载完整性校验始终启用。不同组合各自保存 SDK，共享下载缓存。
+
+用精确目录键安装会固定来源和下载 ID；自定义来源的目录键还需传入原来的 `--manifest URL`。按版本安装可继承项目约束；显式目录键直接选择该键中的组合。
+
+## MSBuild 与组件选择
+
+```sh
+hanamori install latest --name build
+hanamori exec --using build -- MSBuild.exe app.sln -p:Configuration=Release -p:Platform=x64
+hanamori exec --using build -- MSBuild.exe app.vcxproj -t:Rebuild -p:Configuration=Debug -p:Platform=x64
+```
+
+默认安装 MSVC、Windows SDK 和 MSBuild，从同一清单选择 MSBuild 17.x、C++ props/targets、任务程序集和 FileTracker。`--no-msbuild` 排除 MSBuild，保留编译器与 SDK。`--no-sdk` 或项目 `"sdk": null` 默认只安装编译器。
+
+组件选择遵循显式命令行参数 → 项目设置 → 默认值。项目可声明 `"msbuild": true` 或 `false`，`--msbuild` / `--no-msbuild` 可覆盖它。明确要求 MSBuild 时必须同时安装 SDK，否则报错；可以用 `--no-msbuild` 撤销该要求。固定目录键始终保留键中的组件组合，不因默认值改变而增加 MSBuild。
+
+VS 2026 安装需指定 `--no-msbuild`。首版范围是 VS 2022 的 x64/v143 原生 C++ `.vcxproj` 和 `.sln`。不承诺 VS 2026、Win32/ARM64、ATL/MFC、C++/CLI、UWP、驱动、C# 或 Visual Studio IDE 集成。此功能的 Windows 原生构建验收尚待执行；真实包下载/解包与 Linux 回归不能替代它。
+
+包含 MSBuild 的目录键为 `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild版本>_x64`，与不含 MSBuild 的组合独立共存。重新安装精确键会校验清单仍提供对应 MSBuild 版本；不会静默替换成新版。上游撤包时需提供匹配的清单及缓存。
+
+主机需具备 MSBuild 所需的 .NET Framework。安装只解包和检查文件；Windows 上的 `doctor` 额外启动 `MSBuild.exe -version` 诊断运行时，失败会报错，不自动安装系统组件。通过 Hanamori 环境调用 `MSBuild.exe`，生成的配置会指向所选工具链的编译器和 SDK；项目显式要求不同版本时构建失败。
+
+FileTracker 使用私有目录，不借用系统安装。其上游实现有 ANSI 路径限制，首版建议将 MSBuild 工具链安装在 ASCII 路径下，例如 `--dir D:/Tools/hanamori-build`；这与项目目录含 Unicode 是两个不同的情况。
