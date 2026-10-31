@@ -1,13 +1,19 @@
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Verify', 'Package')]
+    [ValidateSet('Resolve', 'Verify', 'Package')]
     [string] $Stage,
-    [Parameter(Mandatory)]
-    [string] $Tag
+    [string] $Tag = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+if ($Stage -eq 'Resolve' -and [string]::IsNullOrWhiteSpace($Tag)) {
+    $tags = @(git tag --list 'v*' --sort=-version:refname)
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot list release tags.' }
+    if ($tags.Count -eq 0) { throw 'No existing v* release tag was found.' }
+    $Tag = $tags[0]
+}
 
 # Values from workflow inputs are arguments, never interpolated PowerShell source.
 if (-not $Tag.StartsWith('v', [StringComparison]::Ordinal)) {
@@ -17,6 +23,14 @@ git check-ref-format "refs/tags/$Tag"
 if ($LASTEXITCODE -ne 0) { throw 'Invalid release tag.' }
 $commit = git rev-parse --verify "refs/tags/$Tag^{commit}"
 if ($LASTEXITCODE -ne 0) { throw 'The release tag must already exist and point to a commit.' }
+if ($Stage -eq 'Resolve') {
+    if ($env:GITHUB_OUTPUT) {
+        "tag=$Tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        "commit=$commit" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+    }
+    Write-Host "Selected $Tag at $commit"
+    return
+}
 $headCommit = git rev-parse --verify HEAD
 if ($LASTEXITCODE -ne 0 -or $headCommit -ne $commit) {
     throw 'The checked-out commit does not match the release tag.'

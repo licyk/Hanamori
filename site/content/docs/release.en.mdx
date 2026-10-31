@@ -1,34 +1,48 @@
 ---
 title: "Release process"
-description: "Build the tagged Windows binary and verify published assets."
+description: "Select an existing tag, share checks, and publish Windows assets and the crate."
 icon: Upload
 ---
 
-Publishing remains a separate, explicitly requested step. Use the existing
-[release workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) and
-[release script](https://github.com/licyk/Hanamori/blob/main/.github/scripts/release.ps1): build the actual new `v*` tag with locked
-dependencies and the Windows MSVC target, check that the tag, Cargo version and executable
-version agree, and verify source identity, executable/ZIP names and matching hashes.
-After publishing, the workflow checks that GitHub reports the packaged executable's
-SHA-256 digest. Independently verify downloadable assets as well. A passing CI run or an
-older release asset is not evidence of a publication of this revision.
+The [Release workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) publishes both GitHub Release assets and the `hanamori` crate. Pushing a `v*` tag publishes to both channels. Manual runs let you choose a tag and a channel. Ordinary main pushes and website builds do not publish versions.
 
-## crates.io
+## Select a tag and channel
 
-[.github/workflows/publish.yml](https://github.com/licyk/Hanamori/blob/main/.github/workflows/publish.yml)
-publishes the `hanamori` crate independently, on `v*` tag pushes or manual dispatch with an
-existing tag. It reuses tag/Cargo version verification, runs tests on the Windows MSVC
-target, then packages, verifies the packaged build and uploads with `cargo publish --locked`.
-It does not publish `hanamori-test-support` or `xtask`.
+In Actions, choose **Release → Run workflow** and use the workflow on `main`:
 
-After migrating the repository, configure `CARGO_REGISTRY_TOKEN` in the destination GitHub
-repository's Actions Secrets with a crates.io API token authorized to publish `hanamori`.
-Never put the token in source files or workflow text. The first publication requires
-permission to create the crate; subsequent publications require permission to publish
-that crate. The two publishing workflows run independently: a successful GitHub Release
-does not prove publication on crates.io. Retry the unpublished channel manually with the
-same tag if needed.
+| Input | Meaning |
+| --- | --- |
+| `tag` | An optional existing `v*` Git tag, such as `v0.1.0`. If omitted, the highest `v*` tag in Git version order is selected, independently of tag creation dates or GitHub Release dates. |
+| `target` | `all` (default) publishes both channels; `github` publishes only GitHub Release assets; `crates-io` publishes only the crate. |
 
-Before publishing, run `cargo publish --locked --registry crates-io -p hanamori --dry-run`
-locally to compile the packaged source without uploading. A version already published on
-crates.io cannot be overwritten; do not republish it after confirming it exists.
+```sh
+# Select the latest tag and publish both channels
+gh workflow run release.yml --ref main
+
+# Select the latest tag and publish only GitHub Release assets
+gh workflow run release.yml --ref main -f target=github
+
+# Publish an explicit existing tag to crates.io only
+gh workflow run release.yml --ref main -f tag=v0.1.0 -f target=crates-io
+```
+
+The workflow does not create tags. Publication stops if there is no `v*` tag, the requested tag does not exist, or the tag version differs from the Cargo version in its source. A tag push selects that tag; an explicit manual `tag` input takes precedence.
+
+## Checks, builds and publication
+
+1. Update the workspace version and Cargo-generated lockfile, then create a `v*` tag pointing to the intended source.
+2. Release fetches all tags, resolves the selected commit, and verifies its Cargo package name, version and binary target.
+3. The reusable [CI workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/ci.yml) runs one Linux/Windows check matrix for that commit, including formatting, module architecture and tests. Windows uses the release profile and `x86_64-pc-windows-msvc` target.
+4. After checks pass, the selected channels build and publish from the same commit. Ordinary branch CI does not respond to tag pushes; the two channels in one Release run share checks instead of running `cargo test` separately.
+5. The GitHub channel packages `hanamori-x86_64-pc-windows-msvc.exe` and the matching ZIP, containing `hanamori.exe`. It verifies that GitHub reports the same EXE SHA-256 digest as the packaged file.
+6. The crates.io channel runs `cargo publish --locked`, retaining Cargo's compilation check of the packaged source. Only `hanamori` is published, not `hanamori-test-support` or `xtask`.
+
+The two channels run independently after shared checks pass. If one fails, retry only the unpublished channel with the same tag. When manually publishing an older tag, checks and builds use that tag's source, not the main source that defines the workflow.
+
+A passing CI run, website deployment or successful publication to one channel does not prove publication to the other. After a GitHub Release, also verify that users can download its assets. The download page and self-update use the asset names above; the page queries the public API without a token.
+
+## crates.io credentials and retries
+
+Configure `CARGO_REGISTRY_TOKEN` in the repository's Actions Secrets with a crates.io API token authorized to publish `hanamori`. The first publication requires permission to create the crate; subsequent publications require permission to publish that crate.
+
+Run `cargo publish --locked --registry crates-io -p hanamori --dry-run` locally to compile the packaged source without uploading. A version already on crates.io cannot be overwritten. If the crate is already published and only GitHub assets are missing, select `target=github`.

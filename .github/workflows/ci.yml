@@ -5,9 +5,19 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source:
+        description: Commit to check
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ inputs.source || github.ref }}
+  cancel-in-progress: ${{ github.workflow == 'CI' }}
 
 jobs:
   test:
@@ -19,6 +29,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.source || github.ref }}
       - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
         with:
           toolchain: stable
