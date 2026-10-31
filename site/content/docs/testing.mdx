@@ -12,6 +12,8 @@ HANAMORI_REQUIRE_SHELL_TESTS=1 cargo test --workspace --locked
 
 PowerShell 中先设置 `$env:HANAMORI_REQUIRE_SHELL_TESTS = '1'`，再运行 Cargo。既有 CI 覆盖 Linux 与 Windows，测试使用真实实现、本地 HTTP 服务、合成安装包和实际可用 Shell。必需 Shell 模式避免把缺少运行时当成成功覆盖。
 
+main 推送和 PR 仅在 Rust 源码、测试、工作区包、Cargo/工具链配置、安装脚本或发布自动化发生变化时触发 Rust CI。只修改 README 或网站时跳过 Rust CI；`site/` 的变更由 Website 工作流单独检查。手动运行 CI 和 Release 对 CI 的复用调用始终执行完整的 Linux/Windows 检查，不受变更路径过滤影响。
+
 普通本地检查可以直接运行 `cargo test --workspace`。缺少可选 Shell 时会明确报告跳过；显式配置的运行时必须可用。Windows Bash/Zsh 用例需要带 `cygpath` 的 Git Bash 或 MSYS2，不使用 WSL。测试子进程保留可用的 Windows 临时目录，同时隔离父进程的 Hanamori 状态和配置；CMD 生命周期用例使用精简的系统 PATH，避免开发机已安装工具占用批处理命令长度。
 
 Windows CI 通过 `cargo test --locked -p hanamori --test cli bootstrap::` 验证 PowerShell 5.1/7 安装脚本：本地 HTTP 服务提供真实构建的程序，Profile 与注册表键均隔离。覆盖首次与重复安装、Unicode 路径、PATH 保留、跳过选项，以及下载、哈希、大小或版本验证失败时保留旧程序。库测试验证基于安装记录的 PATH 清理，不修改真实用户 PATH。

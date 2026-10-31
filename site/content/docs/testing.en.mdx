@@ -35,6 +35,12 @@ CI uses the existing Linux and Windows workflow. Tests use real implementation p
 local HTTP servers, synthetic archives and real available shells. Required-shell mode
 prevents silently treating missing shells as successful integration coverage.
 
+For main pushes and pull requests, Rust CI runs only when Rust source, tests, workspace
+packages, Cargo/toolchain configuration, installer scripts or release automation change.
+README-only and website-only changes skip Rust CI; the Website workflow checks changes
+under `site/` separately. Manual CI runs and Release's reusable CI call always run the
+full Linux/Windows checks, regardless of the changed paths.
+
 For ordinary local checks, run `cargo test --workspace`. Unavailable optional shells are
 reported as skipped; an explicitly configured runtime must exist. Windows Bash/Zsh tests
 need Git Bash or MSYS2 with `cygpath`, rather than WSL. Test subprocesses retain a usable
