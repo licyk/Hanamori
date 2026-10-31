@@ -24,7 +24,6 @@ jobs:
     runs-on: windows-latest
     outputs:
       tag: ${{ steps.verify.outputs.tag }}
-      commit: ${{ steps.verify.outputs.commit }}
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
@@ -86,8 +85,9 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v3.0.3
         with:
+          # The verified tag already selects the commit. Explicit target_commitish
+          # can require workflow-write permission when old workflow files differ from main.
           tag_name: ${{ needs.build.outputs.tag }}
-          target_commitish: ${{ needs.build.outputs.commit }}
           files: |
             dist/hanamori-x86_64-pc-windows-msvc.exe
             dist/hanamori-x86_64-pc-windows-msvc.zip
