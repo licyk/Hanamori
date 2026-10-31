@@ -124,12 +124,13 @@ fn human_queries_show_active_default_and_missing_targets_without_changing_storag
             .output()
             .unwrap(),
     );
+    let removal_root = manager.join("toolchains").join(KEY);
     for expected in [
         "Uninstall plan",
         "Remove directory",
         "Remove references",
         "default, stable",
-        root.to_str().unwrap(),
+        removal_root.to_str().unwrap(),
     ] {
         assert!(text.contains(expected), "{text}");
     }

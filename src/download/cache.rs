@@ -94,7 +94,8 @@ async fn copy_verified(source: &Path, destination: &Path, digest: &str) -> Resul
     let mut output = tokio::fs::File::create(&temporary).await?;
     let mut hash = Sha256::new();
     let mut size = 0;
-    let mut buffer = [0; 64 * 1024];
+    // Keep the async state small enough for Windows' default main-thread stack.
+    let mut buffer = vec![0; 64 * 1024];
     loop {
         let count = input.read(&mut buffer).await?;
         if count == 0 {

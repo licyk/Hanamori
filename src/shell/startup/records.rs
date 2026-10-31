@@ -131,6 +131,7 @@ impl Store {
     }
 
     pub fn removal(&self, program: &Path) -> Result<Removal> {
+        let program = fs::canonicalize(program)?;
         let mut removal = Removal {
             profiles: Vec::new(),
             files: Vec::new(),
@@ -175,7 +176,7 @@ impl Store {
                 "unsupported startup record: {}",
                 path.display()
             );
-            if !locking::same_path(Path::new(&record.program), program) {
+            if !locking::same_path(Path::new(&record.program), &program) {
                 continue;
             }
             match record.entry {

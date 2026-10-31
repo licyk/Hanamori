@@ -256,6 +256,7 @@ fn cmd_dispatch_rejects_linked_work_directory_and_forwards_native_arguments_and_
 #[cfg(windows)]
 #[test]
 fn windows_batch_entry_switches_and_restores_current_session_and_cleans_temporary_scripts() {
+    use std::os::windows::process::CommandExt;
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     let root = temp.path().join("工具 chain % & !");
@@ -310,6 +311,7 @@ exit /b 0
     let output = Command::new("cmd.exe")
         .args(["/d", "/v:off", "/c"])
         .arg(&script)
+        .creation_flags(0x10)
         .env("ENTRY", &entry)
         .env("HANAMORI_HOME", &home)
         .env("TEMP", &temporary)
@@ -318,6 +320,20 @@ exit /b 0
         .output()
         .unwrap();
     if !output.status.success() {
+        eprintln!(
+            "Generated entry:\n{}",
+            std::fs::read_to_string(&entry).unwrap()
+        );
+        for directory in std::fs::read_dir(&temporary).unwrap() {
+            for file in std::fs::read_dir(directory.unwrap().path()).unwrap() {
+                let path = file.unwrap().path();
+                eprintln!(
+                    "{}:\n{}",
+                    path.display(),
+                    String::from_utf8_lossy(&std::fs::read(&path).unwrap())
+                );
+            }
+        }
         eprintln!(
             "CMD failure artifacts retained at {}",
             temp.keep().display()
@@ -335,7 +351,7 @@ exit /b 0
     assert_eq!(first["status"], "ready");
     assert_eq!(
         first["active"]["root"],
-        serde_json::to_value(&root).unwrap()
+        serde_json::to_value(root.canonicalize().unwrap()).unwrap()
     );
     assert_eq!(second["active"]["toolset"], "14.51.36260");
     assert_eq!(second["status"], "ready");

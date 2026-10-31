@@ -28,10 +28,7 @@ pub(super) fn save_backup(
     bytes: &[u8],
 ) -> Result<PathBuf> {
     let path = file.into_temp_path();
-    // CopyFileW copies security properties on Windows 8+, unlike a fresh byte-only backup.
-    // An existing destination keeps its own DACL, so remove the reserved empty file first.
-    fs::remove_file(&path)?;
-    copy_windows(target, &path, true)?;
+    copy_windows(target, &path, false)?;
     ensure!(
         fs::read(&path)? == bytes,
         "profile changed while backing it up; retry"
@@ -48,7 +45,42 @@ fn wide(path: &Path) -> Vec<u16> {
 
 #[cfg(windows)]
 fn copy_windows(source: &Path, target: &Path, no_clobber: bool) -> Result<()> {
+    use windows_sys::Win32::Security::{
+        GetFileSecurityW, GetSecurityDescriptorControl, SetFileSecurityW,
+        DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, SE_DACL_PROTECTED,
+        UNPROTECTED_DACL_SECURITY_INFORMATION,
+    };
     let (source, target) = (wide(source), wide(target));
+    let mut needed = 0;
+    unsafe {
+        GetFileSecurityW(
+            source.as_ptr(),
+            DACL_SECURITY_INFORMATION,
+            std::ptr::null_mut(),
+            0,
+            &mut needed,
+        );
+    }
+    if needed == 0 {
+        return Err(std::io::Error::last_os_error()).context("cannot size profile permissions");
+    }
+    let mut buffer = vec![0u32; (needed as usize).div_ceil(4)];
+    let descriptor = buffer.as_mut_ptr().cast();
+    let mut control = 0;
+    let mut revision = 0;
+    if unsafe {
+        GetFileSecurityW(
+            source.as_ptr(),
+            DACL_SECURITY_INFORMATION,
+            descriptor,
+            needed,
+            &mut needed,
+        )
+    } == 0
+        || unsafe { GetSecurityDescriptorControl(descriptor, &mut control, &mut revision) } == 0
+    {
+        return Err(std::io::Error::last_os_error()).context("cannot read profile permissions");
+    }
     let result = unsafe {
         windows_sys::Win32::Storage::FileSystem::CopyFileW(
             source.as_ptr(),
@@ -59,6 +91,22 @@ fn copy_windows(source: &Path, target: &Path, no_clobber: bool) -> Result<()> {
     if result == 0 {
         return Err(std::io::Error::last_os_error())
             .context("cannot copy profile with Windows security properties");
+    }
+    // CopyFileW alone does not preserve a protected DACL on the backup.
+    let protection = if control & SE_DACL_PROTECTED != 0 {
+        PROTECTED_DACL_SECURITY_INFORMATION
+    } else {
+        UNPROTECTED_DACL_SECURITY_INFORMATION
+    };
+    if unsafe {
+        SetFileSecurityW(
+            target.as_ptr(),
+            DACL_SECURITY_INFORMATION | protection,
+            descriptor,
+        )
+    } == 0
+    {
+        return Err(std::io::Error::last_os_error()).context("cannot preserve profile permissions");
     }
     Ok(())
 }
