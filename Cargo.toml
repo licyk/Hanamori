@@ -6,7 +6,7 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/licyk/Hanamori"
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-only"
 
 [workspace.dependencies]
 anyhow = "1"
@@ -48,7 +48,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Hanamori standalone MSVC toolchain installer and version manager"
-include = ["/src", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
+include = ["/src", "/README.md", "/LICENSE"]
 
 [dependencies]
 anyhow.workspace = true

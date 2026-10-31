@@ -52,4 +52,4 @@ bun run dev
 
 Use `bun run build` for static output in `site/.output/public`, then `bun run check` and `bun run test` for validation. See [website maintenance](site/content/docs/website.en.mdx) for bilingual content and deployment configuration. Hosting must be configured separately; adding these files does not publish a website.
 
-The Rust package declares `MIT OR Apache-2.0`. The website adapts RVC Next's framework and retains its GPL-3.0 license; see [site/NOTICE](site/NOTICE) and [site/LICENSE](site/LICENSE).
+Licensed under the [GNU General Public License v3.0](LICENSE). Website attribution is in [site/NOTICE](site/NOTICE).

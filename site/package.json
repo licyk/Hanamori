@@ -1,6 +1,7 @@
 {
   "name": "@hanamori/site",
   "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "sideEffects": false,
   "scripts": {
