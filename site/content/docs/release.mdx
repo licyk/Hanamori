@@ -6,6 +6,28 @@ icon: Upload
 
 [Release 工作流](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) 统一发布 GitHub Release 和 `hanamori` crate。推送 `v*` 标签时发布到两个渠道；手动运行时可以选择标签和发布渠道。普通 main 推送与网站构建不发布版本。
 
+## 更新版本与创建标签
+
+在工作区或其成员包目录中使用仓库自带的 `xtask`：
+
+```sh
+cargo xtask bump          # 默认 patch：0.1.1 -> 0.1.2
+cargo xtask bump minor    # 另一种选择：递增 minor，patch 归零
+cargo xtask bump major    # 另一种选择：递增 major，minor 和 patch 归零
+```
+
+选择其中一种递增方式。命令更新 `Cargo.toml` 的 `workspace.package.version`，并由 Cargo 同步 `Cargo.lock` 中的工作区包版本，保留已锁定的依赖版本。命令不会提交修改或创建标签。先提交版本修改，再创建标签：
+
+```sh
+git add Cargo.toml Cargo.lock
+git commit -m "chore: bump version"
+cargo xtask tag --push
+```
+
+`cargo xtask tag` 在 `HEAD` 创建带注释的 `v版本号` 标签，默认不推送。默认版本来自当前工作区，而非已有 Git 标签中的最高版本。也可显式指定版本，例如 `cargo xtask tag 0.1.2 --push`；指定值必须与工作区版本一致。已跟踪文件的修改必须先提交，已有标签不会被覆盖。
+
+`--push` 仅将刚创建的标签推送到 `origin`，触发两个发布渠道。推送失败时保留本地标签，并输出可重试的 `git push` 命令。
+
 ## 选择标签与渠道
 
 在 Actions 中选择 **Release → Run workflow**，使用 `main` 上的工作流：

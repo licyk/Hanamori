@@ -6,6 +6,34 @@ icon: Upload
 
 The [Release workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/release.yml) publishes both GitHub Release assets and the `hanamori` crate. Pushing a `v*` tag publishes to both channels. Manual runs let you choose a tag and a channel. Ordinary main pushes and website builds do not publish versions.
 
+## Prepare a version and tag
+
+Use the repository's `xtask` commands from the workspace or one of its packages:
+
+```sh
+cargo xtask bump          # Patch: 0.1.1 -> 0.1.2
+cargo xtask bump minor    # Alternative: increment minor and reset patch
+cargo xtask bump major    # Alternative: increment major and reset minor/patch
+```
+
+Choose one bump command. It updates `workspace.package.version` in `Cargo.toml` and uses
+Cargo to regenerate the workspace entries in `Cargo.lock`, preserving locked dependency
+versions. It does not commit changes or create tags. Commit the version change before tagging:
+
+```sh
+git add Cargo.toml Cargo.lock
+git commit -m "chore: bump version"
+cargo xtask tag --push
+```
+
+`cargo xtask tag` creates an annotated `vVERSION` tag at `HEAD` without pushing. The default
+is the current workspace version, not the highest existing Git tag. An explicit version is
+also supported, for example `cargo xtask tag 0.1.2 --push`; it must match the workspace version.
+Tracked changes must be committed, and an existing tag is never replaced.
+
+`--push` pushes only the created tag to `origin`, triggering both release channels. If the
+push fails, the local tag is retained and the command prints the `git push` command to retry.
+
 ## Select a tag and channel
 
 In Actions, choose **Release → Run workflow** and use the workflow on `main`:

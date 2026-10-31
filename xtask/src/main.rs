@@ -1,36 +1,73 @@
-//! Repository automation. `cargo xtask check` enforces the module architecture that crate
-//! boundaries used to guarantee.
+//! Repository architecture checks and release preparation.
 
 mod graph;
 mod layers;
 mod modules;
 mod parents;
+mod release;
 
 use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 fn main() -> ExitCode {
-    if std::env::args().nth(1).as_deref() != Some("check") {
-        eprintln!("usage: cargo xtask check");
-        return ExitCode::from(2);
-    }
-    match check() {
-        Ok(violations) if violations.is_empty() => {
-            println!("module architecture checks passed");
-            ExitCode::SUCCESS
-        }
-        Ok(violations) => {
-            for violation in &violations {
-                println!("{violation}");
-            }
-            println!("{} module architecture violation(s)", violations.len());
-            ExitCode::FAILURE
-        }
+    match run(Cli::parse().task) {
+        Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("error: {error:#}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[derive(Parser)]
+#[command(
+    name = "cargo xtask",
+    bin_name = "cargo xtask",
+    about = "Repository checks and release preparation"
+)]
+struct Cli {
+    #[command(subcommand)]
+    task: Task,
+}
+
+#[derive(Subcommand)]
+enum Task {
+    /// Check module architecture.
+    Check,
+    /// Increment the workspace version and regenerate Cargo.lock.
+    Bump {
+        #[arg(value_enum, default_value = "patch")]
+        part: release::Part,
+    },
+    /// Create a vVERSION tag at HEAD, defaulting to the current workspace version.
+    Tag {
+        /// Explicit version; must match the committed workspace version.
+        version: Option<semver::Version>,
+        /// Push the created tag to origin, triggering the release workflow.
+        #[arg(long)]
+        push: bool,
+    },
+}
+
+fn run(task: Task) -> Result<()> {
+    match task {
+        Task::Check => {
+            let violations = check()?;
+            for violation in &violations {
+                println!("{violation}");
+            }
+            anyhow::ensure!(
+                violations.is_empty(),
+                "{} module architecture violation(s)",
+                violations.len()
+            );
+            println!("module architecture checks passed");
+            Ok(())
+        }
+        Task::Bump { part } => release::bump(part),
+        Task::Tag { version, push } => release::tag(version, push),
     }
 }
 
