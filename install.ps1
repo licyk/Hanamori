@@ -1,6 +1,6 @@
 param(
     [string]$Version = 'latest',
-    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Hanamori\bin'),
+    [string]$InstallDir = $env:HANAMORI_INSTALL_DIR,
     [switch]$NoPathUpdate,
     [switch]$NoShell
 )
@@ -8,7 +8,7 @@ param(
 function Install-Hanamori {
     param(
         [string]$Version = 'latest',
-        [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Hanamori\bin'),
+        [string]$InstallDir = $env:HANAMORI_INSTALL_DIR,
         [switch]$NoPathUpdate,
         [switch]$NoShell,
         [string]$ReleaseApi = 'https://api.github.com/repos/licyk/Hanamori/releases',
@@ -70,6 +70,7 @@ function Resolve-HanamoriInstallDirectory {
     }
     $architecture = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
     if ($architecture -ne 'AMD64') { throw 'Hanamori requires Windows x64.' }
+    if (!$Directory) { $Directory = Join-Path $env:LOCALAPPDATA 'Hanamori\bin' }
     $directory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Directory)
     if ($directory.Contains(';')) { throw 'The installation directory cannot contain a semicolon (PATH separator).' }
     $directory

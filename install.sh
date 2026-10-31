@@ -2,7 +2,7 @@
 
 main() (
     set -euo pipefail
-    local version=latest install_dir= no_path=false no_shell=false
+    local version=latest install_dir=${HANAMORI_INSTALL_DIR:-} no_path=false no_shell=false
     while (($#)); do
         case "$1" in
             --version|--install-dir)
@@ -68,6 +68,9 @@ Install Hanamori for Windows x64 from MSYS2 or Git Bash.
   --no-path-update        Skip user PATH configuration
   --no-shell              Skip Bash profile integration and completions
   -h, --help              Show this help
+
+HANAMORI_INSTALL_DIR sets the installation directory when --install-dir is omitted.
+An unset or empty variable defaults to %LOCALAPPDATA%/Hanamori/bin.
 USAGE
 }
 

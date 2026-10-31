@@ -10,6 +10,7 @@ function Assert($condition, $message) {
     if (!$condition) { throw $message }
 }
 $root = $env:INSTALLER_ROOT
+$env:HANAMORI_INSTALL_DIR = Join-Path $root 'unused-env-bin'
 $location = $env:INSTALLER_REGISTRY
 $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($location)
 $originalProcessPath = $env:PATH
@@ -24,6 +25,8 @@ $options = @{
 try {
     [IO.File]::WriteAllText($options.ProfilePath, '# user profile', [Text.UTF8Encoding]::new($false))
     Install-Hanamori @options
+    Assert (!(Test-Path -LiteralPath $env:HANAMORI_INSTALL_DIR)) 'Environment directory overrode InstallDir'
+    Assert ((Resolve-HanamoriInstallDirectory '') -eq (Join-Path $env:LOCALAPPDATA 'Hanamori\bin')) 'Empty directory did not use the default'
     $executable = Join-Path $options.InstallDir 'hanamori.exe'
     $receipt = "$executable.install.json"
     Assert (Test-Path -LiteralPath $receipt) 'Missing PATH ownership receipt'
@@ -44,12 +47,14 @@ try {
     Assert (@(Get-ChildItem -LiteralPath $options.InstallDir -Directory).Count -eq 0) 'Staging files remained'
     Remove-Item Function:hanamori
     $bare = $options.Clone()
-    $bare.InstallDir = Join-Path $root 'bare'
+    $bare.Remove('InstallDir')
+    $env:HANAMORI_INSTALL_DIR = Join-Path $root 'bare'
     $bare.ProfilePath = Join-Path $root 'unused-profile.ps1'
     $messages = @(Install-Hanamori @bare -NoShell -NoPathUpdate 3>&1)
+    Assert (Test-Path -LiteralPath (Join-Path $env:HANAMORI_INSTALL_DIR 'hanamori.exe')) 'Environment installation directory was ignored'
     Assert (@($messages | Where-Object { $_ -is [Management.Automation.WarningRecord] -and $_.Message.Contains($executable) }).Count -gt 0) 'Existing executable was not reported'
     Assert (!(Test-Path -LiteralPath $bare.ProfilePath)) 'NoShell wrote a profile'
-    Assert (!(Test-Path -LiteralPath (Join-Path $bare.InstallDir 'hanamori.exe.install.json'))) 'NoPathUpdate claimed ownership'
+    Assert (!(Test-Path -LiteralPath (Join-Path $env:HANAMORI_INSTALL_DIR 'hanamori.exe.install.json'))) 'NoPathUpdate claimed ownership'
     Assert ($key.GetValue('Path', '', 'DoNotExpandEnvironmentNames') -eq $userPath) 'NoPathUpdate changed PATH'
     $preexisting = $options.Clone()
     $preexisting.InstallDir = Join-Path $root 'preexisting'

@@ -20,6 +20,15 @@ To choose a release or executable directory:
 & ([scriptblock]::Create((irm https://licyk.github.io/Hanamori/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
 ```
 
+You can also set `HANAMORI_INSTALL_DIR` to the directory that should contain `hanamori.exe`:
+
+```powershell
+$env:HANAMORI_INSTALL_DIR = 'D:\Tools\Hanamori'
+irm https://licyk.github.io/Hanamori/install.ps1 | iex
+```
+
+The priority is `-InstallDir`, then `HANAMORI_INSTALL_DIR`, then `%LOCALAPPDATA%\Hanamori\bin`. An unset or empty environment variable uses the default directory.
+
 | Parameter | Meaning |
 | --- | --- |
 | `-Version` | `latest` or a version, with an optional `v` prefix |
@@ -39,7 +48,7 @@ Run in MSYS2 or Git Bash on Windows x64:
 curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
 ```
 
-The Bash installer reuses the PowerShell download, verification and user PATH setup, then invokes `hanamori shell init --shell bash` with the actual Bash runtime to configure `.bashrc`, login startup and completions. It uses `%LOCALAPPDATA%\Hanamori\bin`, installs no toolchains and leaves PowerShell profiles unchanged.
+The Bash installer reuses the PowerShell download, verification and user PATH setup, then invokes `hanamori shell init --shell bash` with the actual Bash runtime to configure `.bashrc`, login startup and completions. It defaults to `%LOCALAPPDATA%\Hanamori\bin`, installs no toolchains and leaves PowerShell profiles unchanged.
 
 It requires `cygpath`, `curl` and Windows PowerShell or PowerShell 7. If PowerShell is absent from the MSYS2 PATH, the script checks the Windows system directory. From a checkout, run `bash install.sh` to use the adjacent `install.ps1`.
 
@@ -49,6 +58,12 @@ curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash -s -- \
 ```
 
 Options are `--version`, `--install-dir`, `--no-path-update` and `--no-shell`. Installation directories accept MSYS or Windows paths. `--no-shell` skips Bash startup and completion setup; `--no-path-update` skips user PATH configuration.
+
+Bash also supports `HANAMORI_INSTALL_DIR`, with `--install-dir` taking precedence. An unset or empty variable uses the default directory. For a piped installation, pass the variable to `bash`:
+
+```bash
+curl -fsSL https://licyk.github.io/Hanamori/install.sh | HANAMORI_INSTALL_DIR='/d/Tools/Hanamori' bash
+```
 
 `curl | bash` runs in a child process. Open a new Bash terminal afterward, or run the printed hook command to use Hanamori immediately in the current terminal. MSYS2 may rebuild PATH at startup; the Bash hook invokes Hanamori by its absolute path.
 

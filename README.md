@@ -18,6 +18,8 @@ irm https://licyk.github.io/Hanamori/install.ps1 | iex
 
 The script installs the Windows x64 executable into `%LOCALAPPDATA%\Hanamori\bin`, adds that directory to your user PATH, and initializes the current PowerShell profile and session with completions. No administrator privileges are required. Toolchains are installed separately.
 
+Set `HANAMORI_INSTALL_DIR` to choose the executable directory in either installer. Explicit `-InstallDir` / `--install-dir` arguments take precedence; an unset or empty variable uses the default directory. `HANAMORI_HOME` separately selects manager data.
+
 For MSYS2 or Git Bash, use the Bash installer:
 
 ```bash
