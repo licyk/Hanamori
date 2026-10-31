@@ -83,7 +83,15 @@ function Install-HanamoriBinary {
     try {
         $download = Join-Path $staging 'hanamori.exe'
         Write-Host "Downloading Hanamori $($Release.Version)..."
-        Invoke-WebRequest -UseBasicParsing -Uri $Release.Url -OutFile $download -TimeoutSec 180
+        # Windows PowerShell interprets brackets in -OutFile as wildcards.
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $Release.Url -TimeoutSec 180
+        $file = [IO.File]::Create($download)
+        try {
+            $response.RawContentStream.CopyTo($file)
+        } finally {
+            $file.Dispose()
+            $response.RawContentStream.Dispose()
+        }
         if ((Get-Item -LiteralPath $download).Length -ne $Release.Size) {
             throw 'Downloaded executable size differs from the release asset.'
         }

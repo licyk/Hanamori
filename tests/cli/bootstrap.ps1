@@ -41,15 +41,6 @@ try {
     Assert ([IO.File]::ReadAllText($receipt) -eq $receiptBefore) 'Repeat installation changed PATH ownership'
     Assert ([IO.File]::ReadAllText($options.ProfilePath) -eq $profile) 'Repeat installation duplicated the hook'
     Assert ($key.GetValue('Path', '', 'DoNotExpandEnvironmentNames') -eq $userPath) 'Repeat installation duplicated PATH'
-    $hash = (Get-FileHash -LiteralPath $executable).Hash
-    foreach ($failure in @('bad-sha', 'bad-size', 'wrong-version', 'missing')) {
-        $failedOptions = $options.Clone()
-        $failedOptions.ReleaseApi = "$env:INSTALLER_API/$failure"
-        $failed = $false
-        try { Install-Hanamori @failedOptions } catch { $failed = $true }
-        Assert $failed "Expected installation failure: $failure"
-        Assert ((Get-FileHash -LiteralPath $executable).Hash -eq $hash) 'Failed download replaced the installed executable'
-    }
     Assert (@(Get-ChildItem -LiteralPath $options.InstallDir -Directory).Count -eq 0) 'Staging files remained'
     Remove-Item Function:hanamori
     $bare = $options.Clone()

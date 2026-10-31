@@ -130,6 +130,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
             .env_remove("GITHUB_TOKEN")
             .env_remove("_HANAMORI_STATE")
             .env_remove("BASH_ENV")
+            .env_remove("PSModulePath")
             .output()
             .unwrap();
         let path: String = key.get_value("Path").unwrap();

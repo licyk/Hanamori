@@ -7,6 +7,29 @@ use std::{fs, process::Command};
 #[test]
 #[cfg(windows)]
 fn powershell_installer_downloads_configures_and_reinstalls() {
+    run_installer_test("powershell.exe", include_str!("bootstrap.ps1"));
+}
+
+#[test]
+#[cfg(windows)]
+fn pwsh_installer_downloads_configures_and_reinstalls() {
+    run_installer_test("pwsh.exe", include_str!("bootstrap.ps1"));
+}
+
+#[test]
+#[cfg(windows)]
+fn powershell_failed_installs_preserve_existing_program() {
+    run_installer_test("powershell.exe", include_str!("bootstrap_failures.ps1"));
+}
+
+#[test]
+#[cfg(windows)]
+fn pwsh_failed_installs_preserve_existing_program() {
+    run_installer_test("pwsh.exe", include_str!("bootstrap_failures.ps1"));
+}
+
+#[cfg(windows)]
+fn run_installer_test(shell: &str, script_source: &str) {
     let bytes = fs::read(env!("CARGO_BIN_EXE_hanamori")).unwrap();
     let size = bytes.len();
     let digest = format!("sha256:{:x}", Sha256::digest(&bytes));
@@ -40,48 +63,44 @@ fn powershell_installer_downloads_configures_and_reinstalls() {
             .push(("Content-Type".into(), "application/json".into()));
         reply
     });
-    for shell in ["powershell.exe", "pwsh.exe"] {
-        let temp = tempfile::tempdir().unwrap();
-        let directory = temp.path().join("用户 '& [test]");
-        fs::create_dir(&directory).unwrap();
-        let script = temp.path().join("test.ps1");
-        fs::write(&script, include_str!("bootstrap.ps1")).unwrap();
-        success(
-            Command::new(shell)
-                .args([
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                ])
-                .arg(script)
-                .env(
-                    "INSTALLER_SOURCE",
-                    concat!(env!("CARGO_MANIFEST_DIR"), "/install.ps1"),
-                )
-                .env("INSTALLER_API", &api.url)
-                .env("INSTALLER_ROOT", &directory)
-                .env("INSTALLER_VERSION", env!("CARGO_PKG_VERSION"))
-                .env(
-                    "INSTALLER_REGISTRY",
-                    format!(r"Software\Hanamori-Installer-Test-{}", uuid::Uuid::new_v4()),
-                )
-                .env("LOCALAPPDATA", temp.path().join("data"))
-                .env("HANAMORI_HOME", temp.path().join("manager"))
-                .env_remove("GITHUB_TOKEN")
-                .env_remove("_HANAMORI_STATE")
-                .output()
-                .unwrap(),
-        );
-        assert!(!temp.path().join("manager/toolchains").exists());
-    }
-    let requests = api.requests.lock().unwrap();
-    assert!(requests.iter().any(|request| request.path == "/latest"));
-    assert!(requests
-        .iter()
-        .any(|request| request.path == concat!("/tags/v", env!("CARGO_PKG_VERSION"))));
+    let temp = tempfile::tempdir().unwrap();
+    let directory = temp.path().join("用户 '& [test]");
+    fs::create_dir(&directory).unwrap();
+    let script = temp.path().join("test.ps1");
+    fs::write(&script, script_source).unwrap();
+    success(
+        Command::new(shell)
+            .args([
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(script)
+            .env(
+                "INSTALLER_SOURCE",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/install.ps1"),
+            )
+            .env("INSTALLER_API", &api.url)
+            .env("INSTALLER_ROOT", &directory)
+            .env("INSTALLER_VERSION", env!("CARGO_PKG_VERSION"))
+            .env("INSTALLER_BINARY", env!("CARGO_BIN_EXE_hanamori"))
+            .env(
+                "INSTALLER_REGISTRY",
+                format!(r"Software\Hanamori-Installer-Test-{}", uuid::Uuid::new_v4()),
+            )
+            .env("LOCALAPPDATA", temp.path().join("data"))
+            .env("HANAMORI_HOME", temp.path().join("manager"))
+            .env_remove("GITHUB_TOKEN")
+            .env_remove("_HANAMORI_STATE")
+            // Rebuild the selected shell's module path instead of inheriting pwsh's.
+            .env_remove("PSModulePath")
+            .output()
+            .unwrap(),
+    );
+    assert!(!temp.path().join("manager/toolchains").exists());
 }
 
 #[test]
@@ -122,6 +141,8 @@ fn powershell_release_validation_and_corrupt_download_preserve_existing_program(
         reply
     });
     let temp = tempfile::tempdir().unwrap();
+    let directory = temp.path().join("用户 '& [test]");
+    fs::create_dir(&directory).unwrap();
     let script = temp.path().join("metadata.ps1");
     fs::write(&script, include_str!("bootstrap_metadata.ps1")).unwrap();
     success(
@@ -140,8 +161,9 @@ fn powershell_release_validation_and_corrupt_download_preserve_existing_program(
                 concat!(env!("CARGO_MANIFEST_DIR"), "/install.ps1"),
             )
             .env("INSTALLER_API", &api.url)
-            .env("INSTALLER_ROOT", temp.path())
+            .env("INSTALLER_ROOT", &directory)
             .env_remove("GITHUB_TOKEN")
+            .env_remove("PSModulePath")
             .output()
             .unwrap(),
     );

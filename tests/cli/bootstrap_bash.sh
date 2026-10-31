@@ -22,10 +22,12 @@ cmp -- "$HOME/.bash_profile" "$root/login-before"
 cat -- "$installer" | "$BASH" -s -- --install-dir "$root/piped" --no-path-update --no-shell
 test -f "$root/piped/hanamori.exe"
 cp -- "$directory/hanamori.exe" "$root/before.exe"
-if "$BASH" "$installer" --install-dir "$directory" --version 9.9.9; then
+if "$BASH" "$installer" --install-dir "$directory" --version 9.9.9 > "$root/failure.log" 2>&1; then
     printf 'Corrupt release was accepted\n' >&2
     exit 1
 fi
+cat -- "$root/failure.log"
+grep -q 'SHA-256' "$root/failure.log"
 cmp -- "$directory/hanamori.exe" "$root/before.exe"
 "$BASH" "$installer" --install-dir "$root/bare" --no-path-update --no-shell
 test -f "$root/bare/hanamori.exe"

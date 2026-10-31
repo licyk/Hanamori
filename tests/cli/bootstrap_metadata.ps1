@@ -11,13 +11,16 @@ if ($release.Version -ne '1.2.3') { throw 'Unexpected release version' }
 $release = Get-HanamoriRelease -Version v1.2.3 -ReleaseApi $env:INSTALLER_API
 if ($release.Version -ne '1.2.3') { throw 'Explicit version was not resolved' }
 foreach ($scenario in @(
-    @{Version = 'latest'; ReleaseApi = "$env:INSTALLER_API/prerelease"},
-    @{Version = 'latest'; ReleaseApi = "$env:INSTALLER_API/no-digest"},
-    @{Version = '2.0.0'; ReleaseApi = $env:INSTALLER_API},
-    @{Version = 'invalid'; ReleaseApi = $env:INSTALLER_API}
+    @{Version = 'latest'; ReleaseApi = "$env:INSTALLER_API/prerelease"; Error = 'no usable Hanamori version'},
+    @{Version = 'latest'; ReleaseApi = "$env:INSTALLER_API/no-digest"; Error = 'SHA-256 digest'},
+    @{Version = '2.0.0'; ReleaseApi = $env:INSTALLER_API; Error = 'differs from the requested version'},
+    @{Version = 'invalid'; ReleaseApi = $env:INSTALLER_API; Error = 'Version must be'}
 )) {
     $failed = $false
-    try { $null = Get-HanamoriRelease @scenario } catch { $failed = $true }
+    try { $null = Get-HanamoriRelease -Version $scenario.Version -ReleaseApi $scenario.ReleaseApi } catch {
+        if (!$_.ToString().Contains($scenario.Error)) { throw }
+        $failed = $true
+    }
     if (!$failed) { throw "Invalid release accepted: $($scenario | ConvertTo-Json -Compress)" }
 }
 $release = Get-HanamoriRelease -Version latest -ReleaseApi "$env:INSTALLER_API/bad-sha"
