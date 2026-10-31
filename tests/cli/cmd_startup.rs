@@ -234,6 +234,7 @@ exit /b 0
         .env_remove("_HANAMORI_CMD_ENTRY")
         .env_remove("ERRORLEVEL")
         .env_remove("RANDOM")
+        .env("_HANAMORI_CMD_TRACE", "1")
         .env("HANAMORI_LOG", "invalid[")
         .env("PLAIN", plain.loader_path())
         .env("AUTO", auto.loader_path())

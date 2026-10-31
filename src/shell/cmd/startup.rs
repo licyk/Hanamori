@@ -29,9 +29,11 @@ pub fn loader(auto_activate: bool, use_on_cd: bool) -> String {
 @set "_HANAMORI_CMD_PROBE=1"
 @call "%~dp0hanamori.cmd"
 @endlocal
+@if defined _HANAMORI_CMD_TRACE echo Hanamori CMD startup: probe status %errorlevel% 1>&2
 @if errorlevel 1 exit /b 0
 @if not exist "%SystemRoot%\System32\doskey.exe" goto _hanamori_init_failed
 @"%SystemRoot%\System32\doskey.exe" /exename=cmd.exe hanamori="%%_HANAMORI_CMD_ENTRY%%" $* >nul 2>nul
+@if defined _HANAMORI_CMD_TRACE echo Hanamori CMD startup: DOSKEY status %errorlevel% 1>&2
 @if errorlevel 1 exit /b 0
 @set "_HANAMORI_CMD_ENTRY=%~dp0hanamori.cmd"
 @if defined _HANAMORI_CMD_CD "%SystemRoot%\System32\doskey.exe" /exename=cmd.exe cd= >nul 2>nul

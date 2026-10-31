@@ -36,4 +36,4 @@ jobs:
       - name: Test library and CLI
         env:
           HANAMORI_REQUIRE_SHELL_TESTS: '1'
-        run: cargo test --workspace --locked -- --nocapture
+        run: cargo test --workspace --locked ${{ runner.os == 'Windows' && '--release --target x86_64-pc-windows-msvc' || '' }} -- --nocapture
