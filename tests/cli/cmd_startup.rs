@@ -226,40 +226,42 @@ exit /b 0
         .replace('\n', "\r\n"),
     )
     .unwrap();
-    let output = Command::new("cmd.exe")
-        .args(["/d", "/v:off", "/c"])
-        .arg(&script)
-        .creation_flags(0x10) // CREATE_NEW_CONSOLE: DOSKEY requires a real console.
-        .env_remove("_HANAMORI_STATE")
-        .env_remove("_HANAMORI_CMD_ENTRY")
-        .env_remove("ERRORLEVEL")
-        .env_remove("RANDOM")
-        .env("_HANAMORI_CMD_TRACE", "1")
-        .env("HANAMORI_LOG", "invalid[")
-        .env("PLAIN", plain.loader_path())
-        .env("AUTO", auto.loader_path())
-        .env("BAD", bad.loader_path())
-        .env("HANAMORI_HOME", temp.path().join("home"))
-        .current_dir(temp.path())
-        .output()
-        .unwrap();
-    if !output.status.success() {
-        eprintln!(
-            "CMD startup failure artifacts retained at {}",
-            temp.keep().display()
+    for attempt in 1..=10 {
+        let output = Command::new("cmd.exe")
+            .args(["/d", "/v:off", "/c"])
+            .arg(&script)
+            .creation_flags(0x10) // CREATE_NEW_CONSOLE: DOSKEY requires a real console.
+            .env_remove("_HANAMORI_STATE")
+            .env_remove("_HANAMORI_CMD_ENTRY")
+            .env_remove("ERRORLEVEL")
+            .env_remove("RANDOM")
+            .env("_HANAMORI_CMD_TRACE", "1")
+            .env("HANAMORI_LOG", "invalid[")
+            .env("PLAIN", plain.loader_path())
+            .env("AUTO", auto.loader_path())
+            .env("BAD", bad.loader_path())
+            .env("HANAMORI_HOME", temp.path().join("home"))
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        if !output.status.success() {
+            eprintln!(
+                "CMD startup failure artifacts retained at {}",
+                temp.keep().display()
+            );
+            panic!(
+                "attempt {attempt}, status {:?}\nstdout {}\nstderr {}",
+                output.status.code(),
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        let macros = std::fs::read_to_string(temp.path().join("macros.txt")).unwrap();
+        assert!(
+            macros.contains("hanamori=\"%_HANAMORI_CMD_ENTRY%\" $*"),
+            "{macros}"
         );
-        panic!(
-            "status {:?}\nstdout {}\nstderr {}",
-            output.status.code(),
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+        assert!(String::from_utf8_lossy(&output.stdout).contains("terminal remains usable"));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"));
     }
-    let macros = std::fs::read_to_string(temp.path().join("macros.txt")).unwrap();
-    assert!(
-        macros.contains("hanamori=\"%_HANAMORI_CMD_ENTRY%\" $*"),
-        "{macros}"
-    );
-    assert!(String::from_utf8_lossy(&output.stdout).contains("terminal remains usable"));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"));
 }
