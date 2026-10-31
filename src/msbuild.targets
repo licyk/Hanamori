@@ -14,7 +14,7 @@
     <ManifestTrackerSdkPath>$(HanamoriTrackerPath)</ManifestTrackerSdkPath>
   </PropertyGroup>
   <Target Name="HanamoriValidateToolchain" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(Platform)' != 'x64' or '$(PlatformToolset)' != 'v143'" Text="Hanamori MSBuild supports x64/v143 native C++ projects." />
+    <Error Condition="'$(Platform)' != 'x64' or '$(PlatformToolset)' != '@PLATFORM_TOOLSET@'" Text="Hanamori MSBuild supports x64/@PLATFORM_TOOLSET@ native C++ projects." />
     <Error Condition="'$(VCToolsVersion)' != '$(HanamoriToolsetVersion)'" Text="The project requests a different VCToolsVersion from the selected Hanamori toolchain." />
     <Error Condition="'$(WindowsTargetPlatformVersion)' != '$(HanamoriSdkVersion)'" Text="The project requests a different Windows SDK from the selected Hanamori toolchain." />
   </Target>

@@ -5,12 +5,12 @@
     <HanamoriSdkVersion>@SDK@</HanamoriSdkVersion>
     <VCToolsVersion Condition="'$(VCToolsVersion)' == ''">$(HanamoriToolsetVersion)</VCToolsVersion>
     <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == '' or '$(WindowsTargetPlatformVersion)' == '10.0'">$(HanamoriSdkVersion)</WindowsTargetPlatformVersion>
-    <!-- With registry lookup disabled, v170 targets require these versioned roots
+    <!-- With registry lookup disabled, v@TARGETS_VERSION@ targets require these versioned roots
          and later copy them over the public installation properties. -->
-    <VCInstallDir_170>$(HanamoriRoot)VC\</VCInstallDir_170>
-    <VCToolsInstallDir_170>$(VCInstallDir_170)Tools\MSVC\$(HanamoriToolsetVersion)\</VCToolsInstallDir_170>
-    <VCInstallDir>$(VCInstallDir_170)</VCInstallDir>
-    <VCToolsInstallDir>$(VCToolsInstallDir_170)</VCToolsInstallDir>
+    <VCInstallDir_@TARGETS_VERSION@>$(HanamoriRoot)VC\</VCInstallDir_@TARGETS_VERSION@>
+    <VCToolsInstallDir_@TARGETS_VERSION@>$(VCInstallDir_@TARGETS_VERSION@)Tools\MSVC\$(HanamoriToolsetVersion)\</VCToolsInstallDir_@TARGETS_VERSION@>
+    <VCInstallDir>$(VCInstallDir_@TARGETS_VERSION@)</VCInstallDir>
+    <VCToolsInstallDir>$(VCToolsInstallDir_@TARGETS_VERSION@)</VCToolsInstallDir>
     <WindowsSdkDir_10>$(HanamoriRoot)Windows Kits\10\</WindowsSdkDir_10>
     <WindowsSdkDir>$(WindowsSdkDir_10)</WindowsSdkDir>
     <UniversalCRTSdkDir_10>$(WindowsSdkDir_10)</UniversalCRTSdkDir_10>

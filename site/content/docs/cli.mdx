@@ -23,14 +23,14 @@ icon: ListTree
 | `--sdk VER` | 实际 SDK 版本，与 `--sdk-id`、`--no-sdk` 互斥 |
 | `--sdk-id ID` | SDK 下载 ID，与 `--sdk`、`--no-sdk` 互斥 |
 | `--no-sdk` | 不安装 SDK，默认也不安装 MSBuild；项目明确要求 MSBuild 时须同时加 `--no-msbuild` |
-| `--msbuild` | 显式启用 MSBuild，覆盖项目设置；默认随 SDK 安装，支持 VS 2022 x64/v143；与 `--no-sdk`、`--no-msbuild` 互斥 |
+| `--msbuild` | 显式启用 MSBuild，覆盖项目设置；默认随 SDK 安装，支持 VS 2022 x64/v143 和 VS 2026 x64/v145；与 `--no-sdk`、`--no-msbuild` 互斥 |
 | `--no-msbuild` | 禁用默认启用的 MSBuild，也覆盖项目要求；默认保留编译器与 SDK |
 | `--reinstall` | 整体重新安装；外部非空目录必须显式指定 |
 | `--arch ARCH` | 默认且目前只接受 `x64/x64` |
 | `--dry-run` | 可以查询清单，不下载负载，不写安装/引用/工作区 |
-| `list-remote` | 默认查询 VS 2022；`--all` 同时查询 VS 2022/2026；可加 `--toolset-id ID` 查看指定工具集的包；支持 `--json` |
+| `list-remote` | 默认查询 VS 2026；`--all` 同时查询 VS 2022/2026；可加 `--toolset-id ID` 查看指定工具集的包；支持 `--json` |
 
-这两个命令共用 `--vs-version 2022/2026`（别名 17/18，默认 2022）、`--channel release/preview`（别名 stable/insiders，默认 release）、`--manifest URL`（与前两者互斥）和 `--strict-manifest-integrity`。install 不支持 `--json`。
+这两个命令共用 `--vs-version 2022/2026`（别名 17/18，默认 2026）、`--channel release/preview`（别名 stable/insiders，默认 release）、`--manifest URL`（与前两者互斥）和 `--strict-manifest-integrity`。install 不支持 `--json`。
 
 `list-remote --all` 按 VS 2022、VS 2026 分组列出所选渠道中的工具集和 SDK，并分别展开各组最新工具集的包。默认查询正式渠道；加 `--channel preview`（或 `insiders`）查询两者的预览渠道，不同时混入正式渠道。同名 ID 保留在各自来源组中。它与 `--vs-version`、`--manifest`、`--toolset-id` 互斥。这里的“全部”指当前支持的两代 VS 所选渠道中仍提供的版本，不保证覆盖微软历史上所有已撤下的版本。
 

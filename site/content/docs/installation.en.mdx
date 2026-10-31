@@ -20,16 +20,16 @@ hanamori list-remote --json
 hanamori list-remote --all
 hanamori list-remote --all --channel preview
 hanamori list-remote --all --json
-hanamori list-remote --toolset-id 14.44.17.14
-hanamori install --toolset-id 14.44.17.14 --sdk-id 26100 --name stable
+hanamori list-remote --vs-version 2022 --toolset-id 14.44.17.14
+hanamori install --vs-version 2022 --toolset-id 14.44.17.14 --sdk-id 26100 --name stable
 hanamori install latest --no-msbuild --name compiler-sdk
 hanamori install latest --no-sdk --name compiler
-hanamori install --vs-version 2026 --channel preview --no-msbuild --dry-run
+hanamori install --channel preview --dry-run
 hanamori install --manifest https://example.test/channel.json --dry-run
 ```
 
 `--vs-version` accepts `2022`/`17` and `2026`/`18`. `--channel` accepts `release`/`stable`
-and `preview`/`insiders`. A custom `--manifest` replaces both. The default is 2022 release.
+and `preview`/`insiders`. A custom `--manifest` replaces both. The default is 2026 stable (`release`).
 Only `--arch x64/x64` is implemented.
 
 `list-remote --all` groups toolsets and SDKs by VS 2022 and VS 2026, and expands the latest toolset’s packages in each group. It queries release channels by default. Add `--channel preview` (or `insiders`) to query both preview channels instead, without mixing release channels into the result. Identical IDs remain in their source groups. `--all` conflicts with `--vs-version`, `--manifest`, and `--toolset-id`. “All” covers versions still offered by the selected channels for the two supported VS generations, not every historical version Microsoft has ever published.
@@ -68,11 +68,11 @@ hanamori exec --using build -- MSBuild.exe app.sln -p:Configuration=Release -p:P
 hanamori exec --using build -- MSBuild.exe app.vcxproj -t:Rebuild -p:Configuration=Debug -p:Platform=x64
 ```
 
-Installation includes MSVC, the Windows SDK and MSBuild by default, selecting MSBuild 17.x, C++ props/targets, task assemblies and FileTracker from the same catalog. `--no-msbuild` excludes MSBuild and keeps the compiler and SDK. `--no-sdk` or project `"sdk": null` defaults to a compiler-only installation.
+Installation includes MSVC, the Windows SDK and MSBuild by default, selecting MSBuild 18.x (VS 2026) or 17.x (VS 2022), C++ props/targets, task assemblies and FileTracker from the same catalog. `--no-msbuild` excludes MSBuild and keeps the compiler and SDK. `--no-sdk` or project `"sdk": null` defaults to a compiler-only installation.
 
 Component selection follows explicit command-line options, then project settings, then defaults. Projects may set `"msbuild": true` or `false`; `--msbuild` / `--no-msbuild` override that setting. An explicit MSBuild requirement without the SDK fails; use `--no-msbuild` to cancel that requirement. Exact directory keys retain their component combination, so the new default does not add MSBuild to an existing key.
 
-VS 2026 installations require `--no-msbuild`. The initial scope is VS 2022 x64/v143 native C++ `.vcxproj` and `.sln` builds. VS 2026, Win32/ARM64, ATL/MFC, C++/CLI, UWP, drivers, C# and IDE integration are outside that scope. Native Windows build acceptance remains pending; real downloads/extraction and Linux tests do not establish it.
+The supported scope is native C++ `.vcxproj` and `.sln` builds using VS 2026 x64/v145 or VS 2022 x64/v143. Use `--vs-version 2022` for v143 projects. Win32/ARM64, ATL/MFC, C++/CLI, UWP, drivers, C# and IDE integration are outside that scope. Native Windows build acceptance remains pending; real downloads/extraction and Linux tests do not establish it.
 
 MSBuild combinations use `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild version>_x64`, independently of combinations without MSBuild. Reinstalling an exact key requires the catalog to still offer that MSBuild version; it never silently upgrades it. Retain a matching manifest and cache if upstream removes packages.
 

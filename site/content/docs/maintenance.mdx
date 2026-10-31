@@ -37,7 +37,7 @@ hanamori uninstall stable
 受管目录不存在、为空或缺少关键文件时，原安装命令会重新安装。普通头文件等未纳入快速检查的损坏，用 `--reinstall` 强制重建。没有逐文件哈希收据，也不依赖旧安装记录。
 
 ```sh
-hanamori install --toolset-id 14.44.17.14 --sdk-id 26100
+hanamori install --vs-version 2022 --toolset-id 14.44.17.14 --sdk-id 26100
 hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
 hanamori doctor --dir D:/ExistingTools --json
 ```

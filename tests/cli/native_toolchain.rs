@@ -228,6 +228,10 @@ mod native {
         layout: &hanamori::env::ToolchainLayout,
         key: &str,
     ) -> Result<PathBuf> {
+        let msbuild =
+            hanamori::msbuild::Layout::for_version(layout.msbuild_version.as_deref().unwrap());
+        let vc_root = format!("VCInstallDir_{}", msbuild.targets_version);
+        let tools_root = format!("VCToolsInstallDir_{}", msbuild.targets_version);
         for (name, content) in [
             (
                 "probe.vcxproj",
@@ -240,7 +244,10 @@ mod native {
             ("probe.sln", include_str!("../fixtures/native_build.sln")),
             ("library.cpp", "int linked_value() { return 42; }\n"),
         ] {
-            std::fs::write(work.join(name), content)?;
+            std::fs::write(
+                work.join(name),
+                content.replace("@PLATFORM_TOOLSET@", msbuild.platform_toolset),
+            )?;
         }
         successful(command().args(["MSBuild.exe", "-nologo", "-version"]))?;
         for configuration in ["Debug", "Release"] {
@@ -258,9 +265,9 @@ mod native {
                         "probe.vcxproj",
                         "-nologo",
                         "-p:Platform=x64",
-                    "-getProperty:MSBUILDDISABLENODEREUSE,VCInstallDir_170,VCToolsInstallDir_170,VCInstallDir,VCToolsInstallDir,WindowsSdkDir,VCTargetsPath,CLTrackerFrameworkPath,CLTrackerSdkPath,LinkTrackerFrameworkPath,LibTrackerFrameworkPath,RCTrackerFrameworkPath,ManifestTrackerFrameworkPath",
                     ])
-                    .arg(format!("-p:Configuration={configuration}")),
+                    .arg(format!("-p:Configuration={configuration}"))
+                    .arg(format!("-getProperty:MSBUILDDISABLENODEREUSE,{vc_root},{tools_root},VCInstallDir,VCToolsInstallDir,WindowsSdkDir,VCTargetsPath,CLTrackerFrameworkPath,CLTrackerSdkPath,LinkTrackerFrameworkPath,LibTrackerFrameworkPath,RCTrackerFrameworkPath,ManifestTrackerFrameworkPath")),
             )?;
             let properties: serde_json::Value = serde_json::from_str(&properties)?;
             ensure!(
@@ -268,9 +275,9 @@ mod native {
                 "MSBuild node reuse is not disabled by the selected environment"
             );
             for (name, expected) in [
-                ("VCInstallDir_170", layout.root.join("VC")),
+                (vc_root.as_str(), layout.root.join("VC")),
                 ("VCInstallDir", layout.root.join("VC")),
-                ("VCToolsInstallDir_170", layout.tools_directory()),
+                (tools_root.as_str(), layout.tools_directory()),
                 ("VCToolsInstallDir", layout.tools_directory()),
             ] {
                 let path = properties["Properties"][name]

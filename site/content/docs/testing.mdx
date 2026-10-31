@@ -47,9 +47,9 @@ cargo test --locked -p hanamori --test cli native_toolchain::two_real_toolchains
 
 ## MSBuild 原生验收
 
-普通回归使用 `cargo test --locked -p hanamori --test cli install::msbuild`，覆盖真实 VSIX/MSI/CAB 提取路径、FileTracker 整理、独立目录、项目要求、缺失修复、失败回滚及 MSBuild → 普通组合 → MSBuild 的环境恢复。合成归档不包含可执行的 MSBuild。
+普通回归使用 `cargo test --locked -p hanamori --test cli install::msbuild`，覆盖 VS 2022/2026 的 VSIX/MSI/CAB 提取路径、FileTracker 整理、独立目录、项目要求、缺失修复、失败回滚及 MSBuild → 普通组合 → MSBuild 的环境恢复。合成归档不包含可执行的 MSBuild。
 
-在没有 Visual Studio/Build Tools 的 Windows x64 主机上，为上述 A/B 两套组合按默认组件安装（包含 MSBuild），设置同样的三个环境变量后执行：
+在没有 Visual Studio/Build Tools 的 Windows x64 主机上，为 A 指定 `--vs-version 2022`、B 使用默认 VS 2026，选择不同的编译器和 SDK 版本并按默认组件安装（包含 MSBuild），设置同样的三个环境变量后执行：
 
 ```powershell
 cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild -- --ignored --nocapture

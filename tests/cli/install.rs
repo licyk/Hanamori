@@ -50,12 +50,16 @@ impl Catalog {
     }
 
     fn with_msbuild(missing_task: bool) -> Self {
+        Self::with_msbuild_fixture(msbuild::VS2022, missing_task)
+    }
+
+    fn with_msbuild_fixture(fixture: msbuild::Fixture, missing_task: bool) -> Self {
         Self::with_options(
             false,
             false,
             false,
             Some(sdk::Fault::None),
-            Some(missing_task),
+            Some((fixture, missing_task)),
         )
     }
 
@@ -64,13 +68,16 @@ impl Catalog {
         wrong_manifest_hash: bool,
         wrong_manifest_size: bool,
         sdk: Option<sdk::Fault>,
-        msbuild: Option<bool>,
+        msbuild: Option<(msbuild::Fixture, bool)>,
     ) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let base = format!("http://{address}");
         let temp = tempfile::tempdir().unwrap();
-        common::toolchain(temp.path(), "14.44.35207", None);
+        let fixture = msbuild
+            .map(|(fixture, _)| fixture)
+            .unwrap_or(msbuild::VS2022);
+        common::toolchain(temp.path(), fixture.compiler, None);
         std::fs::write(temp.path().join("extra.txt"), b"additional payload file").unwrap();
         let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
         for path in inventory(temp.path()).unwrap().keys() {
@@ -91,15 +98,15 @@ impl Catalog {
             writer.finish().unwrap().into_inner()
         };
         let mut packages: Vec<_> = [".Tools.HostX64.TargetX64.base", ".CRT.Headers.base", ".CRT.x64.Desktop.base"].into_iter().map(|suffix| serde_json::json!({
-            "id": format!("Microsoft.VC.14.44.17.14{suffix}"), "version": "14.44.35207", "type": "Vsix",
+            "id": format!("Microsoft.VC.{}{suffix}", fixture.toolset_id), "version": fixture.compiler, "type": "Vsix",
             "payloads": [{"fileName": "compiler.vsix", "url": format!("{base}/compiler.vsix"), "size": payload.len(), "sha256": format!("{:x}", Sha256::digest(&payload))}]
         })).collect();
         let mut assets = HashMap::new();
         if let Some(fault) = sdk {
             sdk::append(&base, fault, &mut packages, &mut assets);
         }
-        if let Some(missing_task) = msbuild {
-            msbuild::append(&base, missing_task, &mut packages, &mut assets);
+        if let Some((fixture, missing_task)) = msbuild {
+            msbuild::append(&base, fixture, missing_task, &mut packages, &mut assets);
         }
         let package = serde_json::to_vec(&serde_json::json!({"packages": &packages})).unwrap();
         let package_hash = format!("{:x}", Sha256::digest(&package));

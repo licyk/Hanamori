@@ -3,6 +3,8 @@ use super::*;
 #[test]
 fn compiler_only_installation_does_not_load_user_configuration() {
     let mut options = InstallOptions::new("toolchain");
+    assert_eq!(options.source, "vs2026-release");
+    assert_eq!(options.manifest_url, manifest::STABLE_MANIFEST_URL);
     assert!(options.include_windows_sdk);
     assert!(options.include_msbuild);
     options.include_windows_sdk = false;

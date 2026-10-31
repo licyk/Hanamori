@@ -20,14 +20,14 @@ hanamori list-remote --json
 hanamori list-remote --all
 hanamori list-remote --all --channel preview
 hanamori list-remote --all --json
-hanamori list-remote --toolset-id 14.44.17.14
-hanamori install --toolset-id 14.44.17.14 --sdk-id 26100 --name stable
+hanamori list-remote --vs-version 2022 --toolset-id 14.44.17.14
+hanamori install --vs-version 2022 --toolset-id 14.44.17.14 --sdk-id 26100 --name stable
 hanamori install latest --no-msbuild --name compiler-sdk
 hanamori install latest --no-sdk --name compiler
-hanamori install --vs-version 2026 --channel preview --no-msbuild --dry-run
+hanamori install --channel preview --dry-run
 ```
 
-`--vs-version` 支持 `2022`/`17`、`2026`/`18`；`--channel` 支持 `release`/`stable`、`preview`/`insiders`。默认 VS 2022 release。`--manifest URL` 替代二者，不能同时指定。当前仅实现 `--arch x64/x64`。
+`--vs-version` 支持 `2022`/`17`、`2026`/`18`；`--channel` 支持 `release`/`stable`、`preview`/`insiders`。默认 VS 2026 stable（`release`）。`--manifest URL` 替代二者，不能同时指定。当前仅实现 `--arch x64/x64`。
 
 `list-remote --all` 按 VS 2022、VS 2026 分组列出所选渠道中的工具集和 SDK，并分别展开各组最新工具集的包。默认查询正式渠道；加 `--channel preview`（或 `insiders`）查询两者的预览渠道，不同时混入正式渠道。同名 ID 保留在各自来源组中。它与 `--vs-version`、`--manifest`、`--toolset-id` 互斥。这里的“全部”指当前支持的两代 VS 所选渠道中仍提供的版本，不保证覆盖微软历史上所有已撤下的版本。
 
@@ -67,11 +67,11 @@ hanamori exec --using build -- MSBuild.exe app.sln -p:Configuration=Release -p:P
 hanamori exec --using build -- MSBuild.exe app.vcxproj -t:Rebuild -p:Configuration=Debug -p:Platform=x64
 ```
 
-默认安装 MSVC、Windows SDK 和 MSBuild，从同一清单选择 MSBuild 17.x、C++ props/targets、任务程序集和 FileTracker。`--no-msbuild` 排除 MSBuild，保留编译器与 SDK。`--no-sdk` 或项目 `"sdk": null` 默认只安装编译器。
+默认安装 MSVC、Windows SDK 和 MSBuild，从同一清单选择 MSBuild 18.x（VS 2026）或 17.x（VS 2022）、C++ props/targets、任务程序集和 FileTracker。`--no-msbuild` 排除 MSBuild，保留编译器与 SDK。`--no-sdk` 或项目 `"sdk": null` 默认只安装编译器。
 
 组件选择遵循显式命令行参数 → 项目设置 → 默认值。项目可声明 `"msbuild": true` 或 `false`，`--msbuild` / `--no-msbuild` 可覆盖它。明确要求 MSBuild 时必须同时安装 SDK，否则报错；可以用 `--no-msbuild` 撤销该要求。固定目录键始终保留键中的组件组合，不因默认值改变而增加 MSBuild。
 
-VS 2026 安装需指定 `--no-msbuild`。首版范围是 VS 2022 的 x64/v143 原生 C++ `.vcxproj` 和 `.sln`。不承诺 VS 2026、Win32/ARM64、ATL/MFC、C++/CLI、UWP、驱动、C# 或 Visual Studio IDE 集成。此功能的 Windows 原生构建验收尚待执行；真实包下载/解包与 Linux 回归不能替代它。
+支持范围是 VS 2026 x64/v145 和 VS 2022 x64/v143 原生 C++ `.vcxproj` 和 `.sln`。v143 项目请指定 `--vs-version 2022`。不承诺 Win32/ARM64、ATL/MFC、C++/CLI、UWP、驱动、C# 或 Visual Studio IDE 集成。此功能的 Windows 原生构建验收尚待执行；真实包下载/解包与 Linux 回归不能替代它。
 
 包含 MSBuild 的目录键为 `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild版本>_x64`，与不含 MSBuild 的组合独立共存。重新安装精确键会校验清单仍提供对应 MSBuild 版本；不会静默替换成新版。上游撤包时需提供匹配的清单及缓存。
 

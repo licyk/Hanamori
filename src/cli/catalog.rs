@@ -11,7 +11,7 @@ pub(crate) struct CommonArgs {
     #[arg(long)]
     pub(crate) strict_manifest_integrity: bool,
 
-    /// Visual Studio generation: 2022 (17) or 2026 (18). Default: 2022.
+    /// Visual Studio generation: 2022 (17) or 2026 (18). Default: 2026.
     #[arg(long, value_enum)]
     pub(crate) vs_version: Option<VsVersion>,
 
@@ -20,11 +20,12 @@ pub(crate) struct CommonArgs {
     pub(crate) channel: Option<Channel>,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Default, ValueEnum)]
 pub(crate) enum VsVersion {
     #[value(name = "2022", alias = "17")]
     Vs2022,
     #[value(name = "2026", alias = "18")]
+    #[default]
     Vs2026,
 }
 
@@ -41,7 +42,7 @@ impl CommonArgs {
         if let Some(url) = &self.manifest {
             return url.clone();
         }
-        let major = match self.vs_version.unwrap_or(VsVersion::Vs2022) {
+        let major = match self.vs_version.unwrap_or_default() {
             VsVersion::Vs2022 => 17,
             VsVersion::Vs2026 => 18,
         };

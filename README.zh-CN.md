@@ -74,7 +74,7 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 
 [首次编译指南](site/content/docs/quick-start.mdx) 包含完整的 `hello.cpp` 示例和 Shell 激活方法。
 
-默认安装 MSVC、Windows SDK 和 MSBuild。MSBuild 支持 VS 2022 x64/v143 原生 C++ 项目与解决方案：
+默认使用 VS 2026 stable，安装 MSVC、Windows SDK 和 MSBuild。MSBuild 支持 VS 2026 x64/v145 和 VS 2022 x64/v143（指定 `--vs-version 2022`）原生 C++ 项目与解决方案：
 
 ```powershell
 hanamori install latest --name build

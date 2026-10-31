@@ -210,7 +210,7 @@ fn resolve_options(args: &mut InstallArgs, config: &ResolvedConfig) -> Result<In
     } else {
         format!(
             "vs{}-{}",
-            match args.common.vs_version.unwrap_or(VsVersion::Vs2022) {
+            match args.common.vs_version.unwrap_or_default() {
                 VsVersion::Vs2022 => "2022",
                 VsVersion::Vs2026 => "2026",
             },

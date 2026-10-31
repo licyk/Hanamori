@@ -1,4 +1,4 @@
-//! The VS 2022 x64 native C++ MSBuild payload set.
+//! The VS 2022/2026 x64 native C++ MSBuild payload sets.
 use super::manifest::{ManifestPackage, ManifestPackageSet};
 use anyhow::{ensure, Context, Result};
 
@@ -9,26 +9,41 @@ pub struct Selection<'a> {
 
 pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Selection<'a>> {
     let parts: Vec<_> = toolset.split('.').collect();
+    let engine_major = match parts.as_slice() {
+        ["14", minor, "17", _] if minor.parse::<u32>().is_ok_and(|v| (30..50).contains(&v)) => "17.",
+        ["14", minor, "18", _] | ["14", minor] if minor.parse::<u32>().is_ok_and(|v| v >= 50) => "18.",
+        _ => anyhow::bail!("MSBuild supports VS 2022 v143 and VS 2026 v145 x64 toolsets; use --no-msbuild for other toolsets"),
+    };
+    let engine = required_package(catalog, "Microsoft.Build")?;
+    let version = engine.version.clone();
     ensure!(
-        parts.len() == 4
-            && parts[0] == "14"
-            && parts[2] == "17"
-            && parts[1].parse::<u32>().is_ok_and(|minor| minor >= 30),
-        "MSBuild currently supports VS 2022 v143 x64 toolsets only; use --no-msbuild for other toolsets"
+        crate::msbuild::valid_version(&version) && version.starts_with(engine_major),
+        "unsupported MSBuild version {version} for toolset {toolset}; expected MSBuild {engine_major}x"
     );
+    let layout = crate::msbuild::Layout::for_version(&version);
     let mut ids: Vec<String> = [
         "Microsoft.Build",
         "Microsoft.Build.Dependencies",
         "Microsoft.Build.FileTracker.Msi",
         "Microsoft.VisualCpp.Servicing.Redist",
-        "Microsoft.VisualStudio.VC.MSBuild.v170.Base",
-        "Microsoft.VisualStudio.VC.MSBuild.v170.Base.Resources",
-        "Microsoft.VisualStudio.VC.MSBuild.v170.X64",
-        "Microsoft.VisualStudio.VC.MSBuild.v170.X64.v143",
     ]
     .into_iter()
     .map(str::to_owned)
     .collect();
+    for suffix in [
+        "Base",
+        "Base.Resources",
+        "X64",
+        &format!("X64.{}", layout.platform_toolset),
+    ] {
+        ids.push(format!(
+            "Microsoft.VisualStudio.VC.MSBuild.v{}.{suffix}",
+            layout.targets_version
+        ));
+    }
+    if layout.platform_toolset == "v145" {
+        ids.push("Microsoft.VC.Tools.Redirection.v145".into());
+    }
     for suffix in [".Props", ".Props.x64", ".Tools.Core.Props"] {
         ids.push(format!("Microsoft.VC.{toolset}{suffix}"));
     }
@@ -36,11 +51,6 @@ pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Sele
         .iter()
         .map(|id| required_package(catalog, id))
         .collect::<Result<_>>()?;
-    let version = packages[0].version.clone();
-    ensure!(
-        crate::env::valid_directory_version(&version, 4) && version.starts_with("17."),
-        "unsupported MSBuild version {version}; expected a VS 2022 MSBuild 17.x package"
-    );
     // Servicing.Redist describes the catalog's current runtime, even for an older compiler.
     let redist = required_package(catalog, super::selector::CRT_REDIST_X64_ID)?;
     let runtime_id = redist

@@ -30,11 +30,19 @@ fn channel(arguments: &[&str]) -> String {
 fn selects_channels_and_preserves_default_and_custom_manifest() {
     assert_eq!(
         channel(&["hanamori", "install"]),
-        manifest::RELEASE_MANIFEST_URL
+        manifest::STABLE_MANIFEST_URL
     );
     assert_eq!(
         channel(&["hanamori", "list-remote"]),
+        manifest::STABLE_MANIFEST_URL
+    );
+    assert_eq!(
+        channel(&["hanamori", "install", "--vs-version", "2022"]),
         manifest::RELEASE_MANIFEST_URL
+    );
+    assert_eq!(
+        channel(&["hanamori", "list-remote", "--channel", "preview"]),
+        manifest::INSIDERS_MANIFEST_URL
     );
     assert_eq!(
         channel(&["hanamori", "install", "--vs-version", "2026"]),

@@ -82,14 +82,14 @@ operations and preservation when files are occupied must each be verified with t
 
 ## Native MSBuild acceptance
 
-`cargo test --locked -p hanamori --test cli install::msbuild` covers real extraction paths using synthetic VSIX/MSI/CAB files, private FileTracker placement, independent combinations, project requirements, missing-file repair, rollback and MSBuild → ordinary → MSBuild environment restoration. Those archives contain no executable MSBuild.
+`cargo test --locked -p hanamori --test cli install::msbuild` covers VS 2022/2026 extraction paths using synthetic VSIX/MSI/CAB files, private FileTracker placement, independent combinations, project requirements, missing-file repair, rollback and MSBuild → ordinary → MSBuild environment restoration. Those archives contain no executable MSBuild.
 
-On Windows x64 without Visual Studio/Build Tools, install both A/B combinations with the default components (including MSBuild), set the same three environment variables, then run:
+On Windows x64 without Visual Studio/Build Tools, install A with `--vs-version 2022` and B with the default VS 2026, using different compiler/SDK versions and the default components (including MSBuild), set the same three environment variables, then run:
 
 ```powershell
 cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild -- --ignored --nocapture
 ```
 
-The gate builds `.vcxproj` and `.sln` files referencing a static-library project in A → B (inheriting A) → A order. It exercises Debug/Release, resources, manifests, incremental compilation, changed-library relinking, Clean/Rebuild and evaluated compiler/SDK/targets paths inside the selected installation. An explicitly unavailable SDK must fail. Builds disable node reuse; binary logs reside in the temporary build directory.
+The gate selects v143/v145 for each toolchain and builds `.vcxproj` and `.sln` files referencing a static-library project in A → B (inheriting A) → A order. It exercises Debug/Release, resources, manifests, incremental compilation, changed-library relinking, Clean/Rebuild and evaluated compiler/SDK/targets paths inside the selected installation. An explicitly unavailable SDK must fail. Builds disable node reuse; binary logs reside in the temporary build directory.
 
 Repeat on a host with another Visual Studio installation to check independence, and run the installation guide's build commands from PowerShell and Git Bash/MSYS2. MSBuild examples use `-p:` and `-t:`. If MSYS2 rewrites `cl`'s `/link`, use per-command `MSYS2_ARG_CONV_EXCL='*' cl ...`; installing MSBuild does not address argument conversion. These native checks remain pending; current Linux evidence covers download/extraction and automated regressions only.

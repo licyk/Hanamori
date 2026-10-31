@@ -117,9 +117,11 @@ impl Installer<'_> {
             package.extract(path.parent().unwrap(), staging.path(), &mut || {
                 progress.inc(1);
             })?;
-            let tracker = staging
-                .path()
-                .join("Program Files/MSBuild/15.0/FileTracker");
+            let tracker = ["Program Files", "PFiles"]
+                .iter()
+                .map(|root| staging.path().join(root).join("MSBuild/15.0/FileTracker"))
+                .find(|path| path.is_dir())
+                .context("the MSBuild MSI is missing its FileTracker directory")?;
             // The MSI normally installs a shared system directory. Keep its DLLs next
             // to the private x64 Tracker.exe; generated targets select this path.
             workspace::merge_directory(

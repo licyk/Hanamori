@@ -68,9 +68,9 @@ fn compare_versions_orders_numerically() {
 }
 
 #[test]
-fn msbuild_rejects_toolsets_outside_vs2022_before_selecting_payloads() {
+fn msbuild_rejects_toolsets_outside_supported_generations_before_selecting_payloads() {
     let packages = manifest("");
-    for toolset in ["14.29.16.11", "14.50.18.0", "14.51"] {
+    for toolset in ["14.29.16.11", "14.44", "14.50.17.0"] {
         let error = hanamori::catalog::msbuild::select(&packages, toolset)
             .err()
             .unwrap();

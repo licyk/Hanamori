@@ -31,7 +31,7 @@ icon: Network
 
 每套托管组合独占 `<toolchains-dir>/<来源>/msvc-<下载 ID>_sdk-<下载 ID 或 none>_x64`。本地命令扫描目录并检查少量必要文件；目录名保存下载 ID，实际 MSVC/SDK 版本从解包结构读取。自定义来源以清单 URL 的稳定 SHA-256 区分，不因清单内容更新改变目录。
 
-MSBuild 组合在 `_x64` 前加入 `_msbuild-<版本>`。`catalog/msbuild` 维护 VS 2022 C++ 所需的明确包集合；不递归安装任意 VS 依赖。负载带 toolset/SDK/MSBuild 角色，FileTracker MSI 独立解包并整理到私有引擎目录。`msbuild` 模块从源模板生成安装内的 props/targets，保存引擎包版本并定义关键文件检查；不修改上游 targets，不写注册表，不运行系统安装器。
+MSBuild 组合在 `_x64` 前加入 `_msbuild-<版本>`。`catalog/msbuild` 维护 VS 2022/2026 C++ 所需的明确包集合；不递归安装任意 VS 依赖。负载带 toolset/SDK/MSBuild 角色，FileTracker MSI 独立解包并整理到私有引擎目录。`msbuild` 模块从源模板生成安装内的 props/targets，保存引擎包版本并定义关键文件检查；不修改上游 targets，不写注册表，不运行系统安装器。
 
 `references/<name>.json` 只保存名字指向的托管目录键，或外部路径与固定版本组合。引用不证明安装存在；损坏的单个引用不会遮蔽其他安装。安装数据库、文件收据与 JSON 恢复日志已移除。配置/项目声明仍为 schema 1，Shell 启动入口的归属记录继续保留。验收方法见[测试与原生验收](/docs/testing)。
 

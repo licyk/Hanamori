@@ -150,12 +150,16 @@ impl ToolchainLayout {
             );
         }
 
-        if self.msbuild_version.is_some() {
+        if let Some(version) = &self.msbuild_version {
             for (key, value) in [
                 ("VSINSTALLDIR", ensure_trailing_separator(&self.root)),
                 (
                     "VCTargetsPath",
-                    ensure_trailing_separator(&self.root.join(crate::msbuild::TARGETS)),
+                    ensure_trailing_separator(
+                        &self
+                            .root
+                            .join(crate::msbuild::Layout::for_version(version).targets_path()),
+                    ),
                 ),
                 (
                     "MSBuildExtensionsPath",
@@ -386,10 +390,11 @@ pub fn required_files(layout: &ToolchainLayout) -> Result<Vec<PathBuf>> {
             paths.push(layout.windows_sdk_host_bin_directory().join(path));
         }
     }
-    if layout.msbuild_version.is_some() {
+    if let Some(version) = &layout.msbuild_version {
         paths.extend(crate::msbuild::required_files(
             &layout.root,
             &layout.vc_tools_version,
+            version,
         )?);
     }
     Ok(paths)

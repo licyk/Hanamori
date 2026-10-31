@@ -1,4 +1,4 @@
-//! Synthetic archives with the paths observed in the VS 2022 packages.
+//! Synthetic archives with paths observed in the VS 2022 and VS 2026 packages.
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -6,13 +6,52 @@ use std::{
     io::{Cursor, Write},
 };
 
+#[derive(Clone, Copy)]
+pub(super) struct Fixture {
+    pub toolset_id: &'static str,
+    pub compiler: &'static str,
+    engine: &'static str,
+    targets: &'static str,
+    platform: &'static str,
+    redist: &'static str,
+}
+
+pub(super) const VS2022: Fixture = Fixture {
+    toolset_id: "14.44.17.14",
+    compiler: "14.44.35207",
+    engine: "17.14.60.2643110",
+    targets: "170",
+    platform: "143",
+    redist: "14.44.35112",
+};
+pub(super) const VS2026: Fixture = Fixture {
+    toolset_id: "14.51",
+    compiler: "14.51.36231",
+    engine: "18.11.1.2651303",
+    targets: "180",
+    platform: "145",
+    redist: "14.51.36231",
+};
+
+impl Fixture {
+    fn expand(self, text: &str) -> String {
+        text.replace("14.44.17.14", self.toolset_id)
+            .replace("14.44.35207", self.compiler)
+            .replace("17.14.60.2643110", self.engine)
+            .replace("14.44.35112", self.redist)
+            .replace("170", self.targets)
+            .replace("143", self.platform)
+    }
+}
+
 pub(super) fn append(
     base: &str,
+    fixture: Fixture,
     missing_task: bool,
     packages: &mut Vec<Value>,
     assets: &mut HashMap<String, Vec<u8>>,
 ) {
-    let groups: &[(&str, &[&str])] = &[
+    let mut groups: Vec<(&str, &[&str])> = vec![
         (
             "Microsoft.Build",
             &[
@@ -34,6 +73,7 @@ pub(super) fn append(
             "Microsoft.VisualCpp.Servicing.Redist",
             &[
                 "VC/Auxiliary/Build/Microsoft.VCRedistVersion.v143.default.props",
+                "VC/Auxiliary/Build/Microsoft.VCRedistVersion.default.props",
                 "VC/Auxiliary/Build/Microsoft.VCRedistVersion.default.txt",
             ],
         ),
@@ -90,9 +130,27 @@ pub(super) fn append(
             &["VC/Auxiliary/Build/Microsoft.VCToolsVersion.v143.default.props"],
         ),
     ];
+    if fixture.platform == "145" {
+        groups.push((
+            "Microsoft.VC.Tools.Redirection.v145",
+            &["VC/Auxiliary/Build/Microsoft.VCToolsVersion.v145.default.props"],
+        ));
+    }
     for (index, (id, paths)) in groups.iter().enumerate() {
         let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
         for path in *paths {
+            let mut path = fixture.expand(path);
+            if fixture.platform == "145" {
+                if path.ends_with("MSBuild.exe.config") {
+                    path.push_str(".template");
+                }
+                if id.ends_with(".Tools.Core.Props") {
+                    path = format!(
+                        "VC/Auxiliary/Build/v145/Microsoft.VCToolsVersion.VC.{}.props",
+                        fixture.toolset_id
+                    );
+                }
+            }
             if missing_task && path.ends_with("Microsoft.Build.CPPTasks.Common.dll") {
                 continue;
             }
@@ -102,35 +160,40 @@ pub(super) fn append(
                     zip::write::SimpleFileOptions::default(),
                 )
                 .unwrap();
-            let contents: &[u8] = if path.ends_with("Microsoft.VCRedistVersion.default.txt") {
-                b"14.44.35112\r\n"
+            let contents = if path.ends_with("Microsoft.VCRedistVersion.default.txt") {
+                format!("{}\r\n", fixture.redist)
             } else {
-                b"synthetic MSBuild payload"
+                "synthetic MSBuild payload".into()
             };
-            writer.write_all(contents).unwrap();
+            writer.write_all(contents.as_bytes()).unwrap();
         }
         let bytes = writer.finish().unwrap().into_inner();
         let route = format!("/msbuild-{index}.vsix");
-        let mut package = json!({"id": id, "version": "17.14.60.2643110", "type": "Vsix", "language": "neutral",
+        let mut package = json!({"id": fixture.expand(id), "version": fixture.engine, "type": "Vsix", "language": "neutral",
             "payloads": [payload(base, &route, "payload.vsix", &bytes)]});
         if *id == "Microsoft.VisualCpp.CRT.Redist.X64" {
             package["dependencies"] = json!({
-                "Microsoft.VC.14.44.17.14.CRT.Redist.X64.base": "14.0",
+                (format!("Microsoft.VC.{}.CRT.Redist.X64.base", fixture.toolset_id)): "14.0",
                 "Microsoft.VisualCpp.CRT.Redist.Resources": {"version": "14.44.35211", "type": "Recommended"}
             });
         }
         packages.push(package);
         assets.insert(route, bytes);
     }
+    let program_files = if fixture.platform == "145" {
+        "PFiles"
+    } else {
+        "Program Files"
+    };
     let (msi, cab) = super::sdk::archives(
         "cab1.cab",
         &[
             (
-                "Program Files/MSBuild/15.0/FileTracker/FileTracker64.dll".into(),
+                format!("{program_files}/MSBuild/15.0/FileTracker/FileTracker64.dll"),
                 b"synthetic tracker".to_vec(),
             ),
             (
-                "Program Files/MSBuild/15.0/FileTracker/FileTracker32.dll".into(),
+                format!("{program_files}/MSBuild/15.0/FileTracker/FileTracker32.dll"),
                 b"synthetic tracker".to_vec(),
             ),
         ],
@@ -148,10 +211,15 @@ fn payload(base: &str, route: &str, name: &str, bytes: &[u8]) -> Value {
 
 #[test]
 fn msbuild_installation_is_independent_reusable_and_repairable() {
+    installation_is_independent_reusable_and_repairable(VS2022);
+    installation_is_independent_reusable_and_repairable(VS2026);
+}
+
+fn installation_is_independent_reusable_and_repairable(fixture: Fixture) {
     use super::{installed, local_command, Catalog};
     use crate::support::{assert_success, success};
     let temp = tempfile::tempdir().unwrap();
-    let catalog = Catalog::with_msbuild(false);
+    let catalog = Catalog::with_msbuild_fixture(fixture, false);
     success(catalog.install(&temp).arg("--no-msbuild").output().unwrap());
     let plain = installed(&temp);
     let reused = assert_success(
@@ -184,7 +252,7 @@ fn msbuild_installation_is_independent_reusable_and_repairable() {
         .find(|v| v["msbuild"].is_string())
         .unwrap();
     let key = build["key"].as_str().unwrap();
-    assert!(key.ends_with("_sdk-26100_msbuild-17.14.60.2643110_x64"));
+    assert!(key.ends_with(&format!("_sdk-26100_msbuild-{}_x64", fixture.engine)));
     let root = std::path::PathBuf::from(build["path"].as_str().unwrap());
     assert_ne!(root, plain.path);
     assert_eq!(build["status"], "ready");
@@ -192,6 +260,42 @@ fn msbuild_installation_is_independent_reusable_and_repairable() {
         .join("MSBuild/Current/Bin/amd64/FileTracker64.dll")
         .is_file());
     assert!(!root.join("Program Files").exists());
+    assert!(!root.join("PFiles").exists());
+    let props = std::fs::read_to_string(root.join("MSBuild/Hanamori.props")).unwrap();
+    assert!(props.contains(&format!("<VCInstallDir_{}>", fixture.targets)));
+    assert!(!props.contains('@'));
+    let targets = std::fs::read_to_string(root.join("MSBuild/Hanamori.targets")).unwrap();
+    assert!(targets.contains(&format!("'$(PlatformToolset)' != 'v{}'", fixture.platform)));
+    if fixture.platform == "145" {
+        assert_eq!(
+            std::fs::read(root.join("MSBuild/Current/Bin/amd64/MSBuild.exe.config")).unwrap(),
+            std::fs::read(root.join("MSBuild/Current/Bin/amd64/MSBuild.exe.config.template"))
+                .unwrap()
+        );
+    }
+    let environment = hanamori::env::detect(&root).unwrap().environment();
+    assert_eq!(
+        std::path::Path::new(&environment["VCTargetsPath"]),
+        root.join(format!("MSBuild/Microsoft/VC/v{}", fixture.targets))
+    );
+    success(
+        local_command(&temp)
+            .args(["import", "--name", "external", "--dir"])
+            .arg(&root)
+            .output()
+            .unwrap(),
+    );
+    let imported: Value = serde_json::from_str(&success(
+        local_command(&temp)
+            .args(["list", "--json"])
+            .output()
+            .unwrap(),
+    ))
+    .unwrap();
+    assert_eq!(
+        imported["references"]["external"]["msbuild"],
+        fixture.engine
+    );
     let build_selection = hanamori::state::local::Selection::new(
         Some(key.into()),
         hanamori::env::detect(&root).unwrap(),
@@ -256,7 +360,9 @@ fn msbuild_installation_is_independent_reusable_and_repairable() {
             .unwrap(),
     );
     assert!(reused.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&reused.stderr).contains("MSBuild: 17.14.60.2643110"));
+    assert!(
+        String::from_utf8_lossy(&reused.stderr).contains(&format!("MSBuild: {}", fixture.engine))
+    );
     for missing in [
         "MSBuild/Current/Bin/amd64/MSBuild.exe",
         "MSBuild/Current/Bin/amd64/FileTracker64.dll",
@@ -270,7 +376,7 @@ fn msbuild_installation_is_independent_reusable_and_repairable() {
         "MSBuild/Hanamori.version",
         "MSBuild",
     ] {
-        let path = root.join(missing);
+        let path = root.join(fixture.expand(missing));
         if path.is_dir() {
             std::fs::remove_dir_all(&path).unwrap();
         } else {
@@ -514,6 +620,7 @@ fn msbuild_uses_the_catalog_redist_dependency_even_with_an_older_compiler() {
     let mut entries = Vec::new();
     append(
         "https://example.invalid",
+        VS2022,
         false,
         &mut entries,
         &mut HashMap::new(),
@@ -540,4 +647,36 @@ fn msbuild_uses_the_catalog_redist_dependency_even_with_an_older_compiler() {
     redist["dependencies"] = json!({"unknown": {"future": true}});
     let error = select(&parse(&entries), "14.40.17.10").err().unwrap();
     assert!(error.to_string().contains("base dependency"));
+}
+
+#[test]
+fn msbuild_2026_selects_both_download_id_formats_and_requires_redirection() {
+    use hanamori::catalog::{manifest::parse_packages, msbuild::select};
+    for toolset_id in ["14.50.18.0", "14.51"] {
+        let mut entries = Vec::new();
+        append(
+            "https://example.invalid",
+            Fixture {
+                toolset_id,
+                ..VS2026
+            },
+            false,
+            &mut entries,
+            &mut HashMap::new(),
+        );
+        let parse =
+            |entries: &[Value]| parse_packages(&json!({"packages": entries}).to_string()).unwrap();
+        let catalog = parse(&entries);
+        let selected = select(&catalog, toolset_id).unwrap();
+        assert_eq!(selected.version, VS2026.engine);
+        assert!(selected
+            .packages
+            .iter()
+            .any(|p| p.id == "Microsoft.VisualStudio.VC.MSBuild.v180.X64.v145"));
+        entries.retain(|p| p["id"] != "Microsoft.VC.Tools.Redirection.v145");
+        let error = select(&parse(&entries), toolset_id).err().unwrap();
+        assert!(error
+            .to_string()
+            .contains("Microsoft.VC.Tools.Redirection.v145"));
+    }
 }

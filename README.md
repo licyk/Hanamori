@@ -74,7 +74,7 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 
 The [first compilation guide](site/content/docs/quick-start.en.mdx) includes a complete `hello.cpp` and shell activation instructions.
 
-Installation includes MSVC, the Windows SDK and MSBuild by default. MSBuild supports VS 2022 x64/v143 native C++ projects and solutions:
+Installation defaults to VS 2026 stable and includes MSVC, the Windows SDK and MSBuild. MSBuild supports native C++ projects and solutions using VS 2026 x64/v145 or VS 2022 x64/v143 (`--vs-version 2022`):
 
 ```powershell
 hanamori install latest --name build

@@ -40,7 +40,7 @@ pub(crate) enum Command {
     },
     /// Update this executable from the latest stable GitHub release (Windows x64 MSVC).
     Upgrade(UpgradeArgs),
-    /// Install MSVC, the Windows SDK and MSBuild (VS 2022 x64/v143).
+    /// Install MSVC, the Windows SDK and MSBuild (VS 2026 by default).
     Install(InstallArgs),
     /// List toolchain directories without network access.
     List(ListArgs),

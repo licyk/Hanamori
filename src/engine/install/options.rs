@@ -59,7 +59,7 @@ impl InstallOptions {
         Self {
             install_directory: install_directory.into(),
             toolchains_directory: None,
-            source: "vs2022-release".into(),
+            source: "vs2026-release".into(),
             reinstall: false,
             toolset_id: String::new(),
             sdk_id: String::new(),
@@ -68,7 +68,7 @@ impl InstallOptions {
             expected_msbuild: None,
             expected_toolset: None,
             expected_sdk: None,
-            manifest_url: manifest::RELEASE_MANIFEST_URL.to_owned(),
+            manifest_url: manifest::STABLE_MANIFEST_URL.to_owned(),
             strict_manifest_integrity: false,
             proxy: None,
             dry_run: false,

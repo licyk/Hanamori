@@ -23,14 +23,14 @@ Installation includes MSVC + Windows SDK + MSBuild by default. Install help grou
 | `--sdk VER` | Actual SDK version; conflicts with sdk-id and no-sdk |
 | `--sdk-id ID` | SDK download ID; conflicts with sdk and no-sdk |
 | `--no-sdk` | Exclude the SDK and, by default, MSBuild; add `--no-msbuild` if the project explicitly requires MSBuild |
-| `--msbuild` | Explicitly enable MSBuild, overriding the project; enabled with the SDK by default, for VS 2022 x64/v143; conflicts with `--no-sdk` and `--no-msbuild` |
+| `--msbuild` | Explicitly enable MSBuild, overriding the project; enabled with the SDK by default, for VS 2022 x64/v143 and VS 2026 x64/v145; conflicts with `--no-sdk` and `--no-msbuild` |
 | `--no-msbuild` | Disable MSBuild, overriding the default and the project; keeps the compiler and SDK by default |
 | `--reinstall` | Replace the whole tree; required for a nonempty external directory |
 | `--arch ARCH` | Defaults to and only accepts `x64/x64` |
 | `--dry-run` | May query manifests; no payload download, installation, reference or workspace writes |
-| `list-remote` | Defaults to VS 2022; `--all` queries VS 2022 and 2026; optional `--toolset-id ID` inspects a selected toolset; supports `--json` |
+| `list-remote` | Defaults to VS 2026; `--all` queries VS 2022 and 2026; optional `--toolset-id ID` inspects a selected toolset; supports `--json` |
 
-Both commands accept `--vs-version 2022/2026` (aliases 17/18; default 2022), `--channel release/preview` (aliases stable/insiders; default release), `--manifest URL` (conflicts with both) and `--strict-manifest-integrity`. Install has no `--json` option.
+Both commands accept `--vs-version 2022/2026` (aliases 17/18; default 2026), `--channel release/preview` (aliases stable/insiders; default release), `--manifest URL` (conflicts with both) and `--strict-manifest-integrity`. Install has no `--json` option.
 
 `list-remote --all` groups toolsets and SDKs by VS 2022 and VS 2026, and expands the latest toolset’s packages in each group. It queries release channels by default. Add `--channel preview` (or `insiders`) to query both preview channels instead, without mixing release channels into the result. Identical IDs remain in their source groups. `--all` conflicts with `--vs-version`, `--manifest`, and `--toolset-id`. “All” covers versions still offered by the selected channels for the two supported VS generations, not every historical version Microsoft has ever published.
 

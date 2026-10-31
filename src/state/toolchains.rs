@@ -236,9 +236,9 @@ pub fn validate_key(key: &str) -> Result<()> {
     );
     let (toolset, sdk, msbuild) = download_ids(key).context("invalid toolchain directory key")?;
     ensure!(
-        env::valid_directory_version(toolset, 4)
+        (env::valid_directory_version(toolset, 4) || env::valid_directory_version(toolset, 2))
             && sdk.is_none_or(|sdk| !sdk.is_empty() && sdk.bytes().all(|c| c.is_ascii_digit()))
-            && msbuild.is_none_or(|v| v.starts_with("17.") && env::valid_directory_version(v, 4))
+            && msbuild.is_none_or(crate::msbuild::valid_version)
             && (msbuild.is_none() || sdk.is_some()),
         "invalid toolchain download IDs"
     );
@@ -268,9 +268,9 @@ fn validate_reference(reference: &Reference) -> Result<()> {
         } => {
             ensure!(
                 path.is_absolute()
-                    && msbuild.as_ref().is_none_or(|v| sdk.is_some()
-                        && v.starts_with("17.")
-                        && env::valid_directory_version(v, 4))
+                    && msbuild
+                        .as_ref()
+                        .is_none_or(|v| sdk.is_some() && crate::msbuild::valid_version(v))
                     && env::valid_directory_version(toolset, 3)
                     && sdk
                         .as_ref()
