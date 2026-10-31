@@ -42,15 +42,15 @@ It provides aliases and defaults, shared download caching, shell initialization,
 
 This repository describes the current development version. Historical `msvc-installer` release assets do not contain the current commands. The website download page offers only actual matching `hanamori` assets; a private repository does not provide anonymous downloads.
 
-- **Website:** <https://licyk.github.io/Hanamori/>
-- **Documentation:** <https://licyk.github.io/Hanamori/docs/> (English and Chinese)
+- **Website:** <https://hanamori.netlify.app/>
+- **Documentation:** <https://hanamori.netlify.app/docs/> (English and Chinese)
 
 ## Get started
 
 Install Hanamori in Windows PowerShell 5.1 or PowerShell 7:
 
 ```powershell
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 The script installs the Windows x64 executable into `%LOCALAPPDATA%\Hanamori\bin`, adds that directory to your user PATH, and initializes the current PowerShell profile and session with completions. No administrator privileges are required. Toolchains are installed separately.
@@ -60,7 +60,7 @@ Set `HANAMORI_INSTALL_DIR` to choose the executable directory in either installe
 For MSYS2 or Git Bash, use the Bash installer:
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+curl -fsSL https://hanamori.netlify.app/install.sh | bash
 ```
 
 It uses the same executable directory and user PATH, and configures Bash startup files and completions. Open a new Bash terminal afterward, or run the printed hook command. It requires `cygpath`, `curl` and Windows PowerShell or PowerShell 7. Install a toolchain when needed:
@@ -72,7 +72,7 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 .\hello.exe
 ```
 
-The [first compilation guide](site/content/docs/quick-start.en.mdx) includes a complete `hello.cpp` and shell activation instructions.
+The [first compilation guide](https://hanamori.netlify.app/docs/quick-start) includes a complete `hello.cpp` and shell activation instructions.
 
 Installation defaults to VS 2026 stable and includes MSVC, the Windows SDK and MSBuild. MSBuild supports native C++ projects and solutions using VS 2026 x64/v145 or VS 2022 x64/v143 (`--vs-version 2022`):
 
@@ -83,7 +83,7 @@ hanamori exec --using build '--' MSBuild.exe app.sln -p:Configuration=Release -p
 
 `--no-msbuild` installs MSVC and the SDK; `--no-sdk` defaults to a compiler-only installation. Explicit `--msbuild` / `--no-msbuild` override a project’s MSBuild setting.
 
-This initial support includes C++ targets and file tracking, requires a Windows SDK and the host .NET Framework, and has a separate [native acceptance gate](site/content/docs/testing.en.mdx). Native Windows build acceptance remains pending; Linux extraction tests do not establish it. See [installation](site/content/docs/installation.en.mdx) for the supported scope.
+This initial support includes C++ targets and file tracking, requires a Windows SDK and the host .NET Framework, and has a separate [native acceptance gate](https://hanamori.netlify.app/docs/testing). Native Windows build acceptance remains pending; Linux extraction tests do not establish it. See [installation](https://hanamori.netlify.app/docs/installation) for the supported scope.
 
 ## Uninstall
 
@@ -109,7 +109,7 @@ hanamori self uninstall --purge --dry-run
 hanamori self uninstall --purge
 ```
 
-Managed toolchain directories are removed in full. External toolchain files, unknown files outside those directories, and manually added PATH entries are preserved. On Windows, executable removal finishes through a helper after the main process exits. See the [uninstall guide](site/content/docs/self-uninstall.en.mdx) for cleanup boundaries and retry instructions.
+Managed toolchain directories are removed in full. External toolchain files, unknown files outside those directories, and manually added PATH entries are preserved. On Windows, executable removal finishes through a helper after the main process exits. See the [uninstall guide](https://hanamori.netlify.app/docs/self-uninstall) for cleanup boundaries and retry instructions.
 
 ## Development
 
@@ -119,7 +119,7 @@ cargo test --workspace --locked
 cargo xtask check
 ```
 
-Building the Windows MSVC executable requires Rust and the corresponding linker/build tools. Read [architecture](site/content/docs/architecture.en.mdx), [testing](site/content/docs/testing.en.mdx), and [release](site/content/docs/release.en.mdx) before changing or publishing the CLI.
+Building the Windows MSVC executable requires Rust and the corresponding linker/build tools. Read [architecture](https://hanamori.netlify.app/docs/architecture), [testing](https://hanamori.netlify.app/docs/testing), and [release](https://hanamori.netlify.app/docs/release) before changing or publishing the CLI.
 
 The independent website lives in `site/`:
 
@@ -129,6 +129,6 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Use `bun run build` for static output in `site/.output/public`, then `bun run check` and `bun run test` for validation. See [website maintenance](site/content/docs/website.en.mdx) for bilingual content and deployment configuration. Hosting must be configured separately; adding these files does not publish a website.
+Use `bun run build` for static output in `site/.output/public`, then `bun run check` and `bun run test` for validation. See [website maintenance](https://hanamori.netlify.app/docs/website) for bilingual content and deployment configuration. Hosting must be configured separately; adding these files does not publish a website.
 
 Licensed under the [GNU General Public License v3.0](LICENSE). Website attribution is in [site/NOTICE](site/NOTICE).

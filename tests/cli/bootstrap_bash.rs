@@ -1,23 +1,15 @@
 use crate::support::success;
-use std::{path::PathBuf, process::Command};
-
-fn bash() -> PathBuf {
-    if cfg!(windows) {
-        std::env::var_os("HANAMORI_TEST_BASH")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from(std::env::var_os("ProgramFiles").unwrap()).join("Git/bin/bash.exe")
-            })
-    } else {
-        "bash".into()
-    }
-}
+#[cfg(windows)]
+use std::path::PathBuf;
 
 #[test]
 fn bash_installer_help_and_argument_errors_need_no_network() {
+    let Some(shell) = crate::support::shell_path("bash") else {
+        return;
+    };
     let source = include_str!("../../install.sh");
     let output = |arguments: &[&str]| {
-        Command::new(bash())
+        crate::support::shell_command(&shell)
             .args(["--noprofile", "--norc", "-c", source, "install.sh"])
             .args(arguments)
             .output()
@@ -74,7 +66,10 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
     );
     let script_bytes = backend.as_bytes().to_vec();
     let scripts = Server::new(move |_| Reply::full(&script_bytes));
-    let mut shells = vec![bash()];
+    let Some(shell) = crate::support::shell_path("bash") else {
+        return;
+    };
+    let mut shells = vec![shell];
     let explicit = std::env::var_os("HANAMORI_TEST_MSYS2_BASH");
     let msys = explicit.clone().map(PathBuf::from).unwrap_or_else(|| {
         PathBuf::from(format!(
@@ -102,7 +97,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
         fs::write(
             directory.join("install.sh"),
             include_str!("../../install.sh")
-                .replace("https://licyk.github.io/Hanamori/install.ps1", &scripts.url),
+                .replace("https://hanamori.netlify.app/install.ps1", &scripts.url),
         )
         .unwrap();
         // Inject only isolated HTTP/registry locations; execute the actual installer functions.
@@ -114,7 +109,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
         let root = RegKey::predef(HKEY_CURRENT_USER);
         let (key, _) = root.create_subkey(&location).unwrap();
         key.set_value("Path", &r"D:\Keep").unwrap();
-        let output = Command::new(&shell)
+        let output = crate::support::shell_command(&shell)
             .args([
                 "--noprofile",
                 "--norc",
@@ -128,7 +123,6 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
             .env("LOCALAPPDATA", temp.path().join("data"))
             .env("HANAMORI_HOME", temp.path().join("manager"))
             .env_remove("GITHUB_TOKEN")
-            .env_remove("_HANAMORI_STATE")
             .env_remove("BASH_ENV")
             .env_remove("PSModulePath")
             .output()

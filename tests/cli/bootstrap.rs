@@ -2,7 +2,7 @@ use crate::support::success;
 use hanamori_test_support::http::{Reply, Server};
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use std::{fs, process::Command};
+use std::fs;
 
 #[test]
 #[cfg(windows)]
@@ -69,7 +69,7 @@ fn run_installer_test(shell: &str, script_source: &str) {
     let script = temp.path().join("test.ps1");
     fs::write(&script, script_source).unwrap();
     success(
-        Command::new(shell)
+        crate::support::shell_command(shell)
             .args([
                 "-NoLogo",
                 "-NoProfile",
@@ -94,7 +94,6 @@ fn run_installer_test(shell: &str, script_source: &str) {
             .env("LOCALAPPDATA", temp.path().join("data"))
             .env("HANAMORI_HOME", temp.path().join("manager"))
             .env_remove("GITHUB_TOKEN")
-            .env_remove("_HANAMORI_STATE")
             // Rebuild the selected shell's module path instead of inheriting pwsh's.
             .env_remove("PSModulePath")
             .output()
@@ -110,7 +109,11 @@ fn powershell_release_validation_and_corrupt_download_preserve_existing_program(
     } else {
         "pwsh"
     };
-    if Command::new(shell).arg("-Version").output().is_err() {
+    if crate::support::shell_command(shell)
+        .arg("-Version")
+        .output()
+        .is_err()
+    {
         assert!(
             std::env::var_os("HANAMORI_REQUIRE_SHELL_TESTS").is_none(),
             "required PowerShell is missing"
@@ -146,7 +149,7 @@ fn powershell_release_validation_and_corrupt_download_preserve_existing_program(
     let script = temp.path().join("metadata.ps1");
     fs::write(&script, include_str!("bootstrap_metadata.ps1")).unwrap();
     success(
-        Command::new(shell)
+        crate::support::shell_command(shell)
             .args([
                 "-NoLogo",
                 "-NoProfile",

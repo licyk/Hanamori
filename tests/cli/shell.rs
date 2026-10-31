@@ -145,7 +145,7 @@ eval "$code"
     std::fs::write(broken.join("config.json"), "bad").unwrap();
     let path = temp.path().join("lifecycle.sh");
     std::fs::write(&path, script).unwrap();
-    let mut cmd = Command::new(shell);
+    let mut cmd = crate::support::shell_command(shell);
     if shell == "bash" {
         cmd.args(["--noprofile", "--norc"]);
     } else {
@@ -253,7 +253,7 @@ if ($env:WindowsSDKVersion -cne 'external SDK') { throw 'external SDK not restor
     std::fs::create_dir(&broken).unwrap();
     std::fs::write(broken.join("config.json"), "bad").unwrap();
     success(
-        Command::new("pwsh")
+        crate::support::shell_command("pwsh")
             .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-File"])
             .arg(&path)
             .current_dir(temp.path())
@@ -264,11 +264,6 @@ if ($env:WindowsSDKVersion -cne 'external SDK') { throw 'external SDK not restor
                 "INCLUDE",
                 "user '\" $PATH $(New-Item unexpected) ` ! %\nline two",
             )
-            .env_remove(session::STATE_KEY)
-            .env_remove("_HANAMORI_STATE_VERSION")
-            .env_remove("_HANAMORI_ACTIVE_ID")
-            .env_remove("_HANAMORI_ACTIVE_ROOT")
-            .env_remove("_HANAMORI_ACTIVE_MANAGER_DIR")
             .output()
             .unwrap(),
     );
@@ -525,7 +520,7 @@ if ((Test-Path Env:CC) -or (Test-Path Env:_HANAMORI_STATE)) { throw 'unset faile
     let path = temp.path().join("lifecycle.ps1");
     std::fs::write(&path, format!("\u{feff}{script}")).unwrap();
     success(
-        Command::new("powershell")
+        crate::support::shell_command("powershell")
             .args([
                 "-NoLogo",
                 "-NoProfile",
@@ -657,7 +652,7 @@ hanamori deactivate
     } else {
         "/usr/bin/zsh"
     };
-    let mut command = Command::new(shell);
+    let mut command = crate::support::shell_command(shell);
     if shell == "bash" {
         command.args(["--noprofile", "--norc"]);
     } else {
@@ -818,7 +813,7 @@ if ($env:PATH -cne $baseline -or [Console]::OutputEncoding.CodePage -ne $encodin
 "#;
     let path = temp.path().join("hook.ps1");
     std::fs::write(&path, format!("\u{feff}{script}")).unwrap();
-    let mut command = Command::new("pwsh");
+    let mut command = crate::support::shell_command("pwsh");
     command
         .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-File"])
         .arg(path)
@@ -830,16 +825,7 @@ if ($env:PATH -cne $baseline -or [Console]::OutputEncoding.CodePage -ne $encodin
         .env("ROOT_B", &b)
         .env("MISSING", temp.path().join("missing"))
         .env("PROBE", support::exec_probe());
-    for key in [
-        "HANAMORI_LOG",
-        "_HANAMORI_STATE",
-        "_HANAMORI_STATE_VERSION",
-        "_HANAMORI_ACTIVE_ID",
-        "_HANAMORI_ACTIVE_ROOT",
-        "_HANAMORI_ACTIVE_MANAGER_DIR",
-    ] {
-        command.env_remove(key);
-    }
+
     let output = command.output().unwrap();
     assert!(
         String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"),
@@ -950,17 +936,13 @@ fn hook_with_unavailable_executable_keeps_the_shell_usable() {
             "missing.sh"
         });
         std::fs::write(&path, format!("{generated}{checks}")).unwrap();
-        let mut command = Command::new(name);
+        let mut command = crate::support::shell_command(name);
         if matches!(shell, Shell::PowerShell) {
             command.args(["-NoProfile", "-NonInteractive", "-File"]);
         } else {
             command.args(["-e", "-u"]);
         }
-        let output = command
-            .arg(path)
-            .env_remove(session::STATE_KEY)
-            .output()
-            .unwrap();
+        let output = command.arg(path).output().unwrap();
         assert!(String::from_utf8_lossy(&output.stderr).contains("automatic activation failed"));
         assert_eq!(success(output).trim(), "shell available");
     }

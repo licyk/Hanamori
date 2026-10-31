@@ -9,7 +9,7 @@ icon: Download
 在 Windows x64 的 PowerShell 5.1 或 PowerShell 7 中运行：
 
 ```powershell
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 默认下载最新稳定版，验证 SHA-256、大小和程序版本后，安装到 `%LOCALAPPDATA%\Hanamori\bin\hanamori.exe`，配置用户 PATH、当前 PowerShell 的启动 Hook 与补全。无需管理员权限，也不下载工具链。命令直接在当前 PowerShell 执行时立即生效；从子进程执行安装后需要打开新终端。
@@ -17,14 +17,14 @@ irm https://licyk.github.io/Hanamori/install.ps1 | iex
 指定版本或安装目录时，将脚本作为带参数的脚本块执行：
 
 ```powershell
-& ([scriptblock]::Create((irm https://licyk.github.io/Hanamori/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
+& ([scriptblock]::Create((irm https://hanamori.netlify.app/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
 ```
 
 也可以通过 `HANAMORI_INSTALL_DIR` 设置存放 `hanamori.exe` 的目录：
 
 ```powershell
 $env:HANAMORI_INSTALL_DIR = 'D:\Tools\Hanamori'
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 安装路径优先级为 `-InstallDir` → `HANAMORI_INSTALL_DIR` → `%LOCALAPPDATA%\Hanamori\bin`。环境变量未设置或为空时使用默认目录。
@@ -45,7 +45,7 @@ irm https://licyk.github.io/Hanamori/install.ps1 | iex
 在 Windows x64 的 MSYS2 或 Git Bash 中运行：
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+curl -fsSL https://hanamori.netlify.app/install.sh | bash
 ```
 
 脚本复用 PowerShell 安装器下载和验证程序、配置用户 PATH，并通过 `hanamori shell init --shell bash` 为实际运行脚本的 Bash 配置 `.bashrc`、登录入口与补全。默认安装目录为 `%LOCALAPPDATA%\Hanamori\bin`，不下载工具链，也不修改 PowerShell Profile。
@@ -53,7 +53,7 @@ curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
 需要 `cygpath`、`curl` 和 Windows PowerShell 或 PowerShell 7。MSYS2 未将 PowerShell 加入 PATH 时，会从 Windows 系统目录查找。仓库内可直接运行 `bash install.sh`，使用同目录的 `install.ps1`。
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash -s -- \
+curl -fsSL https://hanamori.netlify.app/install.sh | bash -s -- \
   --version 0.1.0 --install-dir '/c/Tools/Hanamori'
 ```
 
@@ -62,7 +62,7 @@ curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash -s -- \
 Bash 同样支持 `HANAMORI_INSTALL_DIR`，`--install-dir` 优先于环境变量。变量未设置或为空时使用默认目录；管道安装时将变量传给 `bash`：
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | HANAMORI_INSTALL_DIR='/d/Tools/Hanamori' bash
+curl -fsSL https://hanamori.netlify.app/install.sh | HANAMORI_INSTALL_DIR='/d/Tools/Hanamori' bash
 ```
 
 `curl | bash` 运行在子进程中。安装后重开 Bash，或执行脚本输出的 Hook 加载命令，让当前终端立即使用 Hanamori。MSYS2 启动时可能重新组织 PATH；Bash Hook 通过程序的绝对路径调用 Hanamori。

@@ -5,7 +5,7 @@ use hanamori::shell::{
 };
 use hanamori_test_support::toolchain;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 fn exercise(shell_program: &Path, shell: Shell) {
@@ -63,7 +63,7 @@ if [ "$NATIVE_WINDOWS" = 1 ]; then
     hanamori --version > recovered-version.txt
 fi
 "#;
-    let mut command = Command::new(shell_program);
+    let mut command = support::shell_command(shell_program);
     if shell == Shell::Bash {
         command.args(["--noprofile", "--norc", "-s"]);
     } else {
@@ -80,8 +80,6 @@ fi
             no_arguments.status.code().unwrap().to_string(),
         )
         .env("NATIVE_WINDOWS", if cfg!(windows) { "1" } else { "0" })
-        .env_remove("HANAMORI_LOG")
-        .env_remove("_HANAMORI_STATE")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -117,55 +115,16 @@ fi
     assert_eq!(list["installations"].as_array().unwrap().len(), 1);
 }
 
-fn available(shell: Shell) -> Option<PathBuf> {
-    let key = if shell == Shell::Bash {
-        "HANAMORI_TEST_BASH"
-    } else {
-        "HANAMORI_TEST_ZSH"
-    };
-    let explicit = std::env::var_os(key);
-    let path = explicit.clone().map(PathBuf::from).unwrap_or_else(|| {
-        #[cfg(windows)]
-        if shell == Shell::Bash {
-            return PathBuf::from(
-                std::env::var_os("ProgramFiles").unwrap_or_else(|| "C:\\Program Files".into()),
-            )
-            .join("Git/bin/bash.exe");
-        }
-        PathBuf::from(shell.name())
-    });
-    if Command::new(&path)
-        .arg("--version")
-        .output()
-        .is_ok_and(|output| output.status.success())
-    {
-        return Some(path);
-    }
-    let required = explicit.is_some()
-        || (std::env::var_os("HANAMORI_REQUIRE_SHELL_TESTS").is_some()
-            && (cfg!(unix) || shell == Shell::Bash));
-    assert!(
-        !required,
-        "required POSIX shell missing: {} (override with {key})",
-        path.display()
-    );
-    eprintln!(
-        "SKIPPED native POSIX hook paths: {} is unavailable; set {key} to its executable",
-        path.display()
-    );
-    None
-}
-
 #[test]
 fn bash_executes_hooks_forwarded_commands_and_profile_from_native_paths() {
-    if let Some(path) = available(Shell::Bash) {
+    if let Some(path) = support::shell_path("bash") {
         exercise(&path, Shell::Bash);
     }
 }
 
 #[test]
 fn zsh_executes_hooks_forwarded_commands_and_profile_from_native_paths() {
-    if let Some(path) = available(Shell::Zsh) {
+    if let Some(path) = support::shell_path("zsh") {
         exercise(&path, Shell::Zsh);
     }
 }

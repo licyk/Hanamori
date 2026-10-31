@@ -157,13 +157,10 @@ fn windows_consoleless_startup_does_not_attempt_automatic_activation_or_print_er
     let temp = tempfile::tempdir().unwrap();
     let bundle = bundle(&temp.path().join("loaders"), true);
     bundle.publish().unwrap();
-    let output = Command::new("cmd.exe")
+    let output = crate::support::cmd()
         .args(["/d", "/v:off", "/c"])
         .arg(bundle.loader_path())
         .creation_flags(0x8) // DETACHED_PROCESS, no console for DOSKEY.
-        .env_remove("ERRORLEVEL")
-        .env_remove("_HANAMORI_STATE")
-        .env_remove("_HANAMORI_CMD_ENTRY")
         .env("HANAMORI_LOG", "invalid[")
         .output()
         .unwrap();
@@ -227,14 +224,10 @@ exit /b 0
     )
     .unwrap();
     for attempt in 1..=10 {
-        let output = Command::new("cmd.exe")
+        let output = crate::support::cmd()
             .args(["/d", "/v:off", "/c"])
             .arg(&script)
             .creation_flags(0x10) // CREATE_NEW_CONSOLE: DOSKEY requires a real console.
-            .env_remove("_HANAMORI_STATE")
-            .env_remove("_HANAMORI_CMD_ENTRY")
-            .env_remove("ERRORLEVEL")
-            .env_remove("RANDOM")
             .env("_HANAMORI_CMD_TRACE", "1")
             .env("HANAMORI_LOG", "invalid[")
             .env("PLAIN", plain.loader_path())

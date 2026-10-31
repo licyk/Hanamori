@@ -85,7 +85,7 @@ exit "$detection_status"
         .path()
         .join(if powershell { "test.ps1" } else { "test.sh" });
     std::fs::write(&script_path, script).unwrap();
-    let mut command = Command::new(shell);
+    let mut command = crate::support::shell_command(shell);
     if powershell {
         command.args([
             "-NoLogo",
@@ -111,9 +111,7 @@ exit "$detection_status"
         .env("LOCALAPPDATA", temp.path().join("data"))
         .env("HANAMORI_HOME", temp.path().join("manager"))
         .env("HANAMORI_DETECTION_REPORT", temp.path().join("report.json"))
-        .env("SHELL", "/deliberately/wrong/fish")
-        .env_remove("HANAMORI_LOG")
-        .env_remove("_HANAMORI_STATE");
+        .env("SHELL", "/deliberately/wrong/fish");
     success(command.output().unwrap());
     let report: serde_json::Value =
         serde_json::from_slice(&std::fs::read(temp.path().join("report.json")).unwrap()).unwrap();
@@ -295,7 +293,7 @@ fn cmd_detects_and_generates_batch_scripts() {
     let script = temp.path().join("detect.cmd");
     std::fs::write(&script, "@echo off\r\n\"%PROBE%\" --exact shell_detection::detection_child || exit /b 1\r\n\"%BIN%\" env --output hook.cmd || exit /b 1\r\n\"%BIN%\" shell deactivate --output deactivate.cmd || exit /b 1\r\nexit /b 0\r\n").unwrap();
     success(
-        Command::new("cmd.exe")
+        crate::support::cmd()
             .args(["/d", "/c"])
             .arg(&script)
             .current_dir(temp.path())

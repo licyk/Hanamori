@@ -36,15 +36,6 @@ fn environment(command: &mut Command, base: &Path, home: &Path) {
         .env("LOCALAPPDATA", base.join("data"))
         .env("HANAMORI_HOME", home)
         .env("HANAMORI_LOG", "info");
-    for key in [
-        "_HANAMORI_STATE",
-        "_HANAMORI_ACTIVE_ROOT",
-        "_HANAMORI_ACTIVE_ID",
-        "_HANAMORI_ACTIVE_MANAGER_DIR",
-        "_HANAMORI_STATE_VERSION",
-    ] {
-        command.env_remove(key);
-    }
 }
 
 #[cfg(unix)]
@@ -112,7 +103,7 @@ check [ "$user_calls" -gt 0 ]
 printf 'AUTO_OK\n'
 exit 0
 "#;
-    let mut command = Command::new(shell);
+    let mut command = crate::support::shell_command(shell);
     if shell == "bash" {
         command.args(["--noprofile", "--norc", "-i"]);
     } else {
@@ -230,7 +221,7 @@ Check ($env:PATH -ceq $baseline) 'final baseline not restored'
 "#;
     let path = temp.path().join("test.ps1");
     std::fs::write(&path, format!("\u{feff}{script}")).unwrap();
-    let mut command = Command::new("pwsh");
+    let mut command = crate::support::shell_command("pwsh");
     command
         .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-File"])
         .arg(path);
@@ -342,7 +333,7 @@ exit /b 0
 "#;
     let path = temp.path().join("test.cmd");
     std::fs::write(&path, script.replace('\n', "\r\n")).unwrap();
-    let mut command = Command::new("cmd.exe");
+    let mut command = crate::support::cmd();
     command
         .args(["/d", "/v:off", "/c"])
         .arg(path)

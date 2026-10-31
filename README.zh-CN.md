@@ -42,15 +42,15 @@ Hanamori 在 Windows x64 上管理独立的 MSVC、Windows SDK 和 MSBuild 安�
 
 本仓库描述当前开发版本。历史 `msvc-installer` 发布资产不包含当前命令。网站下载页仅提供实际存在且名称匹配的 `hanamori` 资产；私有仓库不提供匿名下载。
 
-- **官网：** <https://licyk.github.io/Hanamori/>
-- **文档：** <https://licyk.github.io/Hanamori/docs/>（中文与英文）
+- **官网：** <https://hanamori.netlify.app/>
+- **文档：** <https://hanamori.netlify.app/docs/>（中文与英文）
 
 ## 快速开始
 
 在 Windows PowerShell 5.1 或 PowerShell 7 中安装 Hanamori：
 
 ```powershell
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 脚本将 Windows x64 程序安装到 `%LOCALAPPDATA%\Hanamori\bin`，将该目录加入用户 PATH，并为当前 PowerShell 的 Profile 和会话初始化 Hook 与补全。无需管理员权限，工具链需要另行安装。
@@ -60,7 +60,7 @@ irm https://licyk.github.io/Hanamori/install.ps1 | iex
 在 MSYS2 或 Git Bash 中，使用 Bash 安装脚本：
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+curl -fsSL https://hanamori.netlify.app/install.sh | bash
 ```
 
 脚本使用相同的程序目录和用户 PATH，并配置 Bash 启动文件与补全。安装后打开新的 Bash 终端，或执行脚本输出的 Hook 加载命令。需要 `cygpath`、`curl` 和 Windows PowerShell 或 PowerShell 7。随后按需安装工具链：
@@ -72,7 +72,7 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 .\hello.exe
 ```
 
-[首次编译指南](site/content/docs/quick-start.mdx) 包含完整的 `hello.cpp` 示例和 Shell 激活方法。
+[首次编译指南](https://hanamori.netlify.app/docs/quick-start) 包含完整的 `hello.cpp` 示例和 Shell 激活方法。
 
 默认使用 VS 2026 stable，安装 MSVC、Windows SDK 和 MSBuild。MSBuild 支持 VS 2026 x64/v145 和 VS 2022 x64/v143（指定 `--vs-version 2022`）原生 C++ 项目与解决方案：
 
@@ -83,7 +83,7 @@ hanamori exec --using build '--' MSBuild.exe app.sln -p:Configuration=Release -p
 
 `--no-msbuild` 仅安装 MSVC 和 SDK；`--no-sdk` 默认仅安装编译器。显式传入的 `--msbuild` / `--no-msbuild` 会覆盖项目的 MSBuild 设置。
 
-当前初步支持 C++ 构建目标与文件跟踪，依赖 Windows SDK 和主机的 .NET Framework，并设有单独的[原生验收测试](site/content/docs/testing.mdx)。Windows 原生构建验收仍待完成；Linux 解包测试不能替代该验收。支持范围见[工具链安装文档](site/content/docs/installation.mdx)。
+当前初步支持 C++ 构建目标与文件跟踪，依赖 Windows SDK 和主机的 .NET Framework，并设有单独的[原生验收测试](https://hanamori.netlify.app/docs/testing)。Windows 原生构建验收仍待完成；Linux 解包测试不能替代该验收。支持范围见[工具链安装文档](https://hanamori.netlify.app/docs/installation)。
 
 ## 卸载
 
@@ -109,7 +109,7 @@ hanamori self uninstall --purge --dry-run
 hanamori self uninstall --purge
 ```
 
-受管工具链目录会整体删除。外部工具链文件、受管工具链目录之外的未知文件，以及手动添加的 PATH 条目会保留。在 Windows 上，辅助脚本会在主进程退出后完成程序删除。清理边界和失败重试方法见[卸载指南](site/content/docs/self-uninstall.mdx)。
+受管工具链目录会整体删除。外部工具链文件、受管工具链目录之外的未知文件，以及手动添加的 PATH 条目会保留。在 Windows 上，辅助脚本会在主进程退出后完成程序删除。清理边界和失败重试方法见[卸载指南](https://hanamori.netlify.app/docs/self-uninstall)。
 
 ## 开发
 
@@ -119,7 +119,7 @@ cargo test --workspace --locked
 cargo xtask check
 ```
 
-构建 Windows MSVC 程序需要 Rust 和对应的链接器、构建工具。修改或发布 CLI 前，请阅读[架构](site/content/docs/architecture.mdx)、[测试](site/content/docs/testing.mdx)和[发布流程](site/content/docs/release.mdx)。
+构建 Windows MSVC 程序需要 Rust 和对应的链接器、构建工具。修改或发布 CLI 前，请阅读[架构](https://hanamori.netlify.app/docs/architecture)、[测试](https://hanamori.netlify.app/docs/testing)和[发布流程](https://hanamori.netlify.app/docs/release)。
 
 独立网站位于 `site/`：
 
@@ -129,6 +129,6 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-运行 `bun run build` 将静态文件输出到 `site/.output/public`，通过 `bun run check` 和 `bun run test` 进行验证。双语内容和部署配置见[网站维护文档](site/content/docs/website.mdx)。网站托管需要单独配置，仅添加这些文件不会发布网站。
+运行 `bun run build` 将静态文件输出到 `site/.output/public`，通过 `bun run check` 和 `bun run test` 进行验证。双语内容和部署配置见[网站维护文档](https://hanamori.netlify.app/docs/website)。网站托管需要单独配置，仅添加这些文件不会发布网站。
 
 本项目采用 [GNU General Public License v3.0](LICENSE) 许可证。网站引用与署名见 [site/NOTICE](site/NOTICE)。

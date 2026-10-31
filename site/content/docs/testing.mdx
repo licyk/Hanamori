@@ -12,11 +12,13 @@ HANAMORI_REQUIRE_SHELL_TESTS=1 cargo test --workspace --locked
 
 PowerShell 中先设置 `$env:HANAMORI_REQUIRE_SHELL_TESTS = '1'`，再运行 Cargo。既有 CI 覆盖 Linux 与 Windows，测试使用真实实现、本地 HTTP 服务、合成安装包和实际可用 Shell。必需 Shell 模式避免把缺少运行时当成成功覆盖。
 
+普通本地检查可以直接运行 `cargo test --workspace`。缺少可选 Shell 时会明确报告跳过；显式配置的运行时必须可用。Windows Bash/Zsh 用例需要带 `cygpath` 的 Git Bash 或 MSYS2，不使用 WSL。测试子进程保留可用的 Windows 临时目录，同时隔离父进程的 Hanamori 状态和配置；CMD 生命周期用例使用精简的系统 PATH，避免开发机已安装工具占用批处理命令长度。
+
 Windows CI 通过 `cargo test --locked -p hanamori --test cli bootstrap::` 验证 PowerShell 5.1/7 安装脚本：本地 HTTP 服务提供真实构建的程序，Profile 与注册表键均隔离。覆盖首次与重复安装、Unicode 路径、PATH 保留、跳过选项，以及下载、哈希、大小或版本验证失败时保留旧程序。库测试验证基于安装记录的 PATH 清理，不修改真实用户 PATH。
 
-`cargo test --locked -p hanamori --test cli bootstrap_bash::` 验证 Bash 安装入口的参数与平台检查；Windows 上还使用实际 Git Bash，以及可用的 MSYS2 Bash，从本地 HTTP 服务安装真实 EXE，覆盖管道入口、两种路径格式、重复安装、失败保留、跳过选项和新 Bash 会话加载 Hook。Git Bash 使用 `HANAMORI_TEST_BASH` 或默认安装路径；MSYS2 使用 `HANAMORI_TEST_MSYS2_BASH` 或系统盘的 `msys64/usr/bin/bash.exe`。默认 MSYS2 不可用时明确跳过，显式指定的运行时缺失则失败。
+`cargo test --locked -p hanamori --test cli bootstrap_bash::` 验证 Bash 安装入口的参数与平台检查；Windows 上还使用实际 Git Bash，以及可用的 MSYS2 Bash，从本地 HTTP 服务安装真实 EXE，覆盖管道入口、两种路径格式、重复安装、失败保留、跳过选项和新 Bash 会话加载 Hook。主要 Bash 运行时优先使用 `HANAMORI_TEST_BASH`，再查询 PATH、PATH 中 Git 所属安装目录和默认 Git 安装目录；因此也支持 PATH 中自定义位置的 MSYS2。额外的 MSYS2 使用 `HANAMORI_TEST_MSYS2_BASH` 或系统盘的 `msys64/usr/bin/bash.exe`。默认 MSYS2 不可用时明确跳过，显式指定的运行时缺失则失败。
 
-终端补全可以单独运行 `cargo test --locked -p hanamori --test cli completions::`。测试覆盖真实 Bash 候选、Zsh 行编辑器的 Tab 补全、PowerShell 的 `CompleteInput`，以及独立脚本、钩子、启动配置、重复加载、隐藏命令和 `exec --`。Windows 另外运行 PowerShell 5.1；Git Bash 默认定位 `ProgramFiles/Git/bin/bash.exe`，可通过 `HANAMORI_TEST_BASH`、`HANAMORI_TEST_ZSH` 指定本机运行时。Windows Zsh 缺失时明确跳过；设置覆盖路径后则必须可用。升级 `clap_complete` 后应重新验证这些脚本生成与实际 Shell 用例。
+终端补全可以单独运行 `cargo test --locked -p hanamori --test cli completions::`。测试覆盖真实 Bash 候选、Zsh 行编辑器的 Tab 补全、PowerShell 的 `CompleteInput`，以及独立脚本、钩子、启动配置、重复加载、隐藏命令和 `exec --`。Windows 另外运行 PowerShell 5.1；Bash/Zsh 优先使用显式路径，再查询 PATH；Bash 还检查 PATH 中 Git 所属安装目录和 `ProgramFiles/Git/bin/bash.exe`。可通过 `HANAMORI_TEST_BASH`、`HANAMORI_TEST_ZSH` 指定本机运行时。Windows Zsh 缺失时明确跳过；设置覆盖路径后则必须可用。升级 `clap_complete` 后应重新验证这些脚本生成与实际 Shell 用例。
 
 动态补全回归另见 `cargo test --locked -p hanamori --test cli completions::dynamic::`，使用实际目录和外部引用检查选择器、版本歧义、管理器优先级、直接目录、单个损坏引用和只读行为。`completions` 测试也验证真实 Bash Readline/Zsh 行编辑器、PowerShell 中的动态候选、带空格路径、等号参数、HOME 变化和退出码保留。
 

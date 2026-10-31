@@ -38,7 +38,7 @@ main() (
         trap 'rm -rf -- "$staging"' EXIT
         backend="$staging/install.ps1"
         curl --fail --show-error --location --connect-timeout 30 --max-time 120 \
-            https://licyk.github.io/Hanamori/install.ps1 --output "$backend"
+            https://hanamori.netlify.app/install.ps1 --output "$backend"
     fi
     local -a arguments=(-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass
         -File "$(cygpath -aw -- "$backend")" -Version "$version"

@@ -9,7 +9,7 @@ icon: Download
 Run in Windows PowerShell 5.1 or PowerShell 7 on Windows x64:
 
 ```powershell
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 The script downloads the latest stable release, checks its SHA-256, size and reported version, and installs `%LOCALAPPDATA%\Hanamori\bin\hanamori.exe`. It adds the directory to your user PATH and initializes the current PowerShell profile and session with completions. It requires no administrator privileges and downloads no toolchains. Running inline takes effect immediately; running in a child process requires opening a new terminal afterward.
@@ -17,14 +17,14 @@ The script downloads the latest stable release, checks its SHA-256, size and rep
 To choose a release or executable directory:
 
 ```powershell
-& ([scriptblock]::Create((irm https://licyk.github.io/Hanamori/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
+& ([scriptblock]::Create((irm https://hanamori.netlify.app/install.ps1))) -Version 0.1.0 -InstallDir 'D:\Tools\Hanamori'
 ```
 
 You can also set `HANAMORI_INSTALL_DIR` to the directory that should contain `hanamori.exe`:
 
 ```powershell
 $env:HANAMORI_INSTALL_DIR = 'D:\Tools\Hanamori'
-irm https://licyk.github.io/Hanamori/install.ps1 | iex
+irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
 The priority is `-InstallDir`, then `HANAMORI_INSTALL_DIR`, then `%LOCALAPPDATA%\Hanamori\bin`. An unset or empty environment variable uses the default directory.
@@ -45,7 +45,7 @@ Install toolchains when needed with `hanamori install latest --name stable`. Use
 Run in MSYS2 or Git Bash on Windows x64:
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash
+curl -fsSL https://hanamori.netlify.app/install.sh | bash
 ```
 
 The Bash installer reuses the PowerShell download, verification and user PATH setup, then invokes `hanamori shell init --shell bash` with the actual Bash runtime to configure `.bashrc`, login startup and completions. It defaults to `%LOCALAPPDATA%\Hanamori\bin`, installs no toolchains and leaves PowerShell profiles unchanged.
@@ -53,7 +53,7 @@ The Bash installer reuses the PowerShell download, verification and user PATH se
 It requires `cygpath`, `curl` and Windows PowerShell or PowerShell 7. If PowerShell is absent from the MSYS2 PATH, the script checks the Windows system directory. From a checkout, run `bash install.sh` to use the adjacent `install.ps1`.
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash -s -- \
+curl -fsSL https://hanamori.netlify.app/install.sh | bash -s -- \
   --version 0.1.0 --install-dir '/c/Tools/Hanamori'
 ```
 
@@ -62,7 +62,7 @@ Options are `--version`, `--install-dir`, `--no-path-update` and `--no-shell`. I
 Bash also supports `HANAMORI_INSTALL_DIR`, with `--install-dir` taking precedence. An unset or empty variable uses the default directory. For a piped installation, pass the variable to `bash`:
 
 ```bash
-curl -fsSL https://licyk.github.io/Hanamori/install.sh | HANAMORI_INSTALL_DIR='/d/Tools/Hanamori' bash
+curl -fsSL https://hanamori.netlify.app/install.sh | HANAMORI_INSTALL_DIR='/d/Tools/Hanamori' bash
 ```
 
 `curl | bash` runs in a child process. Open a new Bash terminal afterward, or run the printed hook command to use Hanamori immediately in the current terminal. MSYS2 may rebuild PATH at startup; the Bash hook invokes Hanamori by its absolute path.

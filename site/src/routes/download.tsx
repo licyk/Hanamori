@@ -101,10 +101,10 @@ function DownloadPage() {
         <section className="download-card" aria-label={text.install}>
           <h2>{text.install}</h2>
           <p>{text.installDescription}</p>
-          <pre className="download-command"><code>irm https://licyk.github.io/Hanamori/install.ps1 | iex</code></pre>
+          <pre className="download-command"><code>irm https://hanamori.netlify.app/install.ps1 | iex</code></pre>
           <h2>{text.bashInstall}</h2>
           <p>{text.bashDescription}</p>
-          <pre className="download-command"><code>curl -fsSL https://licyk.github.io/Hanamori/install.sh | bash</code></pre>
+          <pre className="download-command"><code>curl -fsSL https://hanamori.netlify.app/install.sh | bash</code></pre>
           <p><Link href="/docs/build">{text.installGuide} →</Link></p>
         </section>
         <section className="download-card" aria-label={text.platform}>

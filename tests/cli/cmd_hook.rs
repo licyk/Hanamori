@@ -308,7 +308,7 @@ exit /b 0
         .replace('\n', "\r\n"),
     )
     .unwrap();
-    let output = Command::new("cmd.exe")
+    let output = crate::support::cmd()
         .args(["/d", "/v:off", "/c"])
         .arg(&script)
         .creation_flags(0x10)
@@ -360,7 +360,7 @@ exit /b 0
     assert!(std::fs::read_to_string(temp.path().join("version.txt"))
         .unwrap()
         .starts_with("hanamori "));
-    let output = Command::new("cmd.exe")
+    let output = crate::support::cmd()
         .args(["/d", "/v:on", "/c"])
         .arg(&entry)
         .arg("deactivate")
@@ -386,7 +386,7 @@ fn windows_batch_entry_rejects_reserved_variable_shadows_and_disabled_extensions
             .unwrap(),
     );
     for key in ["ERRORLEVEL", "RANDOM"] {
-        let output = Command::new("cmd.exe")
+        let output = crate::support::cmd()
             .args(["/d", "/v:off", "/c"])
             .arg(&entry)
             .arg("--version")
@@ -398,7 +398,7 @@ fn windows_batch_entry_rejects_reserved_variable_shadows_and_disabled_extensions
         assert!(String::from_utf8_lossy(&output.stderr).contains(key));
         assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 0);
     }
-    let output = Command::new("cmd.exe")
+    let output = crate::support::cmd()
         .args(["/d", "/e:off", "/v:off", "/c"])
         .arg(&entry)
         .arg("--version")

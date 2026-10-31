@@ -7,8 +7,9 @@ icon: FlaskConical
 Run `cargo test --locked -p hanamori --test cli completions::` for completion coverage:
 real Bash candidates, Zsh's Tab completion in a line editor, PowerShell `CompleteInput`,
 standalone scripts, hooks, profiles, repeated loading, hidden commands and `exec --`.
-Windows also runs PowerShell 5.1. Git Bash defaults to `ProgramFiles/Git/bin/bash.exe`;
-override runtimes with `HANAMORI_TEST_BASH` / `HANAMORI_TEST_ZSH`.
+Windows also runs PowerShell 5.1. Bash/Zsh lookup checks the executable override, then PATH;
+Bash also checks the Git installation found on PATH and `ProgramFiles/Git/bin/bash.exe`.
+Override runtimes with `HANAMORI_TEST_BASH` / `HANAMORI_TEST_ZSH`.
 Unavailable Windows Zsh is explicitly skipped unless an override requires it.
 Rerun generation and actual-shell cases when upgrading `clap_complete`.
 
@@ -34,6 +35,13 @@ CI uses the existing Linux and Windows workflow. Tests use real implementation p
 local HTTP servers, synthetic archives and real available shells. Required-shell mode
 prevents silently treating missing shells as successful integration coverage.
 
+For ordinary local checks, run `cargo test --workspace`. Unavailable optional shells are
+reported as skipped; an explicitly configured runtime must exist. Windows Bash/Zsh tests
+need Git Bash or MSYS2 with `cygpath`, rather than WSL. Test subprocesses retain a usable
+Windows temporary directory while isolating Hanamori state and configuration. CMD lifecycle
+fixtures use a small system PATH so the developer's installed tools do not consume the
+batch command length limit.
+
 Windows CI includes `cargo test --locked -p hanamori --test cli bootstrap::` for the
 PowerShell 5.1/7 installer. It serves the real built executable through a local HTTP
 fixture and uses temporary profiles and isolated registry keys. Coverage includes
@@ -45,7 +53,8 @@ Library tests cover receipt-based PATH cleanup without editing the user's real P
 and platform rejection. On Windows it uses real Git Bash and available MSYS2 Bash to
 install the built EXE through local HTTP fixtures, covering piped installation, both
 path formats, repeat installation, failure preservation, skip options and hook loading
-in a fresh Bash session. Git Bash uses `HANAMORI_TEST_BASH` or its default location.
+in a fresh Bash session. The primary Bash uses the same lookup described above, including
+MSYS2 installed at a custom location on PATH.
 MSYS2 uses `HANAMORI_TEST_MSYS2_BASH` or `msys64/usr/bin/bash.exe` on the system drive;
 an unavailable default is explicitly skipped, while a missing explicit runtime fails.
 

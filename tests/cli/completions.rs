@@ -1,6 +1,6 @@
 use crate::support::{self, success};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 mod dynamic;
@@ -78,36 +78,6 @@ fn generation_ignores_configuration_and_rejects_cmd_without_writes() {
     assert!(preview.contains("--completions"));
     assert!(!profile.exists());
     assert!(!temp.path().join("absent data").exists());
-}
-
-fn shell_path(name: &str) -> Option<PathBuf> {
-    let key = format!("HANAMORI_TEST_{}", name.to_uppercase());
-    let explicit = std::env::var_os(&key);
-    let shell = explicit.clone().map(PathBuf::from).unwrap_or_else(|| {
-        #[cfg(windows)]
-        if name == "bash" {
-            return PathBuf::from(
-                std::env::var_os("ProgramFiles").unwrap_or_else(|| "C:\\Program Files".into()),
-            )
-            .join("Git/bin/bash.exe");
-        }
-        PathBuf::from(name)
-    });
-    let mut probe = Command::new(&shell);
-    if matches!(name, "pwsh" | "powershell") {
-        probe.args(["-NoProfile", "-NonInteractive", "-Command", "exit 0"]);
-    } else {
-        probe.arg("--version");
-    }
-    if probe.output().is_ok_and(|output| output.status.success()) {
-        return Some(shell);
-    }
-    let required = explicit.is_some()
-        || (std::env::var_os("HANAMORI_REQUIRE_SHELL_TESTS").is_some()
-            && (cfg!(unix) || name != "zsh"));
-    assert!(!required, "required completion test shell missing: {name}");
-    eprintln!("SKIPPED completion execution: {name} unavailable (override with {key})");
-    None
 }
 
 fn exercise(shell: &Path, powershell: bool, script: &str) {
@@ -191,7 +161,7 @@ fn exercise(shell: &Path, powershell: bool, script: &str) {
 
 #[test]
 fn bash_completes_with_and_without_hook_and_persistent_profile() {
-    let Some(shell) = shell_path("bash") else {
+    let Some(shell) = support::shell_path("bash") else {
         return;
     };
     exercise(
@@ -279,7 +249,7 @@ check list-remote hanamori list-r
 
 #[test]
 fn zsh_completes_in_a_real_line_editor() {
-    let Some(shell) = shell_path("zsh") else {
+    let Some(shell) = support::shell_path("zsh") else {
         return;
     };
     exercise(
@@ -301,7 +271,7 @@ zmodload zsh/zpty
 if [ "$NATIVE_WINDOWS" = 1 ]; then ZSH_BIN=$(cygpath -u -- "$ZSH_BIN"); fi
 zpty -b terminal "$ZSH_BIN" -f
 trap 'zpty -d terminal' EXIT
-zpty -w terminal 'PROMPT=""; autoload -Uz compinit; compinit -D -i; source ./completion.zsh; source ./completion.zsh; _capture() { print -r -- "$BUFFER" > captured; zle .kill-whole-line; }; zle -N _capture; bindkey "^X" _capture; touch ready'
+zpty -w terminal 'PROMPT=""; autoload -Uz compinit; compinit -D -i; source ./completion.zsh; source ./completion.zsh; _capture() { print -r -- "$BUFFER" > captured.tmp; mv captured.tmp captured; zle .kill-whole-line; }; zle -N _capture; bindkey "^X" _capture; touch ready'
 wait_file() {
     local count
     for count in {1..200}; do
@@ -445,7 +415,7 @@ if ([IO.File]::ReadAllText((Join-Path (Get-Location) 'profile.ps1')).Trim()) { t
 #[cfg(unix)]
 #[test]
 fn bash_line_editor_preserves_quoted_paths_and_equals_values() {
-    let Some(shell) = shell_path("zsh") else {
+    let Some(shell) = support::shell_path("zsh") else {
         return;
     };
     exercise(
@@ -458,7 +428,7 @@ cat > line-init.bash <<'BASH'
 PS1=''
 export HANAMORI_HOME=$MANAGER_B
 . ./completion.bash
-capture() { printf '%s\n' "$READLINE_LINE" > captured; READLINE_LINE=''; READLINE_POINT=0; }
+capture() { printf '%s\n' "$READLINE_LINE" > captured.tmp; mv captured.tmp captured; READLINE_LINE=''; READLINE_POINT=0; }
 bind -x '"\C-x":capture'
 touch ready
 BASH
@@ -495,7 +465,7 @@ check "hanamori use --dir '$TOOLS_A' --toolset 14.4" '* --toolset 14.44.35207 *'
 
 #[test]
 fn powershell_completes_native_and_function_commands() {
-    if let Some(shell) = shell_path("pwsh") {
+    if let Some(shell) = support::shell_path("pwsh") {
         exercise(&shell, true, POWERSHELL);
     }
 }
@@ -503,7 +473,7 @@ fn powershell_completes_native_and_function_commands() {
 #[cfg(windows)]
 #[test]
 fn windows_powershell_51_completes_native_and_function_commands() {
-    if let Some(shell) = shell_path("powershell") {
+    if let Some(shell) = support::shell_path("powershell") {
         exercise(&shell, true, POWERSHELL);
     }
 }
