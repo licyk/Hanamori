@@ -29,7 +29,7 @@ fn replacement_closes_only_users_of_the_old_installation_after_preparation() {
         let program = directory.join(worker);
         copy_executable(exec_probe(), &program);
         Running(
-            Command::new(&program)
+            Command::new(program.canonicalize().unwrap())
                 // Restart Manager must not close the test runner's shared console.
                 .creation_flags(0x08000000)
                 .current_dir(temp.path())

@@ -67,6 +67,8 @@ pub fn generate(
 @if errorlevel 65536 goto _hanamori_no_temp
 @set "_HANAMORI_CMD_CP=%errorlevel%"
 @del /q "%_HANAMORI_CMD_WORK%\codepage.txt" >nul 2>nul
+@set "_HANAMORI_CMD_RESULT=0"
+@if defined _HANAMORI_CMD_PROBE goto _hanamori_finish
 @chcp 65001 >nul
 @if errorlevel 1 goto _hanamori_no_temp
 @"{program}" shell cmd-dispatch {options} --codepage %_HANAMORI_CMD_CP% --output "%_HANAMORI_CMD_WORK%\apply.cmd" -- %*
@@ -84,7 +86,7 @@ pub fn generate(
 @if exist "%_HANAMORI_CMD_WORK%" echo Hanamori: temporary directory retained because it is not empty or removable 1>&2
 @endlocal & exit /b %_HANAMORI_CMD_RESULT%
 :_hanamori_no_temp
-@echo Hanamori: cannot prepare the batch entry; check TEMP and the console code page 1>&2
+@if not defined _HANAMORI_CMD_PROBE echo Hanamori: cannot prepare the batch entry; check TEMP and the console code page 1>&2
 @if defined _HANAMORI_CMD_CP chcp %_HANAMORI_CMD_CP% >nul
 @if defined _HANAMORI_CMD_OWNED del /q "%_HANAMORI_CMD_WORK%\codepage.txt" >nul 2>nul
 @if defined _HANAMORI_CMD_OWNED rd "%_HANAMORI_CMD_WORK%" 2>nul
