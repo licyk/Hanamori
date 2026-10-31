@@ -66,15 +66,18 @@ pub fn generate(
 @call :_hanamori_codepage
 @if errorlevel 65536 goto _hanamori_no_temp
 @set "_HANAMORI_CMD_CP=%errorlevel%"
+@echo CMD trace: codepage %_HANAMORI_CMD_CP% 1>&2
 @del /q "%_HANAMORI_CMD_WORK%\codepage.txt" >nul 2>nul
 @chcp 65001 >nul
 @if errorlevel 1 goto _hanamori_no_temp
 @"{program}" shell cmd-dispatch {options} --codepage %_HANAMORI_CMD_CP% --output "%_HANAMORI_CMD_WORK%\apply.cmd" -- %*
 @set "_HANAMORI_CMD_RESULT=%errorlevel%"
+@echo CMD trace: dispatch %_HANAMORI_CMD_RESULT% 1>&2
 @chcp %_HANAMORI_CMD_CP% >nul
 @if not "%_HANAMORI_CMD_RESULT%"=="0" goto _hanamori_finish
 @if not exist "%_HANAMORI_CMD_WORK%\apply.cmd" goto _hanamori_finish
 @endlocal & call "%_HANAMORI_CMD_WORK%\apply.cmd"
+@echo CMD trace: apply %errorlevel% 1>&2
 @exit /b %errorlevel%
 :_hanamori_finish
 @rd "%_HANAMORI_CMD_WORK%" 2>nul
