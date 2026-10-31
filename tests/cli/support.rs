@@ -4,6 +4,14 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::OnceLock;
 
+/// Isolate test configuration while retaining Windows socket and DLL initialization.
+pub fn clear_environment(command: &mut Command) -> &mut Command {
+    command.env_clear();
+    #[cfg(windows)]
+    command.env("SystemRoot", std::env::var_os("SystemRoot").unwrap());
+    command
+}
+
 /// Asserts that a command succeeded, reporting its status and both streams otherwise.
 pub fn assert_success(output: Output) -> Output {
     assert!(

@@ -93,15 +93,13 @@ fn shell_path(name: &str) -> Option<PathBuf> {
         }
         PathBuf::from(name)
     });
-    if Command::new(&shell)
-        .arg(if matches!(name, "pwsh" | "powershell") {
-            "-Version"
-        } else {
-            "--version"
-        })
-        .output()
-        .is_ok_and(|output| output.status.success())
-    {
+    let mut probe = Command::new(&shell);
+    if matches!(name, "pwsh" | "powershell") {
+        probe.args(["-NoProfile", "-NonInteractive", "-Command", "exit 0"]);
+    } else {
+        probe.arg("--version");
+    }
+    if probe.output().is_ok_and(|output| output.status.success()) {
         return Some(shell);
     }
     let required = explicit.is_some()
@@ -144,6 +142,7 @@ fn exercise(shell: &Path, powershell: bool, script: &str) {
     }
     let mut command = Command::new(shell);
     if powershell {
+        command.env_remove("PSModulePath");
         let script_path = temp.path().join("check.ps1");
         std::fs::write(&script_path, format!("\u{feff}{script}")).unwrap();
         command

@@ -209,8 +209,7 @@ impl Catalog {
 
     fn install(&self, temp: &tempfile::TempDir) -> Command {
         let mut command = Command::new(env!("CARGO_BIN_EXE_hanamori"));
-        command
-            .env_clear()
+        crate::support::clear_environment(&mut command)
             .current_dir(temp.path())
             .arg("--manager-dir")
             .arg(temp.path().join("manager"))
@@ -234,8 +233,7 @@ impl Drop for Catalog {
 
 fn local_command(temp: &tempfile::TempDir) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_hanamori"));
-    command
-        .env_clear()
+    crate::support::clear_environment(&mut command)
         .current_dir(temp.path())
         .arg("--manager-dir")
         .arg(temp.path().join("manager"));
@@ -430,7 +428,7 @@ fn strict_manifest_size_mismatch_blocks_both_installation_and_remote_listing() {
     let temp = tempfile::tempdir().unwrap();
     let catalog = Catalog::fixture(false, false, true);
     let mut list = Command::new(env!("CARGO_BIN_EXE_hanamori"));
-    list.env_clear()
+    crate::support::clear_environment(&mut list)
         .current_dir(temp.path())
         .arg("--manager-dir")
         .arg(temp.path().join("manager"))

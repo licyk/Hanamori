@@ -88,6 +88,8 @@ fn run_preserves_literal_arguments_stdin_stdout_stderr_cwd_and_nonzero_status() 
     let home = temp.path().join("manager");
     let root = temp.path().join("工具 chain ' $ &");
     common::toolchain(&root, "14.44.35207", None);
+    let root = root.canonicalize().unwrap();
+    let cwd = temp.path().canonicalize().unwrap();
     let output_file = temp.path().join("report");
     let args = [
         "",
@@ -104,7 +106,7 @@ fn run_preserves_literal_arguments_stdin_stdout_stderr_cwd_and_nonzero_status() 
         "a\\b\\",
     ];
     let mut child = command(&home)
-        .current_dir(temp.path())
+        .current_dir(&cwd)
         .env("INCLUDE", "custom include")
         .env("LIB", "custom lib")
         .env("UNRELATED", "keep me")
@@ -112,7 +114,8 @@ fn run_preserves_literal_arguments_stdin_stdout_stderr_cwd_and_nonzero_status() 
         .arg(&root)
         .arg("--")
         .arg(support::exec_probe())
-        .arg(&output_file)
+        // The relative report path also verifies the child's working directory.
+        .arg("report")
         .arg("37")
         .args(args)
         .stdin(Stdio::piped())
@@ -149,12 +152,12 @@ fn run_preserves_literal_arguments_stdin_stdout_stderr_cwd_and_nonzero_status() 
         env_value(&environment, "INCLUDE"),
         Some(&encode(OsStr::new(&format!(
             "{};custom include",
-            root.join("VC/Tools/MSVC/14.44.35207/include").display()
+            root.join("VC/Tools/MSVC/14.44.35207/include")
+                .canonicalize()
+                .unwrap()
+                .display()
         ))))
     );
-    assert!(std::fs::read_to_string(output_file)
-        .unwrap()
-        .contains(&format!("cwd {}", encode(temp.path().as_os_str()))));
     assert!(!home.exists(), "run must not create a management directory");
     assert!(!temp.path().join("unexpected").exists());
 }
@@ -211,6 +214,7 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
     common::toolchain(&b, "14.51.36260", None);
     import(&home, &a, "old");
     import(&other_home, &b, "new");
+    let b = b.canonicalize().unwrap();
     let result = temp.path().join("nested");
     let path = temp.path().join("baseline bin");
     let output = command(&home)
@@ -234,8 +238,12 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
         .unwrap();
     assert_success(output);
     let (_, environment) = report(&result);
-    let new_tools = b.join("VC/Tools/MSVC/14.51.36260");
-    let expected_path = std::env::join_paths([new_tools.join("bin/Hostx64/x64"), path]).unwrap();
+    let new_tools = b.join("VC/Tools/MSVC/14.51.36260").canonicalize().unwrap();
+    let expected_path = std::env::join_paths([
+        new_tools.join("bin/Hostx64/x64").canonicalize().unwrap(),
+        path,
+    ])
+    .unwrap();
     assert_eq!(
         env_value(&environment, "PATH"),
         Some(&encode(&expected_path))
@@ -243,7 +251,11 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
     assert_eq!(
         env_value(&environment, "CC"),
         Some(&encode(
-            new_tools.join("bin/Hostx64/x64/cl.exe").as_os_str()
+            new_tools
+                .join("bin/Hostx64/x64/cl.exe")
+                .canonicalize()
+                .unwrap()
+                .as_os_str()
         ))
     );
     assert_eq!(env_value(&environment, "WindowsSDKVersion"), None);
@@ -272,7 +284,7 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
         env_value(&environment, "LIB"),
         Some(&encode(OsStr::new(&format!(
             "{};user lib",
-            new_tools.join("lib/x64").display()
+            new_tools.join("lib/x64").canonicalize().unwrap().display()
         ))))
     );
 }

@@ -144,11 +144,11 @@ fn busy_entries_are_skipped_cross_process_and_cleanup_can_be_retried_without_rep
     assert_eq!(std::fs::read(&busy).unwrap(), b"in use");
     assert!(!idle.exists());
     assert!(FileLock::try_acquire(&lock_path).unwrap().is_none());
+    drop(guard);
     assert_eq!(
         std::fs::read(&lock_path).unwrap(),
         b"retained lock identity"
     );
-    drop(guard);
     let result = report(
         cli(&home)
             .args(["cache", "clean", "--json"])

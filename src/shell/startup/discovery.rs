@@ -45,6 +45,8 @@ fn query(executable: &OsStr, arguments: &[&str], timeout: Duration) -> Result<Ou
         command.args(arguments).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
         // Bash's noninteractive BASH_ENV hook is independent of --norc.
         command.env_remove("BASH_ENV").env_remove("ENV");
+        // A different PowerShell edition must discover its own built-in modules.
+        command.env_remove("PSModulePath");
         let mut child = command.spawn().with_context(|| format!("cannot query shell executable {}; use --shell-executable or --profile", Path::new(executable).display()))?;
         let stdout = child.stdout.take().context("missing shell stdout pipe")?;
         let stderr = child.stderr.take().context("missing shell stderr pipe")?;

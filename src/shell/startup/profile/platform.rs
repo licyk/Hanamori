@@ -29,7 +29,9 @@ pub(super) fn save_backup(
 ) -> Result<PathBuf> {
     let path = file.into_temp_path();
     // CopyFileW copies security properties on Windows 8+, unlike a fresh byte-only backup.
-    copy_windows(target, &path, false)?;
+    // An existing destination keeps its own DACL, so remove the reserved empty file first.
+    fs::remove_file(&path)?;
+    copy_windows(target, &path, true)?;
     ensure!(
         fs::read(&path)? == bytes,
         "profile changed while backing it up; retry"

@@ -20,7 +20,7 @@ fn command(manager: &Path) -> Command {
 fn human_queries_show_active_default_and_missing_targets_without_changing_storage() {
     let temp = tempfile::tempdir().unwrap();
     let manager = temp.path().join("工具 管理");
-    let root = manager.join("toolchains").join(KEY);
+    let root = std::path::absolute(manager.join("toolchains").join(KEY)).unwrap();
     toolchain(&root, "14.44.35207", None);
     success(
         command(&manager)
@@ -156,6 +156,7 @@ fn external_references_and_cache_previews_keep_full_paths_and_details() {
     let manager = temp.path().join("manager");
     let root = temp.path().join("外部工具链 with spaces");
     toolchain(&root, "14.44.35207", None);
+    let root = root.canonicalize().unwrap();
     success(
         command(&manager)
             .args(["import", "--name", "external", "--dir"])

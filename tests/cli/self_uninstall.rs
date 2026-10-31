@@ -193,7 +193,7 @@ fn purge_removes_owned_msvc_sdk_and_cache_but_preserves_imports_unknown_files_an
     assert!(
         preview.lines().any(|line| line.contains("Preserve")
             && line.contains("Imported directory")
-            && line.contains(imported.to_str().unwrap())),
+            && line.contains(imported.canonicalize().unwrap().to_str().unwrap())),
         "{preview}"
     );
     assert!(preview.contains("their registrations will be removed"));

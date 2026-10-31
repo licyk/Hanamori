@@ -238,9 +238,9 @@ hanamori deactivate
                 .env("PROFILE_FILE", &profile)
                 .env("SHELL_NAME", shell_name)
                 .env("HANAMORI_HOME", home)
-                .env("EXPECTED", expected)
+                .env("EXPECTED", expected.canonicalize().unwrap())
                 .env("OTHER_MANAGER", other)
-                .env("OTHER_ROOT", other_root)
+                .env("OTHER_ROOT", other_root.canonicalize().unwrap())
                 .env("REMOVE_PROFILE", if remove { "yes" } else { "no" })
                 .output()
                 .unwrap(),
@@ -443,7 +443,8 @@ fn selected_powershell_controls_profile_and_failures_never_choose_another_file()
         .path()
         .join(format!("选定 shell '&$%{}", std::env::consts::EXE_SUFFIX));
     support::copy_executable(support::profile_probe(), &executable);
-    let profile = temp.path().join("redirected documents/自定义 profile.ps1");
+    let profile =
+        std::path::absolute(temp.path().join("redirected documents/自定义 profile.ps1")).unwrap();
     let response = serde_json::json!({"schema_version":1,"shell":"powershell","profile":profile,"version":"5.1.0","policy":"Restricted"}).to_string();
     let invoke = |verb: &str| {
         let mut command = cli(temp.path());

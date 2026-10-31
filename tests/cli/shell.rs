@@ -64,7 +64,7 @@ fn fixture(
                 .unwrap(),
         );
     }
-    (home, a, b)
+    (home, a.canonicalize().unwrap(), b.canonicalize().unwrap())
 }
 
 fn require_shell(name: &str) -> bool {
