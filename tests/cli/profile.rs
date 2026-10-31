@@ -406,7 +406,15 @@ Set-Acl -LiteralPath $env:PROFILE_FILE -AclObject $acl
                     "-NoProfile",
                     "-NonInteractive",
                     "-Command",
-                    "(Get-Acl -LiteralPath $env:PROFILE_FILE).Sddl",
+                    r#"
+$acl = Get-Acl -LiteralPath $env:PROFILE_FILE
+[pscustomobject]@{
+    Owner = $acl.Owner
+    Group = $acl.Group
+    Protected = $acl.AreAccessRulesProtected
+    Access = @($acl.Access | Select-Object IdentityReference, FileSystemRights, AccessControlType, IsInherited, InheritanceFlags, PropagationFlags)
+} | ConvertTo-Json -Depth 4 -Compress
+"#,
                 ])
                 .env("PROFILE_FILE", path)
                 .output()

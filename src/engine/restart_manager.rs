@@ -10,7 +10,7 @@ use windows_sys::Win32::{
 };
 
 pub(super) fn close_users(root: &Path) -> Result<()> {
-    let files = file_names(root)?;
+    let files = file_names(&std::fs::canonicalize(root)?)?;
     if files.is_empty() {
         return Ok(());
     }

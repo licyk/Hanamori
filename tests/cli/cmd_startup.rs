@@ -160,7 +160,7 @@ fn windows_consoleless_startup_does_not_attempt_automatic_activation_or_print_er
     let output = Command::new("cmd.exe")
         .args(["/d", "/v:off", "/c"])
         .arg(bundle.loader_path())
-        .creation_flags(0x08000000) // CREATE_NO_WINDOW, no console for DOSKEY.
+        .creation_flags(0x8) // DETACHED_PROCESS, no console for DOSKEY.
         .env_remove("ERRORLEVEL")
         .env_remove("_HANAMORI_STATE")
         .env_remove("_HANAMORI_CMD_ENTRY")
