@@ -106,7 +106,8 @@ fn powershell(executable: &OsStr) -> Result<Location> {
             "-Command",
             POWERSHELL_QUERY,
         ],
-        Duration::from_secs(10),
+        // Windows PowerShell startup can exceed ten seconds on busy ARM64 hosts.
+        Duration::from_secs(30),
     )?;
     let value: PowerShellLocation = serde_json::from_slice(output.stdout.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&output.stdout))
         .with_context(|| format!("selected executable did not return the PowerShell profile discovery response; use --profile or check --shell-executable; stdout: {}; stderr: {}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr)))?;
