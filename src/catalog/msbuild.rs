@@ -1,5 +1,6 @@
-//! The VS 2022/2026 x64 native C++ MSBuild payload sets.
+//! The VS 2022/2026 native C++ MSBuild payload sets.
 use super::manifest::{ManifestPackage, ManifestPackageSet};
+use crate::architecture::{Arch, Architecture};
 use anyhow::{ensure, Context, Result};
 
 pub struct Selection<'a> {
@@ -7,12 +8,16 @@ pub struct Selection<'a> {
     pub packages: Vec<&'a ManifestPackage>,
 }
 
-pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Selection<'a>> {
+pub fn select<'a>(
+    catalog: &'a ManifestPackageSet,
+    toolset: &str,
+    arch: Architecture,
+) -> Result<Selection<'a>> {
     let parts: Vec<_> = toolset.split('.').collect();
     let engine_major = match parts.as_slice() {
         ["14", minor, "17", _] if minor.parse::<u32>().is_ok_and(|v| (30..50).contains(&v)) => "17.",
         ["14", minor, "18", _] | ["14", minor] if minor.parse::<u32>().is_ok_and(|v| v >= 50) => "18.",
-        _ => anyhow::bail!("MSBuild supports VS 2022 v143 and VS 2026 v145 x64 toolsets; use --no-msbuild for other toolsets"),
+        _ => anyhow::bail!("MSBuild supports VS 2022 v143 and VS 2026 v145 toolsets; use --no-msbuild for other toolsets"),
     };
     let engine = required_package(catalog, "Microsoft.Build")?;
     let version = engine.version.clone();
@@ -30,11 +35,14 @@ pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Sele
     .into_iter()
     .map(str::to_owned)
     .collect();
+    if arch.host == Arch::Arm64 {
+        ids.push("Microsoft.Build.Arm64".into());
+    }
     for suffix in [
         "Base",
         "Base.Resources",
-        "X64",
-        &format!("X64.{}", layout.platform_toolset),
+        arch.target.package(),
+        &format!("{}.{}", arch.target.package(), layout.platform_toolset),
     ] {
         ids.push(format!(
             "Microsoft.VisualStudio.VC.MSBuild.v{}.{suffix}",
@@ -44,7 +52,11 @@ pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Sele
     if layout.platform_toolset == "v145" {
         ids.push("Microsoft.VC.Tools.Redirection.v145".into());
     }
-    for suffix in [".Props", ".Props.x64", ".Tools.Core.Props"] {
+    for suffix in [
+        ".Props",
+        &format!(".Props.{}", arch.target),
+        ".Tools.Core.Props",
+    ] {
         ids.push(format!("Microsoft.VC.{toolset}{suffix}"));
     }
     let mut packages: Vec<_> = ids
@@ -52,12 +64,18 @@ pub fn select<'a>(catalog: &'a ManifestPackageSet, toolset: &str) -> Result<Sele
         .map(|id| required_package(catalog, id))
         .collect::<Result<_>>()?;
     // Servicing.Redist describes the catalog's current runtime, even for an older compiler.
-    let redist = required_package(catalog, super::selector::CRT_REDIST_X64_ID)?;
+    let redist = required_package(
+        catalog,
+        &format!("Microsoft.VisualCpp.CRT.Redist.{}", arch.target.package()),
+    )?;
     let runtime_id = redist
         .dependencies
         .iter()
-        .find(|id| id.ends_with(".CRT.Redist.X64.base"))
-        .context("the manifest is missing the x64 CRT redistributable base dependency")?;
+        .find(|id| {
+            id.to_ascii_lowercase()
+                .ends_with(&format!(".crt.redist.{}.base", arch.target))
+        })
+        .context("the manifest is missing the selected CRT redistributable base dependency")?;
     packages.push(required_package(catalog, runtime_id)?);
     Ok(Selection { version, packages })
 }

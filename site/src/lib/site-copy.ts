@@ -68,7 +68,7 @@ const zhCN = {
       "steps": [
         {
           "title": "获取程序",
-          "description": "下载 Windows x64 版本，或按文档从源码构建。"
+          "description": "下载 Windows x64 / ARM64 版本，或按文档从源码构建。"
         },
         {
           "title": "安装工具链",
@@ -200,7 +200,7 @@ const en = {
       "steps": [
         {
           "title": "Get Hanamori",
-          "description": "Download the Windows x64 build or compile it from source."
+          "description": "Download the Windows x64 / ARM64 build or compile it from source."
         },
         {
           "title": "Install a toolchain",

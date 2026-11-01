@@ -1,6 +1,6 @@
 use hanamori::state::toolchains::{self, Reference, ToolchainStore};
 use hanamori_test_support::toolchain::{inventory, toolchain};
-const KEY: &str = "vs2022-release/msvc-14.44.17.14_sdk-26100_x64";
+const KEY: &str = "vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64";
 #[test]
 fn disk_is_authoritative_and_references_do_not_block_discovery() {
     let temp = tempfile::tempdir().unwrap();
@@ -39,6 +39,7 @@ fn aliases_of_one_external_combination_are_not_ambiguous() {
     let root = temp.path().join("external");
     toolchain(&root, "14.44.35207", None);
     let reference = Reference::External {
+        architecture: hanamori::architecture::Architecture::X64,
         msbuild: None,
         path: root,
         toolset: "14.44.35207".into(),

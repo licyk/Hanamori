@@ -185,7 +185,7 @@ check list-remote hanamori list-r
 check list-remote hanamori.exe list-r
 check list-remote "$BIN" list-r
 check init hanamori shell in
-check --all hanamori list-remote --a
+check --all hanamori list-remote --al
 check 2026 hanamori list-remote --vs-version 2
 check preview hanamori install --channel p
 check powershell hanamori env --shell p
@@ -219,7 +219,7 @@ check fresh hanamori use fr
 manager_file=$MANAGER_B
 if [ "$NATIVE_WINDOWS" = 1 ]; then manager_file=$(cygpath -u -- "$manager_file"); fi
 printf 'broken index' > "$manager_file/references/broken.json"
-check --all hanamori list-remote --a
+check --all hanamori list-remote --al
 COMP_WORDS=(hanamori use ni); COMP_CWORD=2
 _hanamori hanamori ni use
 [[ " ${COMPREPLY[*]} " == *' nightly '* ]]
@@ -231,7 +231,7 @@ _hanamori hanamori -- echo
 [[ ${#COMPREPLY[@]} == 0 ]]
 "$BIN" env --completions --output hook.sh
 . ./hook.sh
-check --all hanamori list-remote --a
+check --all hanamori list-remote --al
 hanamori --version
 printf '# user profile\n' > profile.sh
 "$BIN" shell init --completions --profile "$PWD/profile.sh"
@@ -296,7 +296,7 @@ check 'hanamori list-r' 'hanamori list-remote *'
 check 'hanamori.exe list-r' 'hanamori.exe list-remote *'
 check "${(q)BIN} list-r" '* list-remote *'
 check 'hanamori shell ini' 'hanamori shell init *'
-check 'hanamori list-remote --a' 'hanamori list-remote --all *'
+check 'hanamori list-remote --al' 'hanamori list-remote --all *'
 check 'hanamori install --channel pre' 'hanamori install --channel preview *'
 check 'hanamori env --shell pow' 'hanamori env --shell powershell *'
 check 'hanamori env --output out' 'hanamori env --output output*space.ps1 *'
@@ -359,7 +359,7 @@ Invoke-Cli env --completions --output hook.ps1
 . ./hook.ps1
 Check 'hanamori list-r' 'list-remote'
 Check 'hanamori shell in' 'init'
-Check 'hanamori list-remote --a' '--all'
+Check 'hanamori list-remote --al' '--all'
 $env:HANAMORI_HOME = $env:MANAGER_A
 Check 'hanamori use st' 'stable'
 Check 'hanamori use @' $env:ID_A
@@ -384,7 +384,7 @@ Check 'hanamori use ni' 'nightly'
 Invoke-Cli alias nightly fresh
 Check 'hanamori use fr' 'fresh'
 [IO.File]::WriteAllText((Join-Path $env:MANAGER_B 'references/broken.json'), 'broken index')
-Check 'hanamori list-remote --a' '--all'
+Check 'hanamori list-remote --al' '--all'
 $line = 'hanamori use ni'
 $r = [System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null)
 if ($r.CompletionMatches.CompletionText -notcontains 'nightly') { throw 'Broken reference affected another candidate' }

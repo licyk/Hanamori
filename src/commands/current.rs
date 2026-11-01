@@ -13,6 +13,10 @@ pub(super) fn current(args: ListArgs, environment: &session::Environment) -> Res
     };
     let active = &session.active;
     let layout = crate::env::ToolchainLayout {
+        architecture: crate::architecture::Architecture {
+            host: active.host,
+            target: active.target,
+        },
         root: active.root.clone().into(),
         vc_tools_version: active.toolset.clone(),
         windows_sdk_version: active.sdk.clone().unwrap_or_default(),

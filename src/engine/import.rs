@@ -9,13 +9,15 @@ pub fn run(
     sdk: Option<&str>,
     no_sdk: bool,
     name: &str,
+    architecture: Option<crate::architecture::Architecture>,
 ) -> Result<()> {
     let root = std::fs::canonicalize(root)?;
-    let layout = env::detect_selected(&root, toolset, sdk, no_sdk)?;
+    let layout = env::detect_selected(&root, toolset, sdk, no_sdk, architecture)?;
     env::verify(&layout)?;
     store.write_reference(
         name,
         &Reference::External {
+            architecture: layout.architecture,
             path: root,
             toolset: layout.vc_tools_version,
             sdk: (!layout.windows_sdk_version.is_empty()).then_some(layout.windows_sdk_version),

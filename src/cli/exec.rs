@@ -8,7 +8,7 @@ use std::ffi::OsString;
 )]
 pub(crate) struct ExecArgs {
     /// Explicit local installation ID, alias or unique version prefix.
-    #[arg(long, conflicts_with_all = ["dir", "toolset", "sdk", "no_sdk"])]
+    #[arg(long, conflicts_with_all = ["dir", "toolset", "sdk", "no_sdk", "arch"])]
     pub(crate) using: Option<String>,
     #[command(flatten)]
     pub(crate) directory: DirectoryArgs,

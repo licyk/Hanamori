@@ -75,6 +75,7 @@ fn dynamic_and_explicit_manager_overrides_are_forwarded_without_capturing_ordina
         None,
         true,
         "imported",
+        None,
     )
     .unwrap();
     let work = work(temp.path());
@@ -264,9 +265,26 @@ fn windows_batch_entry_switches_and_restores_current_session_and_cleans_temporar
     common::toolchain(&root, "14.44.35207", None);
     common::toolchain(&root, "14.51.36260", None);
     let store = ToolchainStore::new(&home);
-    hanamori::engine::import::run(&store, &root, Some("14.44.35207"), None, true, "first").unwrap();
-    hanamori::engine::import::run(&store, &root, Some("14.51.36260"), None, true, "second")
-        .unwrap();
+    hanamori::engine::import::run(
+        &store,
+        &root,
+        Some("14.44.35207"),
+        None,
+        true,
+        "first",
+        None,
+    )
+    .unwrap();
+    hanamori::engine::import::run(
+        &store,
+        &root,
+        Some("14.51.36260"),
+        None,
+        true,
+        "second",
+        None,
+    )
+    .unwrap();
     let entry = temp.path().join("hanamori.cmd");
     assert_success(
         Command::new(env!("CARGO_BIN_EXE_hanamori"))

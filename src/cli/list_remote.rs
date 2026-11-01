@@ -9,6 +9,9 @@ pub(crate) struct ListRemoteArgs {
     /// Exact catalog download identifier to show packages for, or latest.
     #[arg(long, value_name = "ID")]
     pub(crate) toolset_id: Option<String>,
+    /// Compiler host/target pair (defaults to the native system architecture).
+    #[arg(long, value_name = "HOST/TARGET", value_parser = super::architecture::parser())]
+    pub(crate) arch: Option<crate::architecture::Architecture>,
     #[arg(long)]
     pub(crate) json: bool,
     #[command(flatten)]

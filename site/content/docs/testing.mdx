@@ -53,7 +53,7 @@ cargo test --locked -p hanamori --test cli native_toolchain::two_real_toolchains
 
 普通回归使用 `cargo test --locked -p hanamori --test cli install::msbuild`，覆盖 VS 2022/2026 的 VSIX/MSI/CAB 提取路径、FileTracker 整理、独立目录、项目要求、缺失修复、失败回滚及 MSBuild → 普通组合 → MSBuild 的环境恢复。合成归档不包含可执行的 MSBuild。
 
-在没有 Visual Studio/Build Tools 的 Windows x64 主机上，为 A 指定 `--vs-version 2022`、B 使用默认 VS 2026，选择不同的编译器和 SDK 版本并按默认组件安装（包含 MSBuild），设置同样的三个环境变量后执行：
+在没有 Visual Studio/Build Tools 的 Windows x64 / ARM64 主机上，为 A 指定 `--vs-version 2022`、B 使用默认 VS 2026，选择不同的编译器和 SDK 版本并按默认组件安装（包含 MSBuild），设置同样的三个环境变量后执行：
 
 ```powershell
 cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild -- --ignored --nocapture
@@ -62,3 +62,15 @@ cargo test --locked -p hanamori --test cli native_toolchain::two_real_msbuild --
 此入口按 A → B（继承 A）→ A 构建带静态库项目引用的 `.vcxproj` 和 `.sln`，覆盖 Debug/Release、资源、清单、增量编译、修改库后重新链接、Clean/Rebuild，并检查编译器、SDK、targets 的求值路径均位于所选安装下。错误的显式 SDK 版本必须失败。构建使用 `-nr:false`，日志在该次临时构建目录内。
 
 还需在装有其他 Visual Studio 的 Windows 主机重复，确认不会借用系统组件，并在 PowerShell、Git Bash/MSYS2 中运行安装文档的构建命令。MSBuild 示例使用 `-p:`、`-t:`；直接调用 `cl` 的 `/link` 被 MSYS2 改写时，用单次命令 `MSYS2_ARG_CONV_EXCL='*' cl ...`，该问题不通过增装 MSBuild 解决。当前 Linux 环境只完成下载解包与自动回归，以上原生验收仍待执行。
+
+## 架构验收
+
+CI 包含 Linux、原生 Windows x64 和 `windows-11-arm`。解包测试覆盖 VS 2022/2026 的四种 Host/Target 组合、MSBuild、独立目录身份及必要文件检查。
+
+在能够运行对应编译器的 Windows 主机上安装组合，将 `HANAMORI_TEST_MANAGER_DIR` 和 `HANAMORI_TEST_TOOLCHAIN_A` 指向该安装，然后运行：
+
+```powershell
+cargo test --locked -p hanamori --test cli native_toolchain::architecture_compiles -- --ignored --nocapture
+```
+
+此验收使用真实编译器编译链接 C/C++，并通过 MSBuild 构建 `.vcxproj`；检查输出 PE Machine（`0x8664` 或 `0xaa64`），操作系统支持目标架构时运行结果。在 x64 Windows 验证 x64/arm64，在 Windows 11 ARM64 验证 arm64/arm64、arm64/x64 和 x64/arm64。原有双工具链验收也支持 ARM64，并使用所选组合的 MSBuild 平台。Linux 解包验证不能替代 Windows 原生验收。

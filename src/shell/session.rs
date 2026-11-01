@@ -224,10 +224,6 @@ impl Session {
                 .is_none_or(|sdk| env::valid_directory_version(sdk, 4)),
             "invalid session SDK version"
         );
-        ensure!(
-            active.host == "x64" && active.target == "x64",
-            "unsupported session architecture"
-        );
         Ok(())
     }
 
@@ -320,9 +316,9 @@ pub fn prepare(
             sdk: layout
                 .has_windows_sdk()
                 .then(|| layout.windows_sdk_version.clone()),
-            host: "x64".into(),
+            host: layout.architecture.host,
             msbuild: layout.msbuild_version.clone(),
-            target: "x64".into(),
+            target: layout.architecture.target,
         },
         baseline,
     };
@@ -348,6 +344,10 @@ impl Session {
     /// Rebuild without consulting references or requiring the old files to still exist.
     pub fn native_changes(&self) -> Result<Changes> {
         let layout = env::ToolchainLayout {
+            architecture: crate::architecture::Architecture {
+                host: self.active.host,
+                target: self.active.target,
+            },
             root: self.active.root.clone().into(),
             vc_tools_version: self.active.toolset.clone(),
             windows_sdk_version: self.active.sdk.clone().unwrap_or_default(),

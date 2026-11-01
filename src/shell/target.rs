@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub struct DirectoryTarget {
+    pub architecture: Option<crate::architecture::Architecture>,
     pub path: PathBuf,
     pub toolset: Option<String>,
     pub sdk: Option<String>,
@@ -17,6 +18,9 @@ impl DirectoryTarget {
             if let Some(value) = value {
                 arguments.extend([flag.into(), value.into()]);
             }
+        }
+        if let Some(architecture) = self.architecture {
+            arguments.extend(["--arch".into(), architecture.to_string().into()]);
         }
         if self.no_sdk {
             arguments.push("--no-sdk".into());

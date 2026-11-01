@@ -11,7 +11,7 @@ import { fetchRelease, RELEASES_URL, type ReleaseResult } from "@/lib/releases";
 const copy = {
   "zh-CN": {
     "title": "下载 Hanamori",
-    "description": "获取 Windows x64 程序，然后安装你的第一套 MSVC 与 Windows SDK。",
+    "description": "获取 Windows x64 / ARM64 程序，然后安装你的第一套 MSVC 与 Windows SDK。",
     "loading": "正在查询公开 Release…",
     "unavailable": "暂未找到可公开下载的新版程序。仓库可能尚未公开，或最新 Release 还没有 Hanamori 资产。",
     "error": "暂时无法查询 Release。请重试，或直接打开 GitHub Release 页面查看。",
@@ -19,7 +19,7 @@ const copy = {
     "release": "所有 Release",
     "build": "从源码构建",
     "start": "首次编译教程",
-    "platform": "Windows x64 · MSVC 构建",
+    "platform": "Windows x64 / ARM64 · MSVC 构建",
     "install": "PowerShell 一键安装",
     "installDescription": "在 PowerShell 5.1 或 7 中运行。自动配置用户 PATH、当前 PowerShell 集成与补全，工具链按需安装。",
     "installGuide": "安装选项与说明",
@@ -35,7 +35,7 @@ const copy = {
   },
   "en": {
     "title": "Download Hanamori",
-    "description": "Get the Windows x64 executable, then install your first MSVC and Windows SDK combination.",
+    "description": "Get the Windows x64 / ARM64 executable, then install your first MSVC and Windows SDK combination.",
     "loading": "Checking public releases…",
     "unavailable": "No publicly accessible new build was found. The repository may not be public yet, or the latest release may not include Hanamori assets.",
     "error": "Could not query releases. Try again, or open the GitHub releases page directly.",
@@ -43,7 +43,7 @@ const copy = {
     "release": "All releases",
     "build": "Build from source",
     "start": "First compilation",
-    "platform": "Windows x64 · MSVC build",
+    "platform": "Windows x64 / ARM64 · MSVC build",
     "install": "Install with PowerShell",
     "installDescription": "Run in PowerShell 5.1 or 7. Configures your user PATH, current PowerShell integration and completions. Install toolchains when needed.",
     "installGuide": "Installation options and guide",
@@ -62,7 +62,7 @@ const copy = {
 export const Route = createFileRoute("/download")({
   head: () => ({
     meta: [
-      { title: "下载 Hanamori — Windows x64" },
+      { title: "下载 Hanamori — Windows x64 / ARM64" },
       { name: "description", content: copy["zh-CN"].description },
     ],
   }),
@@ -122,6 +122,7 @@ function DownloadPage() {
                   {result.release.assets.map(asset => (
                     <a className="primary-action" key={asset.name} href={asset.url}>
                       <Download size={18} aria-hidden="true" />
+                      {asset.name.includes("aarch64") ? "ARM64" : "x64"}{" · "}
                       {asset.name.endsWith(".zip") ? text.zip : text.exe}
                       {" · "}{(asset.size / 1024 / 1024).toFixed(1)} MiB
                     </a>

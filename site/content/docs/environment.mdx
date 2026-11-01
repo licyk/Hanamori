@@ -6,7 +6,7 @@ icon: SlidersHorizontal
 
 Hanamori 准备 PATH、INCLUDE、LIB、`CC`、`CXX`、`VCToolsVersion`、`VCToolsInstallDir`、`VCINSTALLDIR`、`VSCMD_ARG_HOST_ARCH`、`VSCMD_ARG_TGT_ARCH`、`DISTUTILS_USE_SDK`，以及安装了 SDK 时所需的 SDK 根目录、bin 和版本变量。
 
-SDK 工具路径为 `Windows Kits/10/bin/<版本>/x64`，激活或 `exec` 后可按名称运行 `rc.exe`、`mt.exe`。`WindowsSdkVerBinPath` 仍指向不含架构的版本目录。安装完整性检查涵盖这两个工具及其随包 DLL；托管安装缺失这些文件时，重新运行对应的 `install` 可修复。
+SDK 工具路径为 `Windows Kits/10/bin/<版本>/<host>`，激活或 `exec` 后可按名称运行 `rc.exe`、`mt.exe`。`WindowsSdkVerBinPath` 仍指向不含架构的版本目录。安装完整性检查涵盖这两个工具及其随包 DLL；托管安装缺失这些文件时，重新运行对应的 `install` 可修复。
 
 程序不生成 `vcvarsall.bat` 或 `vcvars64.bat`。POSIX Shell 中可执行路径转换为 POSIX 形式，供编译器读取的 INCLUDE/LIB 保持 Windows 形式。
 

@@ -69,7 +69,16 @@ fn release(directory: &Path, stage: &str, tag: &str) -> Output {
         .env_remove("CARGO_TARGET_DIR")
         .args(["-NoProfile", "-NonInteractive", "-File"])
         .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".github/scripts/release.ps1"))
-        .args(["-Stage", stage]);
+        .args([
+            "-Stage",
+            stage,
+            "-Target",
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-pc-windows-msvc"
+            } else {
+                "x86_64-pc-windows-msvc"
+            },
+        ]);
     if !tag.is_empty() {
         command.args(["-Tag", tag]);
     }
@@ -169,25 +178,35 @@ fn release_script_checks_real_tag_and_cargo_version() {
         String::from_utf8_lossy(&mismatch.stderr).contains("does not match Cargo package version")
     );
 
-    #[cfg(all(target_os = "windows", target_arch = "x86_64", target_env = "msvc"))]
+    #[cfg(all(target_os = "windows", target_env = "msvc"))]
     {
-        let binary = temp
-            .path()
-            .join("target/x86_64-pc-windows-msvc/release/hanamori.exe");
+        let binary = temp.path().join(format!(
+            "target/{}/release/hanamori.exe",
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-pc-windows-msvc"
+            } else {
+                "x86_64-pc-windows-msvc"
+            }
+        ));
         std::fs::create_dir_all(binary.parent().unwrap()).unwrap();
         std::fs::copy(env!("CARGO_BIN_EXE_hanamori"), &binary).unwrap();
         successful(release(temp.path(), "Package", &tag));
         assert!(temp.path().join(hanamori::upgrade::ASSET_NAME).exists());
         assert!(temp
             .path()
-            .join("hanamori-x86_64-pc-windows-msvc.zip")
+            .join(hanamori::upgrade::ASSET_NAME.replace(".exe", ".zip"))
             .exists());
 
         let wrong = tempfile::tempdir().unwrap();
         tagged_source(wrong.path(), "99.0.0");
-        let binary = wrong
-            .path()
-            .join("target/x86_64-pc-windows-msvc/release/hanamori.exe");
+        let binary = wrong.path().join(format!(
+            "target/{}/release/hanamori.exe",
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-pc-windows-msvc"
+            } else {
+                "x86_64-pc-windows-msvc"
+            }
+        ));
         std::fs::create_dir_all(binary.parent().unwrap()).unwrap();
         std::fs::copy(env!("CARGO_BIN_EXE_hanamori"), binary).unwrap();
         let mismatch = release(wrong.path(), "Package", "v99.0.0");

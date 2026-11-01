@@ -6,13 +6,15 @@ icon: MonitorCheck
 
 | 项目 | 当前范围 |
 | --- | --- |
-| 原生编译 | Windows x64 主机，x64 目标 |
-| 发布与自我更新 | `x86_64-pc-windows-msvc`，EXE 和 ZIP |
+| 原生编译 | Windows x64 / ARM64 主机，x64 / ARM64 目标 |
+| 发布与自我更新 | `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc`，EXE 和 ZIP |
 | Shell | PowerShell 5.1/7、Bash、Zsh；CMD 为实验性支持 |
 | Windows POSIX Shell | MSYS 路径转换依赖当前运行时的 `cygpath` |
 | Linux/其他 Unix | 可用于源码开发和部分逻辑、Shell 测试，不代表原生运行 MSVC |
 | 工具链组合 | 独立 MSVC/SDK 目录；可不安装 SDK；不共享已安装 SDK 文件 |
 
-项目提供 `run` 执行别名、`completions` 命令和可选的 `--use-on-cd` 项目自动切换，尚未提供 GUI、多架构编译或跨管理器引用计数。初始化钩子默认不会自动激活；`--auto-activate` 在非活动会话加载时尝试一次，`--use-on-cd` 还会在目录变化时重新选择。各 Shell 的触发方式见 [Shell 集成](/docs/shell)。
+项目提供 `run` 执行别名、`completions` 命令和可选的 `--use-on-cd` 项目自动切换，尚未提供 GUI、ARM32/ARM64EC 目标或跨管理器引用计数。初始化钩子默认不会自动激活；`--auto-activate` 在非活动会话加载时尝试一次，`--use-on-cd` 还会在目录变化时重新选择。各 Shell 的触发方式见 [Shell 集成](/docs/shell)。
 
 本地自动化检查、交叉编译和 Windows 原生验收是不同证据。验收方法见[测试与原生验收](/docs/testing)，不要把构建通过等同于所有 Shell 和真实编译器组合均已验收。
+
+ARM64 Host 工具需要 Windows 11 ARM64。微软从 VS 2022 17.4 开始提供原生 ARM64 Visual Studio 工具，详见 [Visual Studio on Arm devices](https://learn.microsoft.com/en-us/visualstudio/install/visual-studio-on-arm-devices?view=visualstudio)。Hanamori 分别选择 Host 编译器与 Target 库。

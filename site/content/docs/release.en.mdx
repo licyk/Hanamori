@@ -60,9 +60,9 @@ The workflow does not create tags. Publication stops if there is no `v*` tag, th
 
 1. Update the workspace version and Cargo-generated lockfile, then create a `v*` tag pointing to the intended source.
 2. Release fetches all tags, resolves the selected commit, and verifies its Cargo package name, version and binary target.
-3. The reusable [CI workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/ci.yml) runs one Linux/Windows check matrix for that commit, including formatting, module architecture and tests. Windows uses the release profile and `x86_64-pc-windows-msvc` target.
+3. The reusable [CI workflow](https://github.com/licyk/Hanamori/blob/main/.github/workflows/ci.yml) runs one Linux/Windows check matrix for that commit, including formatting, module architecture and tests. Windows uses the release profile and `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc` target.
 4. After checks pass, the selected channels build and publish from the same commit. Ordinary branch CI does not respond to tag pushes; the two channels in one Release run share checks instead of running `cargo test` separately.
-5. The GitHub channel packages `hanamori-x86_64-pc-windows-msvc.exe` and the matching ZIP, containing `hanamori.exe`. It verifies that GitHub reports the same EXE SHA-256 digest as the packaged file.
+5. The GitHub channel builds on Windows x64 and `windows-11-arm`, packaging `hanamori-x86_64-pc-windows-msvc.exe`, `hanamori-aarch64-pc-windows-msvc.exe` and matching ZIPs containing `hanamori.exe`. All four published asset SHA-256 digests are verified.
 6. The crates.io channel runs `cargo publish --locked`, retaining Cargo's compilation check of the packaged source. Only `hanamori` is published, not `hanamori-test-support` or `xtask`.
 
 The two channels run independently after shared checks pass. If one fails, retry only the unpublished channel with the same tag. When manually publishing an older tag, checks and builds use that tag's source, not the main source that defines the workflow.

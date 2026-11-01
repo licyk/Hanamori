@@ -64,11 +64,20 @@ jobs:
       source: ${{ needs.plan.outputs.commit }}
 
   build:
-    name: Build Windows assets
+    name: Build (${{ matrix.target }})
     needs: [plan, checks]
     if: github.event_name == 'push' || inputs.target != 'crates-io'
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
     env:
+      BUILD_TARGET: ${{ matrix.target }}
       RELEASE_TAG: ${{ needs.plan.outputs.tag }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -80,17 +89,17 @@ jobs:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2.9.3
       - name: Build release
-        run: cargo build --locked --release -p hanamori --bin hanamori --target x86_64-pc-windows-msvc
+        run: cargo build --locked --release -p hanamori --bin hanamori --target $env:BUILD_TARGET
       - name: Package binary
         shell: pwsh
-        run: ./.github/scripts/release.ps1 -Stage Package -Tag $env:RELEASE_TAG
+        run: ./.github/scripts/release.ps1 -Stage Package -Tag $env:RELEASE_TAG -Target $env:BUILD_TARGET
       - uses: actions/upload-artifact@v7.0.2
         with:
-          name: hanamori-windows
+          name: hanamori-${{ matrix.target }}
           if-no-files-found: error
           path: |
-            hanamori-x86_64-pc-windows-msvc.exe
-            hanamori-x86_64-pc-windows-msvc.zip
+            hanamori-${{ matrix.target }}.exe
+            hanamori-${{ matrix.target }}.zip
 
   github-release:
     name: Publish GitHub Release
@@ -101,7 +110,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8.0.2
         with:
-          name: hanamori-windows
+          pattern: hanamori-*-pc-windows-msvc
+          merge-multiple: true
           path: dist
       - name: Create release
         uses: softprops/action-gh-release@v3.0.3
@@ -110,6 +120,8 @@ jobs:
           files: |
             dist/hanamori-x86_64-pc-windows-msvc.exe
             dist/hanamori-x86_64-pc-windows-msvc.zip
+            dist/hanamori-aarch64-pc-windows-msvc.exe
+            dist/hanamori-aarch64-pc-windows-msvc.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
           draft: false
@@ -124,10 +136,15 @@ jobs:
           $headers = @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $env:GITHUB_TOKEN" }
           $tag = [Uri]::EscapeDataString($env:RELEASE_TAG)
           $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/$tag" -Headers $headers
-          $asset = @($release.assets | Where-Object { $_.name -ceq 'hanamori-x86_64-pc-windows-msvc.exe' })
-          if ($asset.Count -ne 1) { throw 'The release executable asset is missing.' }
-          $expected = 'sha256:' + (Get-FileHash -LiteralPath 'dist/hanamori-x86_64-pc-windows-msvc.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($asset[0].digest -cne $expected) { throw 'The published executable digest does not match the packaged binary.' }
+          foreach ($target in @('x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc')) {
+            foreach ($extension in @('exe', 'zip')) {
+              $name = "hanamori-$target.$extension"
+              $asset = @($release.assets | Where-Object { $_.name -ceq $name })
+              if ($asset.Count -ne 1) { throw "Missing release asset: $name" }
+              $expected = 'sha256:' + (Get-FileHash -LiteralPath "dist/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($asset[0].digest -cne $expected) { throw "Published digest mismatch: $name" }
+            }
+          }
           Write-Host "Verified published executable digest for $env:RELEASE_TAG"
 
   crates-io:

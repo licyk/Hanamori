@@ -18,10 +18,16 @@ fn projects(base: &Path) {
         std::fs::create_dir_all(base.join(path)).unwrap();
     }
     for (directory, json) in [
-        ("project a", r#"{"toolset":"14.44","sdk":"10.0.26100.0"}"#),
-        ("project a/nested", r#"{"toolset":"14.51","sdk":null}"#),
+        (
+            "project a",
+            r#"{"host":"x64","target":"x64","toolset":"14.44","sdk":"10.0.26100.0"}"#,
+        ),
+        (
+            "project a/nested",
+            r#"{"host":"x64","target":"x64","toolset":"14.51","sdk":null}"#,
+        ),
         ("broken", "{broken"),
-        ("missing", r#"{"toolset":"99"}"#),
+        ("missing", r#"{"host":"x64","target":"x64","toolset":"99"}"#),
     ] {
         std::fs::write(base.join(directory).join("hanamori-toolchain.json"), json).unwrap();
     }

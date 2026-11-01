@@ -62,12 +62,14 @@ fn print_reference(name: &str, reference: &toolchains::Reference, items: &toolch
             toolset,
             sdk,
             msbuild,
+            architecture,
         } => {
             rows.extend([
                 ("Type", "external".to_owned()),
                 ("MSVC", toolset.clone()),
                 ("Windows SDK", sdk.as_deref().unwrap_or("none").to_owned()),
                 ("MSBuild", msbuild.as_deref().unwrap_or("none").to_owned()),
+                ("Architecture", architecture.to_string()),
                 ("Directory", path.display().to_string()),
             ]);
         }

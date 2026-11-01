@@ -17,6 +17,15 @@ fn two_real_msbuild_toolchains_build_projects_and_solutions() -> anyhow::Result<
     native::run(true)
 }
 
+#[test]
+#[ignore = "requires a real installed MSVC/SDK/MSBuild combination and native Windows; see testing docs"]
+fn architecture_compiles_c_cpp_and_msbuild_with_the_expected_pe_machine() -> anyhow::Result<()> {
+    #[cfg(not(windows))]
+    anyhow::bail!("this acceptance test must be run on native Windows");
+    #[cfg(windows)]
+    native::architecture()
+}
+
 #[cfg(windows)]
 mod native {
     use anyhow::{ensure, Context, Result};
@@ -53,6 +62,117 @@ mod native {
             String::from_utf8_lossy(&output.stderr)
         );
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    pub fn architecture() -> Result<()> {
+        let home = PathBuf::from(input("HANAMORI_TEST_MANAGER_DIR")?);
+        let id = input("HANAMORI_TEST_TOOLCHAIN_A")?;
+        let store = ConfigContext::from_environment(Default::default())?
+            .resolve(
+                &ConfigOverrides {
+                    manager_dir: Some(home.clone()),
+                    ..Default::default()
+                },
+                Scope::Local,
+            )?
+            .toolchains();
+        let temp = tempfile::tempdir()?;
+        let selection =
+            local::resolve(&store, &local::SelectionRequest::Selector(&id), temp.path())?;
+        let layout = selection.layout();
+        ensure!(
+            layout.has_windows_sdk() && layout.msbuild_version.is_some(),
+            "install with the default SDK and MSBuild components"
+        );
+        let mut baseline = session::Environment::new();
+        let system = PathBuf::from(input("SystemRoot")?);
+        for (name, value) in [
+            ("SystemRoot", system.clone()),
+            ("WINDIR", system.clone()),
+            ("PATH", system.join("System32")),
+            ("TEMP", temp.path().to_owned()),
+            ("TMP", temp.path().to_owned()),
+        ] {
+            baseline.insert(name.into(), value.into_os_string());
+        }
+        let command = || {
+            let mut command = cli(&home, temp.path(), &baseline);
+            command.args(["exec", "--using", &id, "--"]);
+            command
+        };
+        let source = "#include <windows.h>\n#include <stdio.h>\nint main(void) { puts(\"hanamori architecture\"); return GetCurrentProcessId() == 0; }\n";
+        for extension in ["c", "cpp"] {
+            let file = format!("probe.{extension}");
+            std::fs::write(temp.path().join(&file), source)?;
+            successful(command().args([
+                "cl.exe",
+                "/nologo",
+                "/MT",
+                "/EHsc",
+                &file,
+                "/Feprobe.exe",
+            ]))?;
+            verify_machine(&temp.path().join("probe.exe"), layout.architecture.target)?;
+        }
+        let msbuild =
+            hanamori::msbuild::Layout::for_version(layout.msbuild_version.as_deref().unwrap());
+        std::fs::write(
+            temp.path().join("probe.vcxproj"),
+            format!(
+                r#"<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Release|{platform}"><Configuration>Release</Configuration><Platform>{platform}</Platform></ProjectConfiguration></ItemGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+<PropertyGroup Label="Configuration"><ConfigurationType>Application</ConfigurationType><PlatformToolset>{toolset}</PlatformToolset></PropertyGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+<ItemDefinitionGroup><ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary></ClCompile><Link><SubSystem>Console</SubSystem></Link></ItemDefinitionGroup>
+<ItemGroup><ClCompile Include="probe.cpp" /></ItemGroup>
+<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" /></Project>"#,
+                platform = layout.architecture.target.platform(),
+                toolset = msbuild.platform_toolset
+            ),
+        )?;
+        successful(command().args([
+            "MSBuild.exe",
+            "probe.vcxproj",
+            "-nologo",
+            "-p:Configuration=Release",
+            &format!("-p:Platform={}", layout.architecture.target.platform()),
+            "-p:OutDir=out\\",
+        ]))?;
+        verify_machine(
+            &temp.path().join("out/probe.exe"),
+            layout.architecture.target,
+        )?;
+        if hanamori::architecture::Arch::native() == hanamori::architecture::Arch::Arm64
+            || layout.architecture.target == hanamori::architecture::Arch::X64
+        {
+            successful(command().arg(temp.path().join("out/probe.exe")))?;
+        }
+        Ok(())
+    }
+
+    fn verify_machine(path: &Path, target: hanamori::architecture::Arch) -> Result<()> {
+        let bytes = std::fs::read(path)?;
+        ensure!(
+            bytes.len() >= 64 && &bytes[..2] == b"MZ",
+            "missing PE header: {}",
+            path.display()
+        );
+        let offset = u32::from_le_bytes(bytes[60..64].try_into()?) as usize;
+        let header = bytes
+            .get(offset..offset + 6)
+            .context("truncated PE header")?;
+        ensure!(&header[..4] == b"PE\0\0", "invalid PE signature");
+        let machine = u16::from_le_bytes(header[4..6].try_into()?);
+        let expected = match target {
+            hanamori::architecture::Arch::X64 => 0x8664,
+            hanamori::architecture::Arch::Arm64 => 0xaa64,
+        };
+        ensure!(
+            machine == expected,
+            "unexpected PE machine {machine:x}, expected {expected:x}"
+        );
+        Ok(())
     }
 
     pub fn run(with_msbuild: bool) -> Result<()> {
@@ -144,7 +264,16 @@ mod native {
             )?;
             std::fs::write(
                 work.join("probe.manifest"),
-                include_bytes!("../fixtures/native_build.manifest"),
+                include_str!("../fixtures/native_build.manifest").replace(
+                    "amd64",
+                    selections[selected]
+                        .layout()
+                        .architecture
+                        .target
+                        .as_str()
+                        .replace("x64", "amd64")
+                        .as_str(),
+                ),
             )?;
             let command = || {
                 let mut command = cli(&home, &work, &baseline);
@@ -246,16 +375,24 @@ mod native {
         ] {
             std::fs::write(
                 work.join(name),
-                content.replace("@PLATFORM_TOOLSET@", msbuild.platform_toolset),
+                content
+                    .replace("@PLATFORM_TOOLSET@", msbuild.platform_toolset)
+                    .replace("x64", layout.architecture.target.platform()),
             )?;
         }
         successful(command().args(["MSBuild.exe", "-nologo", "-version"]))?;
         for configuration in ["Debug", "Release"] {
             let build = |project: &str, target: &str| {
                 let mut cmd = command();
-                cmd.args(["MSBuild.exe", project, "-nologo", "-m:2", "-p:Platform=x64"])
-                    .arg(format!("-p:Configuration={configuration}"))
-                    .arg(format!("-t:{target}"));
+                cmd.args([
+                    "MSBuild.exe",
+                    project,
+                    "-nologo",
+                    "-m:2",
+                    &format!("-p:Platform={}", layout.architecture.target.platform()),
+                ])
+                .arg(format!("-p:Configuration={configuration}"))
+                .arg(format!("-t:{target}"));
                 cmd
             };
             let properties = successful(
@@ -264,7 +401,7 @@ mod native {
                         "MSBuild.exe",
                         "probe.vcxproj",
                         "-nologo",
-                        "-p:Platform=x64",
+                        &format!("-p:Platform={}", layout.architecture.target.platform()),
                     ])
                     .arg(format!("-p:Configuration={configuration}"))
                     .arg(format!("-getProperty:MSBUILDDISABLENODEREUSE,{vc_root},{tools_root},VCInstallDir,VCToolsInstallDir,WindowsSdkDir,VCTargetsPath,CLTrackerFrameworkPath,CLTrackerSdkPath,LinkTrackerFrameworkPath,LibTrackerFrameworkPath,RCTrackerFrameworkPath,ManifestTrackerFrameworkPath")),
@@ -356,7 +493,7 @@ mod native {
                 "MSBuild.exe",
                 "probe.vcxproj",
                 "-nologo",
-                "-p:Platform=x64",
+                &format!("-p:Platform={}", layout.architecture.target.platform()),
                 "-p:Configuration=Release",
                 "-p:WindowsTargetPlatformVersion=10.0.99999.0",
             ])

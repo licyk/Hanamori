@@ -22,7 +22,7 @@ pub(super) fn doctor(
             )?
         }
     };
-    let mut report = crate::engine::lifecycle::doctor(&store, args.dir.as_deref())?;
+    let mut report = crate::engine::lifecycle::doctor(&store, args.dir.as_deref(), args.arch)?;
     if let Err(error) = config {
         report.issues.push(format!("config_invalid: {error:#}"));
         report.healthy = false;

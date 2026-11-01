@@ -22,15 +22,32 @@ fn discovers_legacy_and_new_versions_and_matches_them_exactly() {
         "#,
     );
     assert_eq!(
-        list_toolset_versions(&packages),
+        list_toolset_versions(&packages, hanamori::architecture::Architecture::X64),
         ["14.52", "14.51", "14.50.18.0", "14.44.17.14"]
     );
-    assert_eq!(find_toolset_version(&packages).as_deref(), Some("14.52"));
+    assert_eq!(
+        find_toolset_version(&packages, hanamori::architecture::Architecture::X64).as_deref(),
+        Some("14.52")
+    );
     for unknown in ["14.50", "14.5", "99.0", "../14.51"] {
-        assert!(select_toolset_packages(&packages, unknown).is_empty());
-        assert!(validate_toolset(&packages, unknown).is_err());
+        assert!(select_toolset_packages(
+            &packages,
+            unknown,
+            hanamori::architecture::Architecture::X64
+        )
+        .is_empty());
+        assert!(validate_toolset(
+            &packages,
+            unknown,
+            hanamori::architecture::Architecture::X64
+        )
+        .is_err());
     }
-    let selected = select_toolset_packages(&packages, "14.51");
+    let selected = select_toolset_packages(
+        &packages,
+        "14.51",
+        hanamori::architecture::Architecture::X64,
+    );
     assert_eq!(selected.len(), 4);
     assert!(!selected.iter().any(|package| package.id.contains("14.50")));
 }
@@ -46,14 +63,28 @@ fn validates_downloadable_core_packages_before_installing() {
     let parse = |entries: &[serde_json::Value]| {
         parse_packages(&serde_json::json!({"packages": entries}).to_string()).unwrap()
     };
-    assert!(validate_toolset(&parse(&entries), "14.51").is_ok());
+    assert!(validate_toolset(
+        &parse(&entries),
+        "14.51",
+        hanamori::architecture::Architecture::X64
+    )
+    .is_ok());
     entries[2]["payloads"] = serde_json::json!([]);
-    assert!(validate_toolset(&parse(&entries), "14.51")
-        .unwrap_err()
-        .to_string()
-        .contains("CRT.x64.Desktop.base"));
+    assert!(validate_toolset(
+        &parse(&entries),
+        "14.51",
+        hanamori::architecture::Architecture::X64
+    )
+    .unwrap_err()
+    .to_string()
+    .contains("CRT.X64.Desktop.base"));
     entries.pop();
-    assert!(validate_toolset(&parse(&entries), "14.51").is_err());
+    assert!(validate_toolset(
+        &parse(&entries),
+        "14.51",
+        hanamori::architecture::Architecture::X64
+    )
+    .is_err());
 }
 
 #[test]
@@ -71,9 +102,13 @@ fn compare_versions_orders_numerically() {
 fn msbuild_rejects_toolsets_outside_supported_generations_before_selecting_payloads() {
     let packages = manifest("");
     for toolset in ["14.29.16.11", "14.44", "14.50.17.0"] {
-        let error = hanamori::catalog::msbuild::select(&packages, toolset)
-            .err()
-            .unwrap();
+        let error = hanamori::catalog::msbuild::select(
+            &packages,
+            toolset,
+            hanamori::architecture::Architecture::X64,
+        )
+        .err()
+        .unwrap();
         assert!(error.to_string().contains("VS 2022 v143"));
     }
 }
@@ -92,7 +127,7 @@ fn find_toolset_version_picks_the_newest_complete_toolset() {
     // 14.50 carries the prefix but none of the toolset suffixes, so it is a package
     // that is not part of a toolset; 14.44.17.14 wins.
     assert_eq!(
-        find_toolset_version(&packages).as_deref(),
+        find_toolset_version(&packages, hanamori::architecture::Architecture::X64).as_deref(),
         Some("14.44.17.14")
     );
 }
@@ -112,10 +147,14 @@ fn select_toolset_packages_keeps_the_expected_packages() {
             "#,
     );
 
-    let selected: Vec<&str> = select_toolset_packages(&packages, "14.44.17.14")
-        .iter()
-        .map(|package| package.id.as_str())
-        .collect();
+    let selected: Vec<&str> = select_toolset_packages(
+        &packages,
+        "14.44.17.14",
+        hanamori::architecture::Architecture::X64,
+    )
+    .iter()
+    .map(|package| package.id.as_str())
+    .collect();
 
     assert_eq!(selected.len(), 5);
     assert!(selected.contains(&"Microsoft.VC.14.44.17.14.CRT.Headers.base"));
@@ -131,7 +170,12 @@ fn select_toolset_packages_drops_other_languages() {
             { "id": "Microsoft.VC.14.44.17.14.CRT.Headers.base", "type": "Vsix", "language": "ja-JP" }
             "#,
     );
-    assert!(select_toolset_packages(&packages, "14.44.17.14").is_empty());
+    assert!(select_toolset_packages(
+        &packages,
+        "14.44.17.14",
+        hanamori::architecture::Architecture::X64
+    )
+    .is_empty());
 }
 
 #[test]
@@ -168,7 +212,7 @@ fn select_windows_sdk_package_falls_back_to_another_release() {
 #[test]
 fn component_ids_match_the_visual_studio_installer() {
     assert_eq!(
-        build_vc_component_id("14.44.17.14"),
+        build_vc_component_id("14.44.17.14", hanamori::architecture::Architecture::X64),
         "Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64"
     );
     assert_eq!(

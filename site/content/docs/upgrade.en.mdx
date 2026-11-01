@@ -1,10 +1,10 @@
 ---
 title: "Self-update"
-description: "Update a Windows x64 MSVC build from a verified GitHub Release."
+description: "Update a Windows x64 / ARM64 MSVC build from a verified GitHub Release."
 icon: CircleArrowUp
 ---
 
-Windows x64 MSVC builds can update the executable that is currently running from the
+Windows x64 / ARM64 MSVC builds can update the executable that is currently running from the
 latest stable [GitHub Release](https://github.com/licyk/Hanamori/releases):
 
 ```powershell
@@ -18,7 +18,7 @@ downloading an executable or writing files. An equal version normally needs no u
 `--force` allows reinstalling it. Neither mode downgrades a newer build, selects a
 prerelease, or bypasses verification. `--check` and `--force` cannot be combined.
 
-The updater downloads `hanamori-x86_64-pc-windows-msvc.exe` directly. The Release asset
+The updater downloads the EXE matching the running executable architecture directly. The Release asset
 must supply a SHA-256 digest; its hash and size must match, and the candidate must
 successfully report the expected `hanamori --version` within ten seconds. Missing or
 invalid metadata, download errors and failed verification leave the current executable
@@ -43,3 +43,5 @@ not one atomic operation: if the process is terminated between them and the orig
 path is missing, rename `<executable>.outdated` back to the original name before retrying.
 A reported rollback failure also gives the exact restore paths. Self-update does not
 change registered toolchains or shell configuration.
+
+Self-update preserves the running executable architecture: x64 builds select the x64 asset; ARM64 builds select `hanamori-aarch64-pc-windows-msvc.exe`, without switching according to OS architecture.

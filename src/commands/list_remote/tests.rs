@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 
 fn arguments(options: &[&str]) -> ListRemoteArgs {
     let cli = Cli::try_parse_from(
-        ["hanamori", "list-remote"]
+        ["hanamori", "list-remote", "--arch", "x64/x64"]
             .into_iter()
             .chain(options.iter().copied()),
     )

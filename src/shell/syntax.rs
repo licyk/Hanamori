@@ -116,14 +116,7 @@ impl ShellEnvironment {
             variables.push((key.clone(), value_for(shell, &key, value)));
         }
 
-        let tools = layout.tools_directory();
-
-        let mut path_entries = vec![tools
-            .join("bin")
-            .join("Hostx64")
-            .join("x64")
-            .display()
-            .to_string()];
+        let mut path_entries = vec![layout.host_bin_directory().display().to_string()];
         if layout.has_windows_sdk() {
             path_entries.push(
                 layout
@@ -134,14 +127,20 @@ impl ShellEnvironment {
         }
 
         if layout.msbuild_version.is_some() {
-            path_entries.push(layout.root.join(crate::msbuild::BIN).display().to_string());
+            path_entries.push(
+                layout
+                    .root
+                    .join(layout.architecture.host.msbuild_bin())
+                    .display()
+                    .to_string(),
+            );
         }
 
         let mut include_entries = vec![layout.include_directory().display().to_string()];
         let mut lib_entries = vec![layout
             .tools_directory()
             .join("lib")
-            .join("x64")
+            .join(layout.architecture.target.as_str())
             .display()
             .to_string()];
 
@@ -160,7 +159,7 @@ impl ShellEnvironment {
                 layout
                     .windows_sdk_lib_directory()
                     .join("ucrt")
-                    .join("x64")
+                    .join(layout.architecture.target.as_str())
                     .display()
                     .to_string(),
             );
@@ -168,7 +167,7 @@ impl ShellEnvironment {
                 layout
                     .windows_sdk_lib_directory()
                     .join("um")
-                    .join("x64")
+                    .join(layout.architecture.target.as_str())
                     .display()
                     .to_string(),
             );

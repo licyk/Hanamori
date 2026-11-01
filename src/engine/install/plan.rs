@@ -15,7 +15,7 @@ impl Installer<'_> {
     /// Builds the list of payloads to fetch.
     ///
     /// For the toolset, every payload of every selected package is needed. For the SDK,
-    /// only the packages an x64 desktop toolchain uses are taken, and from those only the
+    /// only the packages the selected desktop toolchain uses are taken, and from those only the
     /// cabinets their `Media` tables reference — which is why this has to read the MSI
     /// media tables instead of downloading the whole SDK.
     pub(super) async fn plan(
@@ -66,18 +66,19 @@ impl Installer<'_> {
                 .filter(|payload| is_extension(&payload.file_name, "cab"))
                 .collect();
 
-            // Only the packages an x64 desktop toolchain compiles against are taken.
+            // Only the packages the selected desktop toolchain compiles against are taken.
             // The remaining 70 packages of the SDK carry architectures and profiles that
             // the toolset never looks at, and downloading them would cost most of the
             // half gigabyte the SDK weighs.
+            let components = sdk_components(self.options.architecture);
             let wanted: Vec<&ManifestPayload> = sdk_package
                 .payloads
                 .iter()
-                .filter(|payload| is_sdk_package(payload, sdk_components()))
+                .filter(|payload| is_sdk_package(payload, &components))
                 .collect();
 
-            if wanted.len() != sdk_components().len() {
-                let missing: Vec<&str> = sdk_components()
+            if wanted.len() != components.len() {
+                let missing: Vec<&str> = components
                     .iter()
                     .copied()
                     .filter(|candidate| {
@@ -211,14 +212,14 @@ fn sanitize(value: &str) -> String {
     }
 }
 
-/// The SDK packages an x64 desktop toolchain compiles against.
+/// The SDK packages the selected desktop toolchain compiles against.
 ///
 /// The SDK package itself carries 78 MSIs. Installing all of them would fetch half a
 /// gigabyte for headers of architectures and profiles that are never used, so the list is
 /// reduced to the packages the toolset writes into `INCLUDE` and `LIB`.
-fn sdk_components() -> &'static [&'static str] {
-    &[
-        // Despite its x86 name, this MSI also carries the x64 tools and their DLLs.
+fn sdk_components(arch: crate::architecture::Architecture) -> Vec<&'static str> {
+    let mut components = vec![
+        // Despite its x86 name, this MSI carries x86, x64 and ARM64 host tools.
         "Windows SDK for Windows Store Apps Tools-x86_en-us.msi",
         "Windows SDK for Windows Store Apps Headers-x86_en-us.msi",
         "Windows SDK for Windows Store Apps Headers OnecoreUap-x86_en-us.msi",
@@ -226,8 +227,16 @@ fn sdk_components() -> &'static [&'static str] {
         "Windows SDK OnecoreUap Headers x86-x86_en-us.msi",
         "Windows SDK Desktop Headers x86-x86_en-us.msi",
         "Universal CRT Headers Libraries and Sources-x86_en-us.msi",
-        "Windows SDK Desktop Libs x64-x86_en-us.msi",
-    ]
+    ];
+    use crate::architecture::Arch;
+    components.push(match arch.target {
+        Arch::X64 => "Windows SDK Desktop Libs x64-x86_en-us.msi",
+        Arch::Arm64 => "Windows SDK Desktop Libs arm64-x86_en-us.msi",
+    });
+    if arch.target == Arch::Arm64 {
+        components.push("Windows SDK OnecoreUap Headers arm64-x86_en-us.msi");
+    }
+    components
 }
 
 fn is_sdk_package(payload: &ManifestPayload, wanted: &[&str]) -> bool {

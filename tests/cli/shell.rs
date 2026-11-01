@@ -556,6 +556,7 @@ fn posix_hook_lifecycle(shell: &str) {
     let temp = tempfile::tempdir().unwrap();
     let (home, a, b) = fixture(&temp);
     common::toolchain(&a, "14.51.36260", Some("10.0.22621.0"));
+    common::toolchain_for(&a, "14.44.35207", Some("10.0.26100.0"), "x64", "arm64");
     let other = temp.path().join("other manager");
     success(
         cli(&other)
@@ -574,7 +575,7 @@ baseline=$PATH
 export HANAMORI_HOME=$MANAGER
 "$EXE" env --shell "$SHELL_NAME" > dynamic.sh
 "$EXE" --manager-dir "$MANAGER" env --shell "$SHELL_NAME" > generation-manager.sh
-"$EXE" env --shell "$SHELL_NAME" --dir "$ROOT_A" --toolset 14.44.35207 --sdk 10.0.26100.0 > fixed.sh
+"$EXE" env --shell "$SHELL_NAME" --dir "$ROOT_A" --toolset 14.44.35207 --sdk 10.0.26100.0 --arch x64/arm64 > fixed.sh
 "$EXE" env --shell "$SHELL_NAME" --auto-activate > auto.sh
 . ./dynamic.sh
 [ "${_HANAMORI_STATE+x}" != x ]
@@ -627,7 +628,7 @@ hanamori deactivate
 unset HANAMORI_LOG
 export HANAMORI_HOME=$MANAGER
 # Explicit directory selection bypasses the deliberately invalid project file.
-"$EXE" env --shell "$SHELL_NAME" --dir "$ROOT_A" --toolset 14.44.35207 --sdk 10.0.26100.0 --auto-activate > auto-fixed.sh
+"$EXE" env --shell "$SHELL_NAME" --dir "$ROOT_A" --toolset 14.44.35207 --sdk 10.0.26100.0 --arch x64/arm64 --auto-activate > auto-fixed.sh
 . ./auto-fixed.sh
 [ "$_HANAMORI_ACTIVE_ROOT" = "$ROOT_A" ]
 hanamori use second
@@ -689,6 +690,7 @@ hanamori deactivate
         .unwrap()
         .starts_with("arg 627974652dff\n"));
     for name in ["fixed-exec.json", "inherited.json"] {
+        assert_eq!(read(&temp.path().join(name))["active"]["target"], "arm64");
         assert_eq!(
             read(&temp.path().join(name))["active"]["root"],
             a.to_str().unwrap()
@@ -730,6 +732,7 @@ fn powershell_hook_directory_defaults_switching_forwarding_and_recovery() {
     let temp = tempfile::tempdir().unwrap();
     let (home, a, b) = fixture(&temp);
     common::toolchain(&a, "14.51.36260", Some("10.0.22621.0"));
+    common::toolchain_for(&a, "14.44.35207", Some("10.0.26100.0"), "x64", "arm64");
     let other = temp.path().join("other manager");
     success(
         cli(&other)
@@ -749,7 +752,7 @@ $encoding = [Console]::OutputEncoding
 $env:HANAMORI_HOME = $env:MANAGER
 & $env:EXE env --shell powershell --output dynamic.ps1 | Out-Null
 & $env:EXE --manager-dir $env:MANAGER env --shell powershell --output generation-manager.ps1 | Out-Null
-& $env:EXE env --shell powershell --dir $env:ROOT_A --toolset 14.44.35207 --sdk 10.0.26100.0 --output fixed.ps1 | Out-Null
+& $env:EXE env --shell powershell --dir $env:ROOT_A --toolset 14.44.35207 --sdk 10.0.26100.0 --arch x64/arm64 --output fixed.ps1 | Out-Null
 & $env:EXE env --shell powershell --auto-activate --output auto.ps1 | Out-Null
 . ./dynamic.ps1
 if (Test-Path Env:_HANAMORI_STATE) { throw 'loading changed environment' }
@@ -794,7 +797,7 @@ hanamori deactivate
 if (Test-Path Env:_HANAMORI_STATE) { throw 'failed auto activation changed state' }
 Remove-Item Env:HANAMORI_LOG
 $env:HANAMORI_HOME = $env:MANAGER
-& $env:EXE env --shell powershell --dir $env:ROOT_A --toolset 14.44.35207 --sdk 10.0.26100.0 --auto-activate --output auto-fixed.ps1 | Out-Null
+& $env:EXE env --shell powershell --dir $env:ROOT_A --toolset 14.44.35207 --sdk 10.0.26100.0 --arch x64/arm64 --auto-activate --output auto-fixed.ps1 | Out-Null
 . ./auto-fixed.ps1
 if ($env:_HANAMORI_ACTIVE_ROOT -cne $env:ROOT_A) { throw 'auto activation failed' }
 hanamori use second
@@ -833,6 +836,10 @@ if ($env:PATH -cne $baseline -or [Console]::OutputEncoding.CodePage -ne $encodin
         String::from_utf8_lossy(&output.stderr)
     );
     success(output);
+    assert_eq!(
+        read(&temp.path().join("fixed-exec.json"))["active"]["target"],
+        "arm64"
+    );
     assert_eq!(
         read(&temp.path().join("fixed-exec.json"))["active"]["root"],
         a.to_str().unwrap()

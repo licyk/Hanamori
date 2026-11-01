@@ -45,7 +45,7 @@ fn run_installer_test(shell: &str, script_source: &str) {
         let mut release = json!({
             "tag_name": concat!("v", env!("CARGO_PKG_VERSION")),
             "draft": false, "prerelease": false, "future": true,
-            "assets": [{"name": "hanamori-x86_64-pc-windows-msvc.exe",
+            "assets": [{"name": hanamori::upgrade::ASSET_NAME,
                 "browser_download_url": asset_url, "size": size, "digest": digest}]
         });
         if request.path.starts_with("/bad-sha/") {
@@ -130,6 +130,10 @@ fn powershell_release_validation_and_corrupt_download_preserve_existing_program(
             "assets": [{"name": "hanamori-x86_64-pc-windows-msvc.exe", "browser_download_url": url,
                 "size": bytes.len(), "digest": format!("sha256:{:x}", Sha256::digest(bytes))}]
         });
+        let mut arm = release["assets"][0].clone();
+        arm["name"] = json!("hanamori-aarch64-pc-windows-msvc.exe");
+        arm["browser_download_url"] = json!(format!("{url}/arm64"));
+        release["assets"].as_array_mut().unwrap().push(arm);
         if request.path.starts_with("/prerelease/") {
             release["prerelease"] = json!(true);
         } else if request.path.starts_with("/no-digest/") {

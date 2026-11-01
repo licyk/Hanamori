@@ -14,12 +14,13 @@ pub async fn resolve(
     proxy: Option<&reqwest::Url>,
     strict_manifest_integrity: bool,
     show_progress: bool,
+    arch: crate::architecture::Architecture,
 ) -> Result<(ManifestPackageSet, String)> {
     let client = build_client(proxy)?;
     let payload = fetch_visual_studio_manifest(&client, manifest_url, show_progress).await?;
     let packages =
         fetch_packages(&client, &payload, strict_manifest_integrity, show_progress).await?;
-    let toolset = selector::find_toolset_version(&packages)
+    let toolset = selector::find_toolset_version(&packages, arch)
         .context("the manifest does not offer any MSVC toolset")?;
     Ok((packages, toolset))
 }

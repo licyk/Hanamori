@@ -2,15 +2,19 @@
 
 main() (
     set -euo pipefail
-    local version=latest install_dir=${HANAMORI_INSTALL_DIR:-} no_path=false no_shell=false
+    local version=latest architecture=auto install_dir=${HANAMORI_INSTALL_DIR:-} no_path=false no_shell=false
     while (($#)); do
         case "$1" in
-            --version|--install-dir)
+            --version|--install-dir|--architecture)
                 if (($# < 2)) || [[ -z $2 || $2 == --* ]]; then
                     printf 'Missing value for %s\n' "$1" >&2
                     return 1
                 fi
-                if [[ $1 == --version ]]; then version=$2; else install_dir=$2; fi
+                case "$1" in
+                    --version) version=$2 ;;
+                    --architecture) architecture=$2 ;;
+                    --install-dir) install_dir=$2 ;;
+                esac
                 shift 2
                 ;;
             --no-path-update) no_path=true; shift ;;
@@ -19,6 +23,7 @@ main() (
             *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; return 1 ;;
         esac
     done
+    case "$architecture" in auto|x64|arm64) ;; *) printf 'Architecture must be auto, x64 or arm64.\n' >&2; return 1 ;; esac
     require_msys
     if [[ -z $install_dir ]]; then
         : "${LOCALAPPDATA:?LOCALAPPDATA is required to locate the installation directory}"
@@ -42,7 +47,7 @@ main() (
     fi
     local -a arguments=(-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass
         -File "$(cygpath -aw -- "$backend")" -Version "$version"
-        -InstallDir "$(cygpath -aw -- "$install_dir")" -NoShell)
+        -InstallDir "$(cygpath -aw -- "$install_dir")" -Architecture "$architecture" -NoShell)
     if $no_path; then arguments+=(-NoPathUpdate); fi
     # All native arguments are converted explicitly, including paths with spaces.
     MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 "$powershell" "${arguments[@]}"
@@ -61,8 +66,9 @@ main() (
 usage() {
     cat <<'USAGE'
 Usage: bash install.sh [options]
-Install Hanamori for Windows x64 from MSYS2 or Git Bash.
+Install Hanamori for Windows x64 or ARM64 from MSYS2 or Git Bash.
 
+  --architecture ARCH     Hanamori binary: auto (native Windows), x64 or arm64
   --version VERSION       Release version or latest (default)
   --install-dir DIRECTORY Directory containing hanamori.exe (Windows or MSYS path)
   --no-path-update        Skip user PATH configuration
@@ -77,7 +83,7 @@ USAGE
 require_msys() {
     case "$(uname -s)" in
         MSYS_NT-*|MINGW*_NT-*) ;;
-        *) printf 'This installer requires MSYS2 or Git Bash on Windows x64.\n' >&2; return 1 ;;
+        *) printf 'This installer requires MSYS2 or Git Bash on Windows x64 or ARM64.\n' >&2; return 1 ;;
     esac
     command -v cygpath >/dev/null || { printf 'cygpath is required; run from MSYS2 or Git Bash.\n' >&2; return 1; }
 }

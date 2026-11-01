@@ -17,6 +17,7 @@ pub enum SelectionRequest<'a> {
         toolset: Option<&'a str>,
         sdk: Option<&'a str>,
         no_sdk: bool,
+        architecture: Option<crate::architecture::Architecture>,
     },
 }
 pub struct Selection {
@@ -26,6 +27,7 @@ pub struct Selection {
 impl Selection {
     pub fn new(key: Option<String>, layout: ToolchainLayout) -> Result<Self> {
         env::verify(&layout)?;
+        layout.architecture.ensure_runnable()?;
         Ok(Self { key, layout })
     }
     pub fn key(&self) -> Option<&str> {
@@ -55,6 +57,7 @@ pub fn resolve_optional(
         toolset,
         sdk,
         no_sdk,
+        architecture,
     } = request
     {
         return Selection::new(
@@ -64,6 +67,7 @@ pub fn resolve_optional(
                 *toolset,
                 *sdk,
                 *no_sdk,
+                *architecture,
             )?,
         )
         .map(Some);
@@ -97,6 +101,7 @@ pub fn resolve_optional(
         item.key,
         item.status
     );
+    item.architecture.ensure_runnable()?;
     Ok(Some(Selection {
         key: Some(item.key.clone()),
         layout: item.layout(),

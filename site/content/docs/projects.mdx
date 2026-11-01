@@ -18,7 +18,7 @@ icon: FolderGit2
 | `toolset` | 必填；实际 MSVC 版本或一至三段数字前缀 |
 | `sdk` | 实际四段版本；`null` 表示不使用 SDK；省略表示不约束 |
 | `msbuild` | 可选布尔值；`true` 要求 MSBuild，`false` 排除，省略不限制本地选择；安装时默认随 SDK 启用，SDK 为 `null` 时默认关闭 |
-| `host`、`target` | 可选，默认 `x64`，目前无其他架构 |
+| `host`、`target` | 可选 `x64` 或 `arm64`；host 默认为 Windows 原生架构，target 默认跟随 host |
 | `vs`、`channel` | 可选来源约束；来源未知的导入记录不能满足 |
 | `schema_version` | 可选，目前为 `1` |
 

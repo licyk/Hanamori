@@ -13,6 +13,6 @@ pub struct ActiveToolchain {
     #[serde(deserialize_with = "Option::deserialize")]
     pub sdk: Option<String>,
     pub msbuild: Option<String>,
-    pub host: String,
-    pub target: String,
+    pub host: crate::architecture::Arch,
+    pub target: crate::architecture::Arch,
 }

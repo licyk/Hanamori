@@ -3,6 +3,8 @@ export const RELEASE_API = "https://api.github.com/repos/licyk/Hanamori/releases
 const ASSETS = [
   "hanamori-x86_64-pc-windows-msvc.exe",
   "hanamori-x86_64-pc-windows-msvc.zip",
+  "hanamori-aarch64-pc-windows-msvc.exe",
+  "hanamori-aarch64-pc-windows-msvc.zip",
 ] as const;
 
 export interface ReleaseAsset {

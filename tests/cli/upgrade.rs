@@ -396,7 +396,11 @@ fn cli_help_and_conflicting_modes_have_no_side_effects() {
         assert_eq!(output.status.success(), success);
         assert!(!home.exists());
     }
-    #[cfg(not(all(target_os = "windows", target_arch = "x86_64", target_env = "msvc")))]
+    #[cfg(not(all(
+        target_os = "windows",
+        any(target_arch = "x86_64", target_arch = "aarch64"),
+        target_env = "msvc"
+    )))]
     {
         let output = Command::new(env!("CARGO_BIN_EXE_hanamori"))
             .env_clear()

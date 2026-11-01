@@ -10,7 +10,7 @@ There are three distinct identifiers:
 | --- | --- | --- |
 | Download ID | toolset `14.44.17.14`, SDK `26100` | Identifier offered by the selected catalog |
 | Actual version | MSVC `14.44.35207`, SDK `10.0.26100.0` | Directory version verified after extraction |
-| Directory key | `vs2022-release/msvc-14.44.17.14_sdk-26100_x64` | Managed directory determined by source and download IDs |
+| Directory key | `vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64` | Managed directory determined by source and download IDs |
 
 Examples describe version syntax; availability depends on the selected catalog.
 
@@ -30,7 +30,22 @@ hanamori install --manifest https://example.test/channel.json --dry-run
 
 `--vs-version` accepts `2022`/`17` and `2026`/`18`. `--channel` accepts `release`/`stable`
 and `preview`/`insiders`. A custom `--manifest` replaces both. The default is 2026 stable (`release`).
-Only `--arch x64/x64` is implemented.
+`--arch HOST/TARGET` supports `x64/x64`, `x64/arm64`, `arm64/x64` and `arm64/arm64`.
+The default follows the native Windows architecture, even when Hanamori itself runs under emulation.
+An explicit `--arch` overrides project `host`/`target`; otherwise the project takes precedence over the native default.
+The compiler host selects executable tools and MSBuild; the target selects CRT/SDK libraries and the MSBuild platform.
+An ARM64-hosted compiler needs Windows 11 ARM64. ARM32 and ARM64EC are not supported.
+
+```sh
+hanamori install --arch x64/arm64 --name arm-cross
+hanamori install --arch arm64/arm64 --name arm-native
+hanamori list-remote --arch arm64/arm64
+hanamori exec --using arm-native -- MSBuild.exe app.sln -p:Platform=ARM64
+```
+
+Different architecture pairs have separate directories and can coexist. For external directories with several pairs,
+use `--dir PATH --arch HOST/TARGET` with `env`, `use`, `exec`, `import` or `doctor`.
+Unavailable catalog pairs fail explicitly; Hanamori does not substitute another architecture.
 
 `list-remote --all` groups toolsets and SDKs by VS 2022 and VS 2026, and expands the latest toolset’s packages in each group. It queries release channels by default. Add `--channel preview` (or `insiders`) to query both preview channels instead, without mixing release channels into the result. Identical IDs remain in their source groups. `--all` conflicts with `--vs-version`, `--manifest`, and `--toolset-id`. “All” covers versions still offered by the selected channels for the two supported VS generations, not every historical version Microsoft has ever published.
 
@@ -45,12 +60,12 @@ as `null`; it never fabricates a mapping.
 
 Without a version or project constraint, installation selects latest from the chosen catalog. The default reference is not an installation input. Actual versions are discovered from toolchain directories; if no reliable download-ID mapping exists, specify `--toolset-id` / `--sdk-id`. Project constraints are verified before publication.
 
-Managed installations without MSBuild live under `<toolchains-dir>/<source>/msvc-<download-id>_sdk-<download-id-or-none>_x64`. The default MSBuild combination also has a `_msbuild-<version>` segment. The default base is `<manager>/toolchains`. Custom sources use a stable digest of the manifest URL, not the changing catalog contents. Local commands and completion honor the configured storage directory too.
+Managed installations without MSBuild live under `<toolchains-dir>/<source>/msvc-<download-id>_sdk-<download-id-or-none>_host-x64_target-x64`. The default MSBuild combination also has a `_msbuild-<version>` segment. The default base is `<manager>/toolchains`. Custom sources use a stable digest of the manifest URL, not the changing catalog contents. Local commands and completion honor the configured storage directory too.
 
 A complete directory is reused after checking a small set of required files. An absent or incomplete managed directory is reinstalled at the same location; existing references keep working. `--reinstall` forces a fresh tree for other damaged files. `--name` creates or updates a reference after success.
 
 ```sh
-hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
+hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64 --reinstall
 hanamori install --dir D:/Tools/portable --name standalone
 hanamori install --dir D:/Tools/portable --reinstall
 ```
@@ -72,9 +87,9 @@ Installation includes MSVC, the Windows SDK and MSBuild by default, selecting MS
 
 Component selection follows explicit command-line options, then project settings, then defaults. Projects may set `"msbuild": true` or `false`; `--msbuild` / `--no-msbuild` override that setting. An explicit MSBuild requirement without the SDK fails; use `--no-msbuild` to cancel that requirement. Exact directory keys retain their component combination, so the new default does not add MSBuild to an existing key.
 
-The supported scope is native C++ `.vcxproj` and `.sln` builds using VS 2026 x64/v145 or VS 2022 x64/v143. Use `--vs-version 2022` for v143 projects. Win32/ARM64, ATL/MFC, C++/CLI, UWP, drivers, C# and IDE integration are outside that scope. Native Windows build acceptance remains pending; real downloads/extraction and Linux tests do not establish it.
+The supported scope is native C++ `.vcxproj` and `.sln` builds using VS 2026 v145 or VS 2022 v143. Use `--vs-version 2022` for v143 projects. Win32, ATL/MFC, C++/CLI, UWP, drivers, C# and IDE integration are outside that scope. Native Windows build acceptance remains pending; real downloads/extraction and Linux tests do not establish it.
 
-MSBuild combinations use `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild version>_x64`, independently of combinations without MSBuild. Reinstalling an exact key requires the catalog to still offer that MSBuild version; it never silently upgrades it. Retain a matching manifest and cache if upstream removes packages.
+MSBuild combinations use `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild version>_host-x64_target-x64`, independently of combinations without MSBuild. Reinstalling an exact key requires the catalog to still offer that MSBuild version; it never silently upgrades it. Retain a matching manifest and cache if upstream removes packages.
 
 The host needs the .NET Framework required by MSBuild. Installation extracts and checks files; on Windows, `doctor` also runs `MSBuild.exe -version` and reports runtime failures without installing system components. Invoke `MSBuild.exe` through the Hanamori environment so generated configuration selects the local compiler and SDK. Explicit conflicting project versions fail the build.
 

@@ -1,5 +1,7 @@
 param(
     [string]$Version = 'latest',
+    [ValidateSet('auto', 'x64', 'arm64')]
+    [string]$Architecture = 'auto',
     [string]$InstallDir = $env:HANAMORI_INSTALL_DIR,
     [switch]$NoPathUpdate,
     [switch]$NoShell
@@ -8,6 +10,8 @@ param(
 function Install-Hanamori {
     param(
         [string]$Version = 'latest',
+        [ValidateSet('auto', 'x64', 'arm64')]
+        [string]$Architecture = 'auto',
         [string]$InstallDir = $env:HANAMORI_INSTALL_DIR,
         [switch]$NoPathUpdate,
         [switch]$NoShell,
@@ -25,7 +29,7 @@ function Install-Hanamori {
     try {
         [Net.ServicePointManager]::SecurityProtocol = $oldTls -bor [Net.SecurityProtocolType]::Tls12
         [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
-        $release = Get-HanamoriRelease -Version $Version -ReleaseApi $ReleaseApi
+        $release = Get-HanamoriRelease -Version $Version -ReleaseApi $ReleaseApi -Architecture $Architecture
         Install-HanamoriBinary -Release $release -Executable $executable
         Write-Host "Installed $executable"
         if (!$NoPathUpdate) {
@@ -66,10 +70,10 @@ function Resolve-HanamoriInstallDirectory {
     param([string]$Directory)
 
     if ([Environment]::OSVersion.Platform -ne 'Win32NT') {
-        throw 'Hanamori requires Windows x64.'
+        throw 'Hanamori requires Windows x64 or ARM64.'
     }
     $architecture = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
-    if ($architecture -ne 'AMD64') { throw 'Hanamori requires Windows x64.' }
+    if ($architecture -notin @('AMD64', 'ARM64')) { throw 'Hanamori requires Windows x64 or ARM64.' }
     if (!$Directory) { $Directory = Join-Path $env:LOCALAPPDATA 'Hanamori\bin' }
     $directory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Directory)
     if ($directory.Contains(';')) { throw 'The installation directory cannot contain a semicolon (PATH separator).' }
@@ -115,7 +119,18 @@ function Install-HanamoriBinary {
 }
 
 function Get-HanamoriRelease {
-    param([string]$Version, [string]$ReleaseApi)
+    param([string]$Version, [string]$ReleaseApi, [ValidateSet('auto', 'x64', 'arm64')][string]$Architecture = 'auto')
+
+    if ($Architecture -eq 'auto') {
+        $native = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
+        $Architecture = switch ($native) {
+            'AMD64' { 'x64' }
+            'ARM64' { 'arm64' }
+            default { throw "Unsupported Windows architecture: $native" }
+        }
+    }
+    $target = if ($Architecture -eq 'arm64') { 'aarch64-pc-windows-msvc' } else { 'x86_64-pc-windows-msvc' }
+    $assetName = "hanamori-$target.exe"
 
     $suffix = 'latest'
     if ($Version -ne 'latest') {
@@ -134,8 +149,8 @@ function Get-HanamoriRelease {
         throw 'The release has no usable Hanamori version.'
     }
     if ($Version -ne 'latest' -and $tag -cne "v$Version") { throw 'The release tag differs from the requested version.' }
-    $assets = @($metadata.assets | Where-Object { $_.name -eq 'hanamori-x86_64-pc-windows-msvc.exe' })
-    if ($assets.Count -ne 1) { throw 'The release must contain one Windows x64 Hanamori executable.' }
+    $assets = @($metadata.assets | Where-Object { $_.name -eq $assetName })
+    if ($assets.Count -ne 1) { throw "The release must contain exactly one $assetName executable." }
     $asset = $assets[0]
     if ($asset.size -le 0 -or $asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$' -or !$asset.browser_download_url) {
         throw 'The release asset must provide a download URL, size and SHA-256 digest.'

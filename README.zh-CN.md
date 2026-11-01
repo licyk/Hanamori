@@ -36,7 +36,7 @@
 
 </div>
 
-Hanamori 在 Windows x64 上管理独立的 MSVC、Windows SDK 和 MSBuild 安装。无需安装完整的 Visual Studio，即可安装工具链、为项目固定版本、切换当前 Shell 环境，或使用指定工具链运行命令。
+Hanamori 在 Windows x64 / ARM64 上管理独立的 MSVC、Windows SDK 和 MSBuild 安装。无需安装完整的 Visual Studio，即可安装工具链、为项目固定版本、切换当前 Shell 环境，或使用指定工具链运行命令。
 
 支持别名与默认工具链、共享下载缓存、Shell 初始化、按目录发现配置、重新安装、自我更新和按范围卸载。支持 PowerShell、Bash 和 Zsh 集成；CMD 集成仍处于实验阶段。
 
@@ -53,7 +53,7 @@ Hanamori 在 Windows x64 上管理独立的 MSVC、Windows SDK 和 MSBuild 安�
 irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
-脚本将 Windows x64 程序安装到 `%LOCALAPPDATA%\Hanamori\bin`，将该目录加入用户 PATH，并为当前 PowerShell 的 Profile 和会话初始化 Hook 与补全。无需管理员权限，工具链需要另行安装。
+脚本将 Windows x64 / ARM64 程序安装到 `%LOCALAPPDATA%\Hanamori\bin`，将该目录加入用户 PATH，并为当前 PowerShell 的 Profile 和会话初始化 Hook 与补全。无需管理员权限，工具链需要另行安装。
 
 两个安装脚本均支持通过 `HANAMORI_INSTALL_DIR` 指定程序安装目录。显式传入的 `-InstallDir` / `--install-dir` 参数优先；环境变量未设置或为空时使用默认目录。`HANAMORI_HOME` 单独控制管理器数据目录。
 
@@ -74,7 +74,9 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 
 [首次编译指南](https://hanamori.netlify.app/docs/quick-start) 包含完整的 `hello.cpp` 示例和 Shell 激活方法。
 
-默认使用 VS 2026 stable，安装 MSVC、Windows SDK 和 MSBuild。MSBuild 支持 VS 2026 x64/v145 和 VS 2022 x64/v143（指定 `--vs-version 2022`）原生 C++ 项目与解决方案：
+使用 `--arch x64/arm64` 安装交叉编译工具，或 `--arch arm64/arm64` 安装原生 ARM64 工具；省略时跟随 Windows 原生架构。
+
+默认使用 VS 2026 stable，安装 MSVC、Windows SDK 和 MSBuild。MSBuild 支持 VS 2026 v145 和 VS 2022 v143（指定 `--vs-version 2022`）原生 C++ 项目与解决方案：
 
 ```powershell
 hanamori install latest --name build

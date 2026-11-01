@@ -15,7 +15,7 @@ pub(crate) struct UseArgs {
 #[derive(Args)]
 pub(crate) struct TargetArgs {
     /// Local ID, alias or numeric toolset prefix (otherwise: nearest project, then default).
-    #[arg(value_name = "SELECTOR", conflicts_with_all = ["dir", "toolset", "sdk", "no_sdk"])]
+    #[arg(value_name = "SELECTOR", conflicts_with_all = ["dir", "toolset", "sdk", "no_sdk", "arch"])]
     pub(crate) selector: Option<String>,
 
     #[command(flatten)]
@@ -24,6 +24,9 @@ pub(crate) struct TargetArgs {
 
 #[derive(Args, Default)]
 pub(crate) struct DirectoryArgs {
+    /// Select a compiler host/target pair in the directory.
+    #[arg(long, requires = "dir", value_name = "HOST/TARGET", value_parser = super::architecture::parser())]
+    pub(crate) arch: Option<crate::architecture::Architecture>,
     /// Explicit installation directory, including unregistered directories.
     #[arg(short, long, value_name = "PATH", value_hint = clap::ValueHint::DirPath)]
     pub(crate) dir: Option<PathBuf>,
@@ -52,6 +55,7 @@ impl TargetArgs {
                     toolset: self.directory.toolset.as_deref(),
                     sdk: self.directory.sdk.as_deref(),
                     no_sdk: self.directory.no_sdk,
+                    architecture: self.directory.arch,
                 },
                 _ => SelectionRequest::Project,
             },

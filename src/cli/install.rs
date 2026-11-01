@@ -56,8 +56,12 @@ pub(crate) struct InstallArgs {
     pub(crate) reinstall: bool,
 
     /// Host/target architecture pair, e.g. x64/x64.
-    #[arg(long, value_name = "ARCH", default_value = "x64/x64", value_parser = ["x64/x64"], help_heading = "Versions and components")]
-    pub(crate) arch: String,
+    #[arg(
+        long,
+        value_name = "HOST/TARGET", value_parser = super::architecture::parser(),
+        help_heading = "Versions and components"
+    )]
+    pub(crate) arch: Option<crate::architecture::Architecture>,
 
     #[command(flatten, next_help_heading = "Catalog")]
     pub(crate) common: CommonArgs,

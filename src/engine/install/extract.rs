@@ -123,10 +123,13 @@ impl Installer<'_> {
                 .find(|path| path.is_dir())
                 .context("the MSBuild MSI is missing its FileTracker directory")?;
             // The MSI normally installs a shared system directory. Keep its DLLs next
-            // to the private x64 Tracker.exe; generated targets select this path.
+            // to the private host Tracker.exe; generated targets select this path.
             workspace::merge_directory(
                 &tracker,
-                &self.options.install_directory.join(crate::msbuild::BIN),
+                &self
+                    .options
+                    .install_directory
+                    .join(self.options.architecture.host.msbuild_bin()),
             )?;
         }
 

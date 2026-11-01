@@ -12,6 +12,7 @@
 //! The library exists for the `hanamori` executable and its tests. Its API is internal and
 //! may change in any release.
 
+pub mod architecture;
 pub mod archive;
 pub mod catalog;
 pub mod cli;

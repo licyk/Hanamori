@@ -23,10 +23,10 @@ icon: ListTree
 | `--sdk VER` | 实际 SDK 版本，与 `--sdk-id`、`--no-sdk` 互斥 |
 | `--sdk-id ID` | SDK 下载 ID，与 `--sdk`、`--no-sdk` 互斥 |
 | `--no-sdk` | 不安装 SDK，默认也不安装 MSBuild；项目明确要求 MSBuild 时须同时加 `--no-msbuild` |
-| `--msbuild` | 显式启用 MSBuild，覆盖项目设置；默认随 SDK 安装，支持 VS 2022 x64/v143 和 VS 2026 x64/v145；与 `--no-sdk`、`--no-msbuild` 互斥 |
+| `--msbuild` | 显式启用 MSBuild，覆盖项目设置；默认随 SDK 安装，支持 VS 2022 v143 和 VS 2026 v145；与 `--no-sdk`、`--no-msbuild` 互斥 |
 | `--no-msbuild` | 禁用默认启用的 MSBuild，也覆盖项目要求；默认保留编译器与 SDK |
 | `--reinstall` | 整体重新安装；外部非空目录必须显式指定 |
-| `--arch ARCH` | 默认且目前只接受 `x64/x64` |
+| `--arch ARCH` | `x64/x64`、`x64/arm64`、`arm64/x64`、`arm64/arm64`；显式参数 → 项目 → Windows 原生架构 |
 | `--dry-run` | 可以查询清单，不下载负载，不写安装/引用/工作区 |
 | `list-remote` | 默认查询 VS 2026；`--all` 同时查询 VS 2022/2026；可加 `--toolset-id ID` 查看指定工具集的包；支持 `--json` |
 
@@ -51,7 +51,7 @@ icon: ListTree
 
 SELECTOR 是完整托管目录键、外部引用键（`@NAME`）、别名或唯一实际版本前缀。本地选择不接受 latest。无显式选择时使用最近项目，再使用 default。
 
-直接目录选项为 `--dir/-d PATH`、`--toolset VER`、`--sdk VER`、`--no-sdk`。后三者要求 `--dir`，SDK 版本与 no-sdk 互斥；显式 SELECTOR 或 `exec --using` 与全部目录选项互斥。多个组件必须明确选择，版本为实际目录版本。
+直接目录选项为 `--dir/-d PATH`、`--toolset VER`、`--sdk VER`、`--no-sdk`、`--arch HOST/TARGET`。这些组件选择参数要求 `--dir`，SDK 版本与 no-sdk 互斥；显式 SELECTOR 或 `exec --using` 与全部目录选项互斥。多个组件必须明确选择，版本为实际目录版本。
 
 ## Shell 命令
 
@@ -80,7 +80,7 @@ SHELL 为 `powershell`、`bash`、`zsh`、`cmd`；省略时检测调用 Shell。
 | `doctor` | `--dir PATH`、`--json`；只诊断，有错误时非零退出 |
 | `cache clean` | `--dry-run`、`--json`；清理闲置完整缓存负载 |
 | `config show` | 默认显示配置表格；`--resolved` 展示来源和派生关系；`--json` 输出 JSON |
-| `upgrade` | `--check` 或 `--force`，互斥；仅 Windows x64 MSVC |
+| `upgrade` | `--check` 或 `--force`，互斥；仅 Windows x64 / ARM64 MSVC |
 | `self uninstall` | `--dry-run`、`--purge`；默认保留管理器数据，无 json 选项 |
 
 `import` 不支持 dry-run；同名导入更新引用。版本查询和安装可能联网；本地管理不自动联网安装。不要假设每个命令都支持 `--json` 或 `--dry-run`。

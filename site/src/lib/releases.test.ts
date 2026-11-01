@@ -30,6 +30,14 @@ describe("download selection", () => {
     });
   });
 
+  it("offers ARM64 assets without requiring an x64 asset", () => {
+    const name = "hanamori-aarch64-pc-windows-msvc.exe";
+    const result = parseRelease({ ...release, assets: [{ ...asset, name,
+      browser_download_url: asset.browser_download_url.replace(asset.name, name) }] });
+    expect(result.status).toBe("available");
+    if (result.status === "available") expect(result.release.assets[0].name).toBe(name);
+  });
+
   it("does not present old or prerelease builds as compatible downloads", () => {
     expect(parseRelease({ ...release, assets: [{ ...asset, name: "msvc-installer.exe" }] }).status)
       .toBe("unavailable");

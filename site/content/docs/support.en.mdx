@@ -6,13 +6,15 @@ icon: MonitorCheck
 
 | Area | Current scope |
 | --- | --- |
-| Native compilation | Windows x64 host, x64 target |
-| Distribution and self-update | `x86_64-pc-windows-msvc`, EXE and ZIP |
+| Native compilation | Windows x64 / ARM64 hosts; x64 and ARM64 targets |
+| Distribution and self-update | `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc`, EXE and ZIP |
 | Shells | PowerShell 5.1/7, Bash, Zsh; CMD is experimental |
 | POSIX shells on Windows | MSYS path conversion requires the current runtime’s `cygpath` |
 | Linux/other Unix | Source development and some logic/shell tests, not native MSVC execution |
 | Combinations | Independent MSVC/SDK directories; compiler-only supported; no sharing of installed SDK files |
 
-The CLI provides the `run` execution alias, the `completions` command and optional `--use-on-cd` project switching. There is currently no GUI, other compilation architecture or cross-manager reference ledger. Loading a hook does not activate by default. Explicit `--auto-activate` attempts activation once in an inactive session; `--use-on-cd` also reselects on directory changes. See [Shell integration](/docs/shell) for shell-specific triggers.
+The CLI provides the `run` execution alias, the `completions` command and optional `--use-on-cd` project switching. There is currently no GUI, ARM32/ARM64EC target or cross-manager reference ledger. Loading a hook does not activate by default. Explicit `--auto-activate` attempts activation once in an inactive session; `--use-on-cd` also reselects on directory changes. See [Shell integration](/docs/shell) for shell-specific triggers.
 
 Local tests, cross-compilation and native Windows acceptance are different evidence. See [testing and native acceptance](/docs/testing) for the verification procedure. A successful build does not establish acceptance for every shell or real compiler combination.
+
+ARM64-hosted tools require Windows 11 ARM64. Microsoft introduced native ARM64 Visual Studio tools in VS 2022 17.4; see [Visual Studio on Arm devices](https://learn.microsoft.com/en-us/visualstudio/install/visual-studio-on-arm-devices?view=visualstudio). Hanamori selects the host compiler and target libraries independently.

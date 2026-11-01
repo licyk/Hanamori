@@ -1,4 +1,5 @@
 //! Discover toolchains from disk; reference files express choices, never installation state.
+use crate::architecture::Architecture;
 use crate::{
     env::{self, ToolchainLayout},
     fs::atomic_write,
@@ -17,6 +18,8 @@ pub enum Reference {
         key: String,
     },
     External {
+        #[serde(flatten)]
+        architecture: Architecture,
         path: PathBuf,
         toolset: String,
         sdk: Option<String>,
@@ -26,6 +29,8 @@ pub enum Reference {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Toolchain {
+    #[serde(flatten)]
+    pub architecture: Architecture,
     pub key: String,
     pub path: PathBuf,
     pub managed: bool,
@@ -37,6 +42,7 @@ pub struct Toolchain {
 impl Toolchain {
     pub fn layout(&self) -> ToolchainLayout {
         ToolchainLayout {
+            architecture: self.architecture,
             root: self.path.clone(),
             vc_tools_version: self.toolset_version.clone(),
             windows_sdk_version: self.sdk_version.clone().unwrap_or_default(),
@@ -50,6 +56,7 @@ impl Toolchain {
             }
         } else {
             Reference::External {
+                architecture: self.architecture,
                 path: self.path.clone(),
                 toolset: self.toolset_version.clone(),
                 sdk: self.sdk_version.clone(),
@@ -131,6 +138,7 @@ impl ToolchainStore {
             match read {
                 Ok(reference) => {
                     if let Reference::External {
+                        architecture,
                         path,
                         toolset,
                         sdk,
@@ -143,7 +151,12 @@ impl ToolchainStore {
                             inspect(
                                 key,
                                 path.clone(),
-                                Some((toolset.clone(), sdk.clone(), msbuild.clone())),
+                                Some((
+                                    toolset.clone(),
+                                    sdk.clone(),
+                                    msbuild.clone(),
+                                    *architecture,
+                                )),
                             ),
                         );
                     }
@@ -226,7 +239,7 @@ pub fn validate_alias(name: &str) -> Result<()> {
 pub fn validate_key(key: &str) -> Result<()> {
     let (source, _) = key
         .split_once('/')
-        .context("expected SOURCE/msvc-ID_sdk-ID_x64")?;
+        .context("expected SOURCE/msvc-ID_sdk-ID_host-ARCH_target-ARCH")?;
     ensure!(
         !source.is_empty()
             && source
@@ -249,7 +262,9 @@ pub fn download_ids(key: &str) -> Option<(&str, Option<&str>, Option<&str>)> {
         .split_once('/')?
         .1
         .strip_prefix("msvc-")?
-        .strip_suffix("_x64")?;
+        .rsplit_once("_host-")?
+        .0;
+    key_architecture(key)?;
     let (selection, msbuild) = selection
         .split_once("_msbuild-")
         .map(|(s, v)| (s, Some(v)))
@@ -257,10 +272,19 @@ pub fn download_ids(key: &str) -> Option<(&str, Option<&str>, Option<&str>)> {
     let (toolset, sdk) = selection.split_once("_sdk-")?;
     Some((toolset, (sdk != "none").then_some(sdk), msbuild))
 }
+pub fn key_architecture(key: &str) -> Option<Architecture> {
+    let (_, suffix) = key.rsplit_once("_host-")?;
+    let (host, target) = suffix.split_once("_target-")?;
+    Some(Architecture {
+        host: host.parse().ok()?,
+        target: target.parse().ok()?,
+    })
+}
 fn validate_reference(reference: &Reference) -> Result<()> {
     match reference {
         Reference::Managed { key } => validate_key(key),
         Reference::External {
+            architecture: _,
             path,
             toolset,
             sdk,
@@ -291,11 +315,16 @@ fn children(path: &Path) -> Result<Vec<PathBuf>> {
 fn inspect(
     key: String,
     path: PathBuf,
-    external: Option<(String, Option<String>, Option<String>)>,
+    external: Option<(String, Option<String>, Option<String>, Architecture)>,
 ) -> Toolchain {
     let managed = external.is_none();
-    let layout = if let Some((toolset, sdk, msbuild_version)) = external {
+    let architecture = external
+        .as_ref()
+        .map(|e| e.3)
+        .unwrap_or_else(|| key_architecture(&key).expect("validated directory key"));
+    let layout = if let Some((toolset, sdk, msbuild_version, _)) = external {
         Ok(ToolchainLayout {
+            architecture,
             root: path.clone(),
             vc_tools_version: toolset,
             windows_sdk_version: sdk.unwrap_or_default(),
@@ -305,7 +334,14 @@ fn inspect(
         let sdk = download_ids(&key)
             .and_then(|(_, sdk, _)| sdk)
             .map(|id| format!("10.0.{id}.0"));
-        env::detect_selected(&path, None, sdk.as_deref(), sdk.is_none()).map(|mut layout| {
+        env::detect_selected(
+            &path,
+            None,
+            sdk.as_deref(),
+            sdk.is_none(),
+            Some(architecture),
+        )
+        .map(|mut layout| {
             layout.msbuild_version = download_ids(&key)
                 .and_then(|(_, _, msbuild)| msbuild)
                 .map(str::to_owned);
@@ -331,6 +367,7 @@ fn inspect(
         Err(_) => (String::new(), None, "incomplete"),
     };
     Toolchain {
+        architecture,
         key,
         path,
         managed,
@@ -365,12 +402,14 @@ pub fn select<'a>(items: &'a Toolchains, selector: &str) -> Result<&'a Toolchain
 pub fn unique(mut candidates: Vec<&Toolchain>) -> Result<&Toolchain> {
     candidates.sort_by(|a, b| {
         (
+            a.architecture,
             &a.path,
             &a.toolset_version,
             &a.sdk_version,
             &a.msbuild_version,
         )
             .cmp(&(
+                b.architecture,
                 &b.path,
                 &b.toolset_version,
                 &b.sdk_version,
@@ -378,7 +417,8 @@ pub fn unique(mut candidates: Vec<&Toolchain>) -> Result<&Toolchain> {
             ))
     });
     candidates.dedup_by(|a, b| {
-        a.path == b.path
+        a.architecture == b.architecture
+            && a.path == b.path
             && a.toolset_version == b.toolset_version
             && a.sdk_version == b.sdk_version
             && a.msbuild_version == b.msbuild_version

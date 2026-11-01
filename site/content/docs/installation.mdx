@@ -10,7 +10,7 @@ icon: PackagePlus
 | --- | --- | --- |
 | 下载 ID | toolset `14.44.17.14`，SDK `26100` | 在指定清单中选择安装包 |
 | 实际版本 | MSVC `14.44.35207`，SDK `10.0.26100.0` | 解包后验证的目录版本，用于本地选择和项目约束 |
-| 目录键 | `vs2022-release/msvc-14.44.17.14_sdk-26100_x64` | 根据来源与下载 ID 确定的受管目录 |
+| 目录键 | `vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64` | 根据来源与下载 ID 确定的受管目录 |
 
 示例只是语法示范，可用性以清单查询为准。远端 JSON 中未知的实际版本为 `null`，程序不会把包版本猜成编译器目录版本。
 
@@ -27,7 +27,20 @@ hanamori install latest --no-sdk --name compiler
 hanamori install --channel preview --dry-run
 ```
 
-`--vs-version` 支持 `2022`/`17`、`2026`/`18`；`--channel` 支持 `release`/`stable`、`preview`/`insiders`。默认 VS 2026 stable（`release`）。`--manifest URL` 替代二者，不能同时指定。当前仅实现 `--arch x64/x64`。
+`--vs-version` 支持 `2022`/`17`、`2026`/`18`；`--channel` 支持 `release`/`stable`、`preview`/`insiders`。默认 VS 2026 stable（`release`）。`--manifest URL` 替代二者，不能同时指定。`--arch HOST/TARGET` 支持 `x64/x64`、`x64/arm64`、`arm64/x64` 和 `arm64/arm64`。
+默认使用 Windows 原生架构，即使 Hanamori 本身运行在仿真环境中。显式 `--arch` 优先于项目的 `host`/`target`，项目配置优先于原生默认值。
+Host 决定编译器、SDK 工具和 MSBuild 的运行架构，Target 决定 CRT/SDK 库和 MSBuild 平台。
+ARM64 Host 需要 Windows 11 ARM64；不支持 ARM32 或 ARM64EC。
+
+```sh
+hanamori install --arch x64/arm64 --name arm-cross
+hanamori install --arch arm64/arm64 --name arm-native
+hanamori list-remote --arch arm64/arm64
+hanamori exec --using arm-native -- MSBuild.exe app.sln -p:Platform=ARM64
+```
+
+不同架构组合使用独立目录，可以共存。外部目录包含多个组合时，在 `env`、`use`、`exec`、`import` 或 `doctor` 中使用 `--dir PATH --arch HOST/TARGET`。
+清单没有请求的组合时明确失败，不会替换成其他架构。
 
 `list-remote --all` 按 VS 2022、VS 2026 分组列出所选渠道中的工具集和 SDK，并分别展开各组最新工具集的包。默认查询正式渠道；加 `--channel preview`（或 `insiders`）查询两者的预览渠道，不同时混入正式渠道。同名 ID 保留在各自来源组中。它与 `--vs-version`、`--manifest`、`--toolset-id` 互斥。这里的“全部”指当前支持的两代 VS 所选渠道中仍提供的版本，不保证覆盖微软历史上所有已撤下的版本。
 
@@ -43,12 +56,12 @@ hanamori install --channel preview --dry-run
 
 ## 目录与重新安装
 
-不含 MSBuild 的受管目录为 `<toolchains-dir>/<source>/msvc-<下载ID>_sdk-<下载ID或none>_x64`；默认含 MSBuild 的目录还带有 `_msbuild-<版本>` 段，默认存储根目录是 `<manager>/toolchains`。自定义来源用清单 URL 的稳定摘要区分，清单内容改变不会改变目录身份。本地命令和补全也遵循配置的工具链存储目录。
+不含 MSBuild 的受管目录为 `<toolchains-dir>/<source>/msvc-<下载ID>_sdk-<下载ID或none>_host-x64_target-x64`；默认含 MSBuild 的目录还带有 `_msbuild-<版本>` 段，默认存储根目录是 `<manager>/toolchains`。自定义来源用清单 URL 的稳定摘要区分，清单内容改变不会改变目录身份。本地命令和补全也遵循配置的工具链存储目录。
 
 目录通过少量必需文件检查后直接复用；目录不存在、为空或缺少关键文件时，自动安装到原位置，已有引用仍有效。`--reinstall` 强制重建，用于普通头文件等快速检查未覆盖的损坏。`--name` 在安装成功后创建或更新引用。
 
 ```sh
-hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_x64 --reinstall
+hanamori install vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64 --reinstall
 hanamori install --dir D:/Tools/portable --name standalone
 hanamori install --dir D:/Tools/portable --reinstall
 ```
@@ -71,9 +84,9 @@ hanamori exec --using build -- MSBuild.exe app.vcxproj -t:Rebuild -p:Configurati
 
 组件选择遵循显式命令行参数 → 项目设置 → 默认值。项目可声明 `"msbuild": true` 或 `false`，`--msbuild` / `--no-msbuild` 可覆盖它。明确要求 MSBuild 时必须同时安装 SDK，否则报错；可以用 `--no-msbuild` 撤销该要求。固定目录键始终保留键中的组件组合，不因默认值改变而增加 MSBuild。
 
-支持范围是 VS 2026 x64/v145 和 VS 2022 x64/v143 原生 C++ `.vcxproj` 和 `.sln`。v143 项目请指定 `--vs-version 2022`。不承诺 Win32/ARM64、ATL/MFC、C++/CLI、UWP、驱动、C# 或 Visual Studio IDE 集成。此功能的 Windows 原生构建验收尚待执行；真实包下载/解包与 Linux 回归不能替代它。
+支持范围是 VS 2026 v145 和 VS 2022 v143 原生 C++ `.vcxproj` 和 `.sln`。v143 项目请指定 `--vs-version 2022`。不承诺 Win32、ATL/MFC、C++/CLI、UWP、驱动、C# 或 Visual Studio IDE 集成。此功能的 Windows 原生构建验收尚待执行；真实包下载/解包与 Linux 回归不能替代它。
 
-包含 MSBuild 的目录键为 `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild版本>_x64`，与不含 MSBuild 的组合独立共存。重新安装精确键会校验清单仍提供对应 MSBuild 版本；不会静默替换成新版。上游撤包时需提供匹配的清单及缓存。
+包含 MSBuild 的目录键为 `<source>/msvc-<ID>_sdk-<ID>_msbuild-<MSBuild版本>_host-x64_target-x64`，与不含 MSBuild 的组合独立共存。重新安装精确键会校验清单仍提供对应 MSBuild 版本；不会静默替换成新版。上游撤包时需提供匹配的清单及缓存。
 
 主机需具备 MSBuild 所需的 .NET Framework。安装只解包和检查文件；Windows 上的 `doctor` 额外启动 `MSBuild.exe -version` 诊断运行时，失败会报错，不自动安装系统组件。通过 Hanamori 环境调用 `MSBuild.exe`，生成的配置会指向所选工具链的编译器和 SDK；项目显式要求不同版本时构建失败。
 

@@ -6,7 +6,7 @@ icon: SlidersHorizontal
 
 Hanamori prepares PATH, INCLUDE, LIB, `CC`, `CXX`, `VCToolsVersion`, `VCToolsInstallDir`, `VCINSTALLDIR`, `VSCMD_ARG_HOST_ARCH`, `VSCMD_ARG_TGT_ARCH`, `DISTUTILS_USE_SDK`, and SDK root/bin/version variables when an SDK is selected.
 
-The SDK tool path is `Windows Kits/10/bin/<version>/x64`, so activation and `exec` make `rc.exe` and `mt.exe` available by name. `WindowsSdkVerBinPath` still points to the version directory without the architecture. Installation checks include both tools and their bundled DLLs; rerun the corresponding `install` command to repair missing files in a managed installation.
+The SDK tool path is `Windows Kits/10/bin/<version>/<host>`, so activation and `exec` make `rc.exe` and `mt.exe` available by name. `WindowsSdkVerBinPath` still points to the version directory without the architecture. Installation checks include both tools and their bundled DLLs; rerun the corresponding `install` command to repair missing files in a managed installation.
 
 It does not generate `vcvarsall.bat` or `vcvars64.bat`. POSIX shells receive POSIX executable paths, while INCLUDE/LIB consumed by the compiler retain Windows paths.
 

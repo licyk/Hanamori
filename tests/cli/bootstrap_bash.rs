@@ -50,7 +50,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
         let body = json!({
             "tag_name": if broken { "v9.9.9" } else { concat!("v", env!("CARGO_PKG_VERSION")) },
             "draft": false, "prerelease": false,
-            "assets": [{"name": "hanamori-x86_64-pc-windows-msvc.exe", "size": size,
+            "assets": [{"name": hanamori::upgrade::ASSET_NAME, "size": size,
                 "browser_download_url": url,
                 "digest": if broken { format!("sha256:{}", "0".repeat(64)) } else { digest.clone() }}]
         });

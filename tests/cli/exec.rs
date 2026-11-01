@@ -77,7 +77,7 @@ fn selection(root: &Path, toolset: &str, sdk: Option<&str>) -> Selection {
     common::toolchain(root, toolset, sdk);
     Selection::new(
         None,
-        hanamori::env::detect_selected(root, Some(toolset), sdk, sdk.is_none()).unwrap(),
+        hanamori::env::detect_selected(root, Some(toolset), sdk, sdk.is_none(), None).unwrap(),
     )
     .unwrap()
 }

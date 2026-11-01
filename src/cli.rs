@@ -1,6 +1,7 @@
 //! Command line definitions: the parser tree and each command's arguments.
 
 pub(crate) mod alias;
+pub(crate) mod architecture;
 pub(crate) mod catalog;
 pub(crate) mod command;
 pub(crate) mod completions;

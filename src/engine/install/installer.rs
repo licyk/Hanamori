@@ -68,15 +68,22 @@ impl<'a> Installer<'a> {
         .await?;
 
         let toolset_version = self.resolve_toolset_version(&packages)?;
-        selector::validate_toolset(&packages, &toolset_version)?;
+        selector::validate_toolset(&packages, &toolset_version, self.options.architecture)?;
         self.notify_progress(format!("Selected toolset version {toolset_version}"));
 
-        let toolset_packages = selector::select_toolset_packages(&packages, &toolset_version);
+        let toolset_packages = selector::select_toolset_packages(
+            &packages,
+            &toolset_version,
+            self.options.architecture,
+        );
         if toolset_packages.is_empty() {
             bail!("no packages found for toolset {toolset_version}");
         }
 
-        let mut component_ids = vec![selector::build_vc_component_id(&toolset_version)];
+        let mut component_ids = vec![selector::build_vc_component_id(
+            &toolset_version,
+            self.options.architecture,
+        )];
 
         let sdk_version = if self.options.include_windows_sdk {
             let version = self.resolve_sdk_version(&packages)?;
@@ -88,7 +95,11 @@ impl<'a> Installer<'a> {
         };
 
         let msbuild = if self.options.include_msbuild {
-            let selection = crate::catalog::msbuild::select(&packages, &toolset_version)?;
+            let selection = crate::catalog::msbuild::select(
+                &packages,
+                &toolset_version,
+                self.options.architecture,
+            )?;
             if let Some(expected) = &self.options.expected_msbuild {
                 anyhow::ensure!(
                     expected == &selection.version,
@@ -109,11 +120,12 @@ impl<'a> Installer<'a> {
             .map(|v| format!("_msbuild-{v}"))
             .unwrap_or_default();
         let key = format!(
-            "{}/msvc-{}_sdk-{}{}_x64",
+            "{}/msvc-{}_sdk-{}{}{}",
             self.options.source,
             toolset_version,
             sdk_version.as_deref().unwrap_or("none"),
-            msbuild_suffix
+            msbuild_suffix,
+            self.options.architecture.key_suffix()
         );
         validate_key(&key)?;
         let managed = self.options.toolchains_directory.is_some();
@@ -135,6 +147,7 @@ impl<'a> Installer<'a> {
                 None,
                 sdk_version.as_deref().map(sdk_directory_version).as_deref(),
                 !self.options.include_windows_sdk,
+                Some(self.options.architecture),
             ) {
                 if layout.msbuild_version == msbuild_version && env::verify(&layout).is_ok() {
                     verify_requested_versions(
@@ -147,6 +160,7 @@ impl<'a> Installer<'a> {
                         final_root.display()
                     ));
                     return Ok(InstallResult {
+                        architecture: self.options.architecture,
                         key: Some(key),
                         install_directory: final_root,
                         toolset_id: toolset_version,
@@ -199,6 +213,7 @@ impl<'a> Installer<'a> {
             );
 
             return Ok(InstallResult {
+                architecture: self.options.architecture,
                 key: managed.then_some(key.clone()),
                 install_directory: final_root,
                 toolset_id: toolset_version,
@@ -226,10 +241,12 @@ impl<'a> Installer<'a> {
             Some(&vc_tools_version),
             requested_sdk.as_deref(),
             !self.options.include_windows_sdk,
+            Some(self.options.architecture),
         )?
         .windows_sdk_version;
 
         let mut layout = ToolchainLayout {
+            architecture: self.options.architecture,
             root: self.options.install_directory.clone(),
             vc_tools_version,
             windows_sdk_version: sdk_directory_version,
@@ -242,6 +259,7 @@ impl<'a> Installer<'a> {
                 version,
                 &layout.vc_tools_version,
                 &layout.windows_sdk_version,
+                self.options.architecture,
             )?;
         }
 
@@ -259,6 +277,7 @@ impl<'a> Installer<'a> {
         let vc_tools_version = layout.vc_tools_version.clone();
 
         Ok(InstallResult {
+            architecture: self.options.architecture,
             key: managed.then_some(key),
             install_directory: final_root,
             toolset_id: toolset_version,
@@ -277,7 +296,7 @@ impl<'a> Installer<'a> {
             return Ok(self.options.toolset_id.clone());
         }
 
-        selector::find_toolset_version(packages)
+        selector::find_toolset_version(packages, self.options.architecture)
             .context("the manifest does not offer any MSVC toolset")
     }
 

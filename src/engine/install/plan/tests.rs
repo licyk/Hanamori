@@ -18,6 +18,7 @@ async fn sdk_package_tables_use_the_same_mirror_and_verified_cache_as_payloads()
         test_http::Reply::range(request, &bytes)
     });
     let mut options = InstallOptions::new(temp.path().join("tools"));
+    options.architecture = crate::architecture::Architecture::X64;
     options.cache_directory = Some(temp.path().join("cache"));
     options.mirror_url = Some(format!("{}/mirror", mirror.url).parse().unwrap());
     let mut installer = Installer::new(options, |_| {});
@@ -60,7 +61,7 @@ fn sanitize_produces_a_safe_directory_name() {
 
 #[test]
 fn sdk_components_name_the_x64_desktop_packages() {
-    let components = sdk_components();
+    let components = sdk_components(crate::architecture::Architecture::X64);
     assert_eq!(components.len(), 8);
     assert!(components
         .iter()

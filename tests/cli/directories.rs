@@ -4,7 +4,7 @@ use std::{
     path::Path,
     process::{Command, Output},
 };
-const KEY: &str = "vs2022-release/msvc-14.44.17.14_sdk-none_x64";
+const KEY: &str = "vs2022-release/msvc-14.44.17.14_sdk-none_host-x64_target-x64";
 fn cli(home: &Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_hanamori"));
     command.env_clear().arg("--manager-dir").arg(home);

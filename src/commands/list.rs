@@ -43,6 +43,7 @@ pub(super) fn list(
                 "{}",
                 super::output::fields(&[
                     ("Status", item.status.clone()),
+                    ("Architecture", item.architecture.to_string()),
                     (
                         "Type",
                         if item.managed { "managed" } else { "external" }.to_owned()
@@ -76,6 +77,7 @@ pub(super) fn list(
 }
 fn list_json(items: &Toolchains, active: Option<&Session>) -> serde_json::Value {
     let rows: Vec<_> = items.installations.values().map(|item| serde_json::json!({
+        "host": item.architecture.host, "target": item.architecture.target,
         "key": item.key, "path": item.path, "managed": item.managed,
         "toolset": item.toolset_version, "sdk": item.sdk_version, "msbuild": item.msbuild_version, "status": item.status,
         "aliases": items.aliases(item), "default": items.references.get("default") == Some(&item.reference()),
@@ -86,7 +88,9 @@ fn list_json(items: &Toolchains, active: Option<&Session>) -> serde_json::Value 
 
 fn is_active(item: &Toolchain, session: Option<&Session>) -> bool {
     session.is_some_and(|session| {
-        item.path.to_str() == Some(session.active.root.as_str())
+        item.architecture.host == session.active.host
+            && item.architecture.target == session.active.target
+            && item.path.to_str() == Some(session.active.root.as_str())
             && item.toolset_version == session.active.toolset
             && item.sdk_version == session.active.sdk
             && item.msbuild_version == session.active.msbuild

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 fn layout(with_sdk: bool) -> ToolchainLayout {
     ToolchainLayout {
+        architecture: hanamori::architecture::Architecture::X64,
         msbuild_version: None,
         root: PathBuf::from(r"D:\tools\toolchain"),
         vc_tools_version: "14.44.35207".to_owned(),

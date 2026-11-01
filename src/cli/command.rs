@@ -38,7 +38,7 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: SelfCommand,
     },
-    /// Update this executable from the latest stable GitHub release (Windows x64 MSVC).
+    /// Update this executable from the latest stable GitHub release (Windows x64/ARM64 MSVC).
     Upgrade(UpgradeArgs),
     /// Install MSVC, the Windows SDK and MSBuild (VS 2026 by default).
     Install(InstallArgs),

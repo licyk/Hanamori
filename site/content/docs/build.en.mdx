@@ -6,7 +6,7 @@ icon: Download
 
 ## One-command installation
 
-Run in Windows PowerShell 5.1 or PowerShell 7 on Windows x64:
+Run in Windows PowerShell 5.1 or PowerShell 7 on Windows x64 / ARM64:
 
 ```powershell
 irm https://hanamori.netlify.app/install.ps1 | iex
@@ -42,7 +42,7 @@ Install toolchains when needed with `hanamori install latest --name stable`. Use
 
 ## MSYS2 and Git Bash
 
-Run in MSYS2 or Git Bash on Windows x64:
+Run in MSYS2 or Git Bash on Windows x64 / ARM64:
 
 ```bash
 curl -fsSL https://hanamori.netlify.app/install.sh | bash
@@ -80,8 +80,8 @@ Visual Studio installation is needed to run the installer. Building requires Rus
 The repository is [licyk/Hanamori](https://github.com/licyk/Hanamori).
 
 Build this revision from source. The existing release workflow produces
-`hanamori-x86_64-pc-windows-msvc.exe` and `hanamori-x86_64-pc-windows-msvc.zip`, whose entry
-is `hanamori.exe`. These are intended artifact names, not evidence that this refactor
+EXE and ZIP assets for `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`, named
+`hanamori-<target>.exe` and `hanamori-<target>.zip`. The ZIP entry is `hanamori.exe`. These are intended artifact names, not evidence that this refactor
 has been published. Historical assets do not establish support for the commands below.
 
 ## Portable installation
@@ -97,4 +97,10 @@ hanamori --version
 
 For future sessions, add that directory to your user PATH through Windows Environment Variables. Shell initialization creates a command hook; it does not install the executable or permanently edit PATH.
 
-A private repository requires access for cloning and downloading. The website does not provide credentials for private assets. Self-update supports the Windows x64 MSVC build; a different development target does not establish support for installing native MSVC on that host.
+A private repository requires access for cloning and downloading. The website does not provide credentials for private assets. Self-update supports the Windows x64 / ARM64 MSVC build; a different development target does not establish support for installing native MSVC on that host.
+
+## ARM64 program builds
+
+The installer chooses the native Windows architecture, including when launched from an emulated shell. Override with PowerShell `-Architecture x64` / `-Architecture arm64`, or Bash `--architecture x64` / `--architecture arm64`. This selects Hanamori itself; `hanamori install --arch HOST/TARGET` selects the compiler independently.
+
+ARM64 releases provide `hanamori-aarch64-pc-windows-msvc.exe` and `.zip`; the ZIP contains `hanamori.exe`. Source builds use `cargo build --release --target aarch64-pc-windows-msvc` with the corresponding MSVC linker.

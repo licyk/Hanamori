@@ -10,17 +10,23 @@ pub struct DoctorReport {
     pub healthy: bool,
     pub issues: Vec<String>,
 }
-pub fn doctor(store: &ToolchainStore, directory: Option<&Path>) -> Result<DoctorReport> {
+pub fn doctor(
+    store: &ToolchainStore,
+    directory: Option<&Path>,
+    architecture: Option<crate::architecture::Architecture>,
+) -> Result<DoctorReport> {
     let items = store.scan()?;
     let mut issues = items.issues;
     if let Some(root) = directory {
-        if let Err(error) = env::detect(root).and_then(|layout| {
-            env::verify(&layout)?;
-            if layout.msbuild_version.is_some() {
-                crate::msbuild::check_runtime(root)?;
-            }
-            Ok(())
-        }) {
+        if let Err(error) =
+            env::detect_selected(root, None, None, false, architecture).and_then(|layout| {
+                env::verify(&layout)?;
+                if layout.msbuild_version.is_some() {
+                    crate::msbuild::check_runtime(root, layout.architecture)?;
+                }
+                Ok(())
+            })
+        {
             issues.push(format!("{}: {error:#}", root.display()));
         }
     } else {
@@ -28,7 +34,7 @@ pub fn doctor(store: &ToolchainStore, directory: Option<&Path>) -> Result<Doctor
             if item.status != "ready" {
                 issues.push(format!("{}: {}", item.key, item.status));
             } else if item.msbuild_version.is_some() {
-                if let Err(error) = crate::msbuild::check_runtime(&item.path) {
+                if let Err(error) = crate::msbuild::check_runtime(&item.path, item.architecture) {
                     issues.push(format!("{}: {error:#}", item.key));
                 }
             }

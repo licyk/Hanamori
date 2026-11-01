@@ -181,6 +181,7 @@ fn windows_loader_registers_macro_and_preserves_activation_across_reloads_and_fa
     let root = temp.path().join("工具 chain % & !");
     common::toolchain(&root, "14.44.35207", None);
     let mut directory = DirectoryTarget {
+        architecture: Some(hanamori::architecture::Architecture::X64),
         path: root,
         toolset: None,
         sdk: None,

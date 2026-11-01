@@ -15,83 +15,7 @@ pub const MANIFEST_LANGUAGE: &str = "en-US";
 /// Prefix of the VC toolset packages.
 pub const VC_PACKAGE_PREFIX: &str = "Microsoft.VC.";
 
-/// Supported host/target architectures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Arch {
-    X86,
-    X64,
-    Arm64,
-}
-
-impl Arch {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Arch::X86 => "x86",
-            Arch::X64 => "x64",
-            Arch::Arm64 => "arm64",
-        }
-    }
-    pub fn parse(s: &str) -> Option<Self> {
-        match s.to_ascii_lowercase().as_str() {
-            "x86" => Some(Arch::X86),
-            "x64" | "x86_64" | "amd64" => Some(Arch::X64),
-            "arm64" | "aarch64" => Some(Arch::Arm64),
-            _ => None,
-        }
-    }
-}
-
-/// Component groups selectable for installation.
-pub const COMPONENT_GROUPS: &[&str] = &[
-    "compiler",
-    "headers",
-    "crt",
-    "asan",
-    "pgo",
-    "redist",
-    "external-build",
-    "store",
-];
-
-/// Builds the toolset suffix list for a given host/target architecture and component set.
-pub fn vc_suffixes_for(host: Arch, target: Arch, components: &[&str]) -> Vec<&'static str> {
-    let mut out = Vec::new();
-    let want = |name: &str| components.iter().any(|c| c.eq_ignore_ascii_case(name));
-    if want("compiler") {
-        out.push(match (host, target) {
-            (Arch::X64, Arch::X64) => ".Tools.HostX64.TargetX64.base",
-            _ => ".Tools.HostX64.TargetX64.base",
-        });
-        out.push(".Tools.HostX64.TargetX64.Res.base");
-    }
-    if want("headers") {
-        out.push(".CRT.Headers.base");
-        out.push(".CRT.Source.base");
-        out.push(".ASAN.Headers.base");
-        out.push(".PGO.Headers.base");
-    }
-    if want("crt") {
-        out.push(".CRT.x64.Desktop.base");
-        out.push(".CRT.x64.Store.base");
-    }
-    if want("asan") {
-        out.push(".ASAN.X64.base");
-    }
-    if want("pgo") {
-        out.push(".PGO.X64.base");
-    }
-    if want("premium") {
-        out.push(".Premium.Tools.HostX64.TargetX64.base");
-    }
-    let _ = (host, target);
-    out
-}
-
-/// Prefix of the VC component identifiers.
-pub const VC_COMPONENT_PREFIX: &str = "Microsoft.VisualStudio.Component.VC.";
-
-/// Suffix of the VC component identifiers.
-pub const VC_COMPONENT_SUFFIX: &str = ".x86.x64";
+use crate::architecture::Architecture;
 
 /// Prefix of the Windows SDK component identifiers.
 pub const SDK_COMPONENT_PREFIX: &str = "Microsoft.VisualStudio.Component.Windows11SDK.";
@@ -99,30 +23,44 @@ pub const SDK_COMPONENT_PREFIX: &str = "Microsoft.VisualStudio.Component.Windows
 /// Package that provides the external build framework.
 pub const EXTERNAL_BUILD_FRAMEWORK_ID: &str = "Microsoft.VisualStudio.VC.ExternalBuildFramework";
 
-/// Package that provides the VC++ redistributable.
-pub const CRT_REDIST_X64_ID: &str = "Microsoft.VisualCpp.CRT.Redist.X64";
+fn suffixes(arch: Architecture) -> Vec<String> {
+    let host = arch.host.package();
+    let target = arch.target.package();
+    let mut suffixes: Vec<String> = [
+        ".CRT.Headers.base",
+        ".CRT.Source.base",
+        ".ASAN.Headers.base",
+        ".PGO.Headers.base",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    suffixes.extend([
+        format!(".Tools.Host{host}.Target{target}.base"),
+        format!(".Tools.Host{host}.Target{target}.Res.base"),
+        format!(".Premium.Tools.Host{host}.Target{target}.base"),
+        format!(".CRT.{target}.Desktop.base"),
+        format!(".CRT.{target}.Store.base"),
+        format!(".PGO.{target}.base"),
+        format!(".ASAN.{target}.base"),
+    ]);
+    suffixes
+}
 
-/// The VC toolset package suffixes selected by the launcher.
-pub const VC_PACKAGE_SUFFIXES: [&str; 11] = [
-    ".CRT.Headers.base",
-    ".CRT.Source.base",
-    ".ASAN.Headers.base",
-    ".PGO.Headers.base",
-    ".Tools.HostX64.TargetX64.base",
-    ".Tools.HostX64.TargetX64.Res.base",
-    ".CRT.x64.Desktop.base",
-    ".CRT.x64.Store.base",
-    ".Premium.Tools.HostX64.TargetX64.base",
-    ".PGO.X64.base",
-    ".ASAN.X64.base",
-];
-
-fn offers_toolset_packages(packages: &ManifestPackageSet, version: &str) -> bool {
-    let compiler = format!("{VC_PACKAGE_PREFIX}{version}.Tools.HostX64.TargetX64.base");
+fn offers_toolset_packages(
+    packages: &ManifestPackageSet,
+    version: &str,
+    arch: Architecture,
+) -> bool {
+    let compiler = format!(
+        "{VC_PACKAGE_PREFIX}{version}.Tools.Host{}.Target{}.base",
+        arch.host.package(),
+        arch.target.package()
+    );
     packages
         .packages()
         .iter()
-        .any(|candidate| candidate.id.eq_ignore_ascii_case(&compiler) && usable_language(candidate))
+        .any(|p| p.id.eq_ignore_ascii_case(&compiler) && usable_language(p))
 }
 
 pub(super) fn usable_language(package: &ManifestPackage) -> bool {
@@ -140,7 +78,7 @@ fn starts_with_ignore_case(value: &str, prefix: &str) -> bool {
 /// Returns all toolset versions offered by the manifest, newest first.
 ///
 /// Only versions that actually offer the selected packages are considered.
-pub fn list_toolset_versions(packages: &ManifestPackageSet) -> Vec<String> {
+pub fn list_toolset_versions(packages: &ManifestPackageSet, arch: Architecture) -> Vec<String> {
     let mut versions: Vec<String> = packages
         .packages()
         .iter()
@@ -151,15 +89,15 @@ pub fn list_toolset_versions(packages: &ManifestPackageSet) -> Vec<String> {
     versions.dedup();
     versions
         .into_iter()
-        .filter(|version| offers_toolset_packages(packages, version))
+        .filter(|version| offers_toolset_packages(packages, version, arch))
         .collect()
 }
 
 /// Determines the toolset version, for example `14.44.17.14`, from the manifest.
 ///
 /// Only versions that actually offer the selected packages are considered.
-pub fn find_toolset_version(packages: &ManifestPackageSet) -> Option<String> {
-    list_toolset_versions(packages).into_iter().next()
+pub fn find_toolset_version(packages: &ManifestPackageSet, arch: Architecture) -> Option<String> {
+    list_toolset_versions(packages, arch).into_iter().next()
 }
 
 /// Extracts the numeric version before a recognised toolset package suffix.
@@ -170,29 +108,27 @@ fn toolset_version_of(package: &ManifestPackage) -> Option<&str> {
         return None;
     }
     let rest = &package.id[VC_PACKAGE_PREFIX.len()..];
-    VC_PACKAGE_SUFFIXES.iter().find_map(|suffix| {
-        let length = rest.len().checked_sub(suffix.len())?;
-        if !rest.get(length..)?.eq_ignore_ascii_case(suffix) {
-            return None;
-        }
-        let version = rest.get(..length)?;
-        (version.split('.').count() >= 2
-            && version
-                .split('.')
-                .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit())))
-        .then_some(version)
-    })
+    let end = rest.to_ascii_lowercase().find(".tools.host")?;
+    let version = &rest[..end];
+    (version.split('.').count() >= 2
+        && version
+            .split('.')
+            .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())))
+    .then_some(version)
 }
 
 /// Selects the packages that belong to the given toolset version.
 pub fn select_toolset_packages<'a>(
     packages: &'a ManifestPackageSet,
     toolset_version: &str,
+    arch: Architecture,
 ) -> Vec<&'a ManifestPackage> {
-    if !offers_toolset_packages(packages, toolset_version) {
+    if !offers_toolset_packages(packages, toolset_version, arch) {
         return Vec::new();
     }
 
+    let suffixes = suffixes(arch);
+    let redist = format!("Microsoft.VisualCpp.CRT.Redist.{}", arch.target.package());
     packages
         .packages()
         .iter()
@@ -200,26 +136,39 @@ pub fn select_toolset_packages<'a>(
             if !usable_language(package) {
                 return false;
             }
-            if package.id == EXTERNAL_BUILD_FRAMEWORK_ID || package.id == CRT_REDIST_X64_ID {
+            if package.id == EXTERNAL_BUILD_FRAMEWORK_ID || package.id.eq_ignore_ascii_case(&redist)
+            {
                 return true;
             }
-            toolset_version_of(package) == Some(toolset_version)
+            suffixes.iter().any(|suffix| {
+                package
+                    .id
+                    .eq_ignore_ascii_case(&format!("{VC_PACKAGE_PREFIX}{toolset_version}{suffix}"))
+            })
         })
         .collect()
 }
 
 /// Rejects unknown versions and incomplete core toolsets before downloading payloads.
-pub fn validate_toolset(packages: &ManifestPackageSet, version: &str) -> Result<()> {
-    if !offers_toolset_packages(packages, version) {
+pub fn validate_toolset(
+    packages: &ManifestPackageSet,
+    version: &str,
+    arch: Architecture,
+) -> Result<()> {
+    if !offers_toolset_packages(packages, version, arch) {
         bail!(
             "the manifest does not offer MSVC toolset {version}; available versions: {}",
-            list_toolset_versions(packages).join(", ")
+            list_toolset_versions(packages, arch).join(", ")
         );
     }
     for suffix in [
-        ".Tools.HostX64.TargetX64.base",
+        &format!(
+            ".Tools.Host{}.Target{}.base",
+            arch.host.package(),
+            arch.target.package()
+        ),
         ".CRT.Headers.base",
-        ".CRT.x64.Desktop.base",
+        &format!(".CRT.{}.Desktop.base", arch.target.package()),
     ] {
         let id = format!("{VC_PACKAGE_PREFIX}{version}{suffix}");
         if !packages.packages().iter().any(|package| {
@@ -238,8 +187,13 @@ pub fn validate_toolset(packages: &ManifestPackageSet, version: &str) -> Result<
 }
 
 /// Builds the Visual Studio component identifier for a toolset version.
-pub fn build_vc_component_id(toolset_version: &str) -> String {
-    format!("{VC_COMPONENT_PREFIX}{toolset_version}{VC_COMPONENT_SUFFIX}")
+pub fn build_vc_component_id(toolset_version: &str, arch: Architecture) -> String {
+    let suffix = if arch.target == crate::architecture::Arch::Arm64 {
+        "ARM64"
+    } else {
+        "x86.x64"
+    };
+    format!("Microsoft.VisualStudio.Component.VC.{toolset_version}.{suffix}")
 }
 
 /// Builds the Windows SDK component identifier for an SDK version.

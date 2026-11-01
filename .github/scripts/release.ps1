@@ -2,7 +2,9 @@ param(
     [Parameter(Mandatory)]
     [ValidateSet('Resolve', 'Verify', 'Package')]
     [string] $Stage,
-    [string] $Tag = ''
+    [string] $Tag = '',
+    [ValidateSet('x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc')]
+    [string] $Target = 'x86_64-pc-windows-msvc'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,20 +61,21 @@ if ($Stage -eq 'Verify') {
     return
 }
 
-$binary = Join-Path $metadata.target_directory 'x86_64-pc-windows-msvc/release/hanamori.exe'
+$binary = Join-Path $metadata.target_directory "$Target/release/hanamori.exe"
 if (-not (Test-Path -LiteralPath $binary -PathType Leaf)) {
-    throw 'The x86_64-pc-windows-msvc Hanamori release binary is missing.'
+    throw "The $Target Hanamori release binary is missing."
 }
 # Check the executable architecture before assigning an architecture-specific asset name.
 $bytes = [IO.File]::ReadAllBytes($binary)
 if ($bytes.Length -lt 64 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
     throw 'The release binary is not a Windows PE executable.'
 }
+$machine = if ($Target -eq 'aarch64-pc-windows-msvc') { 0xaa64 } else { 0x8664 }
 $peOffset = [BitConverter]::ToUInt32($bytes, 0x3c)
 if ($peOffset -gt $bytes.Length - 6 -or
     [BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550 -or
-    [BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne 0x8664) {
-    throw 'The release binary must be a Windows x64 executable.'
+    [BitConverter]::ToUInt16($bytes, $peOffset + 4) -ne $machine) {
+    throw "The release binary does not match $Target."
 }
 
 $reportedVersion = & $binary --version
@@ -80,8 +83,8 @@ if ($LASTEXITCODE -ne 0 -or $reportedVersion -cne "hanamori $($package[0].versio
     throw 'The built executable does not report the release version.'
 }
 
-$asset = 'hanamori-x86_64-pc-windows-msvc.exe'
-$archive = 'hanamori-x86_64-pc-windows-msvc.zip'
+$asset = "hanamori-$Target.exe"
+$archive = "hanamori-$Target.zip"
 Copy-Item -LiteralPath $binary -Destination $asset -Force
 Compress-Archive -LiteralPath $binary -DestinationPath $archive -Force
 $sourceHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash

@@ -3,19 +3,15 @@
 //! The variable names match the ones the Visual Studio command prompt sets, so build
 //! systems that look for `VCINSTALLDIR` or `WindowsSDKVersion` keep working.
 
+use crate::architecture::Architecture;
 use anyhow::{bail, Context, Result};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// Host architecture of the installed toolset.
-pub const HOST_ARCHITECTURE: &str = "x64";
-
-/// Target architecture of the installed toolset.
-pub const TARGET_ARCHITECTURE: &str = "x64";
-
 /// A toolchain rooted at a directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolchainLayout {
+    pub architecture: Architecture,
     /// Root of the installation.
     pub root: PathBuf,
     /// Toolset version as it appears in the directory layout, for example `14.44.35207`.
@@ -40,12 +36,12 @@ impl ToolchainLayout {
         self.tools_directory().join("include")
     }
 
-    /// Directory holding the x64 host binaries such as `cl.exe`.
+    /// Directory holding the selected host binaries such as `cl.exe`.
     pub fn host_bin_directory(&self) -> PathBuf {
         self.tools_directory()
             .join("bin")
-            .join("Hostx64")
-            .join("x64")
+            .join(self.architecture.host.host_directory())
+            .join(self.architecture.target.as_str())
     }
 
     /// Path of the compiler.
@@ -86,7 +82,8 @@ impl ToolchainLayout {
 
     /// Directory holding SDK tools for the supported host architecture.
     pub fn windows_sdk_host_bin_directory(&self) -> PathBuf {
-        self.windows_sdk_ver_bin_directory().join(HOST_ARCHITECTURE)
+        self.windows_sdk_ver_bin_directory()
+            .join(self.architecture.host.as_str())
     }
 
     /// Whether a Windows SDK is part of this installation.
@@ -104,11 +101,11 @@ impl ToolchainLayout {
 
         environment.insert(
             "VSCMD_ARG_HOST_ARCH".to_owned(),
-            HOST_ARCHITECTURE.to_owned(),
+            self.architecture.host.to_string(),
         );
         environment.insert(
             "VSCMD_ARG_TGT_ARCH".to_owned(),
-            TARGET_ARCHITECTURE.to_owned(),
+            self.architecture.target.to_string(),
         );
         environment.insert("VCToolsVersion".to_owned(), self.vc_tools_version.clone());
         environment.insert(
@@ -185,7 +182,10 @@ impl ToolchainLayout {
                 ),
                 ("UseEnv", "true".into()),
                 ("DisableRegistryUse", "true".into()),
-                ("PreferredToolArchitecture", "x64".into()),
+                (
+                    "PreferredToolArchitecture",
+                    self.architecture.host.to_string(),
+                ),
                 // Persistent build nodes can keep this replaceable toolchain locked on Windows.
                 ("MSBUILDDISABLENODEREUSE", "1".into()),
             ] {
@@ -218,7 +218,7 @@ pub fn detect_with_versions(
     toolset_version: Option<&str>,
     sdk_version: Option<&str>,
 ) -> Result<ToolchainLayout> {
-    detect_selected(root, toolset_version, sdk_version, false)
+    detect_selected(root, toolset_version, sdk_version, false, None)
 }
 
 pub fn detect_selected(
@@ -226,6 +226,7 @@ pub fn detect_selected(
     toolset_version: Option<&str>,
     sdk_version: Option<&str>,
     no_sdk: bool,
+    architecture: Option<Architecture>,
 ) -> Result<ToolchainLayout> {
     if no_sdk && sdk_version.is_some() {
         bail!("--sdk and --no-sdk are mutually exclusive");
@@ -253,7 +254,32 @@ pub fn detect_selected(
             .unwrap_or_default()
     };
 
+    let architecture = match architecture {
+        Some(arch) => arch,
+        None => {
+            let tools = tools_root.join(&vc_tools_version).join("bin");
+            let available: Vec<_> = Architecture::ALL
+                .into_iter()
+                .filter(|arch| {
+                    tools
+                        .join(arch.host.host_directory())
+                        .join(arch.target.as_str())
+                        .join("cl.exe")
+                        .is_file()
+                })
+                .collect();
+            match available.as_slice() {
+                [arch] => *arch,
+                [] => bail!(
+                    "no supported compiler architecture found in {}",
+                    tools.display()
+                ),
+                _ => bail!("multiple compiler architectures found; select --arch HOST/TARGET"),
+            }
+        }
+    };
     Ok(ToolchainLayout {
+        architecture,
         root: root.to_path_buf(),
         vc_tools_version,
         windows_sdk_version,
@@ -356,28 +382,38 @@ pub fn verify(layout: &ToolchainLayout) -> Result<()> {
     Ok(())
 }
 
-/// Minimum compiler/linker/header/library set for the supported x64 desktop layout.
+/// Minimum compiler/linker/header/library set for the selected desktop layout.
 /// Presence is not a substitute for the Windows compile/link acceptance test.
 pub fn required_files(layout: &ToolchainLayout) -> Result<Vec<PathBuf>> {
-    let mut paths: Vec<_> = [
-        "bin/Hostx64/x64/cl.exe",
-        "bin/Hostx64/x64/link.exe",
-        "bin/Hostx64/x64/lib.exe",
-        "include/vcruntime.h",
-        "include/vector",
-        "lib/x64/libcmt.lib",
-        "lib/x64/libcpmt.lib",
-        "lib/x64/vcruntime.lib",
-    ]
-    .iter()
-    .map(|path| layout.tools_directory().join(path))
-    .collect();
+    let mut paths: Vec<_> = ["cl.exe", "link.exe", "lib.exe"]
+        .iter()
+        .map(|name| layout.host_bin_directory().join(name))
+        .collect();
+    paths.extend(
+        ["vcruntime.h", "vector"]
+            .iter()
+            .map(|name| layout.include_directory().join(name)),
+    );
+    paths.extend(
+        ["libcmt.lib", "libcpmt.lib", "vcruntime.lib"]
+            .iter()
+            .map(|name| {
+                layout
+                    .tools_directory()
+                    .join("lib")
+                    .join(layout.architecture.target.as_str())
+                    .join(name)
+            }),
+    );
     if layout.has_windows_sdk() {
         for path in ["um/Windows.h", "shared/sdkddkver.h", "ucrt/stdio.h"] {
             paths.push(layout.windows_sdk_include_directory().join(path));
         }
         // Preserve the SDK archive's spelling on case-sensitive extraction hosts.
-        for path in ["um/x64/kernel32.Lib", "ucrt/x64/ucrt.lib"] {
+        for path in [
+            format!("um/{}/kernel32.Lib", layout.architecture.target),
+            format!("ucrt/{}/ucrt.lib", layout.architecture.target),
+        ] {
             paths.push(layout.windows_sdk_lib_directory().join(path));
         }
         for path in [
@@ -395,6 +431,7 @@ pub fn required_files(layout: &ToolchainLayout) -> Result<Vec<PathBuf>> {
             &layout.root,
             &layout.vc_tools_version,
             version,
+            layout.architecture,
         )?);
     }
     Ok(paths)

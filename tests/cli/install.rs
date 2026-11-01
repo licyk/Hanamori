@@ -17,6 +17,85 @@ mod msbuild;
 mod restart;
 mod sdk;
 
+#[test]
+fn architecture_uses_the_project_unless_the_cli_overrides_it() {
+    for explicit in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let architecture = hanamori::architecture::Architecture {
+            host: hanamori::architecture::Arch::X64,
+            target: hanamori::architecture::Arch::Arm64,
+        };
+        let catalog = Catalog::with_architecture(false, false, false, None, None, architecture);
+        std::fs::write(temp.path().join("hanamori-toolchain.json"), serde_json::json!({
+            "toolset":"14.44", "sdk":null, "host":"x64", "target":if explicit {"x64"} else {"arm64"}
+        }).to_string()).unwrap();
+        let mut command = local_command(&temp);
+        command.args([
+            "install",
+            "--manifest",
+            &catalog.url,
+            "--toolset-id",
+            "14.44.17.14",
+        ]);
+        if explicit {
+            command.args(["--arch", "x64/arm64"]);
+        }
+        success(command.output().unwrap());
+        assert_eq!(installed(&temp).architecture, architecture);
+    }
+}
+
+#[test]
+fn architecture_combinations_install_independent_compilers_sdks_and_msbuild() {
+    for generation in [msbuild::VS2022, msbuild::VS2026] {
+        let temp = tempfile::tempdir().unwrap();
+        for arch in hanamori::architecture::Architecture::ALL {
+            let catalog = Catalog::with_architecture(
+                false,
+                false,
+                false,
+                Some(sdk::Fault::None),
+                Some((generation, false)),
+                arch,
+            );
+            let name = format!("{}_{}", arch.host, arch.target);
+            success(
+                catalog
+                    .install(&temp)
+                    .args(["--name", &name, "--sdk-id", "26100"])
+                    .output()
+                    .unwrap(),
+            );
+            let store =
+                hanamori::state::toolchains::ToolchainStore::new(&temp.path().join("manager"));
+            let items = store.scan().unwrap();
+            let item = hanamori::state::toolchains::select(&items, &name).unwrap();
+            assert_eq!(item.architecture, arch);
+            assert!(item.key.ends_with(&arch.key_suffix()));
+            assert_eq!(item.status, "ready");
+            let layout = item.layout();
+            hanamori::env::verify(&layout).unwrap();
+            assert!(layout.compiler_path().is_file());
+            let props = std::fs::read_to_string(item.path.join("MSBuild/Hanamori.props")).unwrap();
+            assert!(props.contains(&format!(
+                "<PreferredToolArchitecture>{}</PreferredToolArchitecture>",
+                arch.host
+            )));
+            let targets =
+                std::fs::read_to_string(item.path.join("MSBuild/Hanamori.targets")).unwrap();
+            assert!(targets.contains(&arch.host.msbuild_bin().replace('/', "\\")));
+        }
+        assert_eq!(
+            hanamori::state::toolchains::ToolchainStore::new(&temp.path().join("manager"))
+                .scan()
+                .unwrap()
+                .installations
+                .len(),
+            4
+        );
+    }
+}
+
 struct Catalog {
     url: String,
     address: std::net::SocketAddr,
@@ -25,6 +104,7 @@ struct Catalog {
     mirror_requests: Arc<AtomicUsize>,
     user_agents: Arc<Mutex<Vec<(String, String)>>>,
     thread: Option<JoinHandle<()>>,
+    architecture: hanamori::architecture::Architecture,
     include_sdk: bool,
     include_msbuild: bool,
     packages: Vec<serde_json::Value>,
@@ -70,6 +150,24 @@ impl Catalog {
         sdk: Option<sdk::Fault>,
         msbuild: Option<(msbuild::Fixture, bool)>,
     ) -> Self {
+        Self::with_architecture(
+            broken_archive,
+            wrong_manifest_hash,
+            wrong_manifest_size,
+            sdk,
+            msbuild,
+            hanamori::architecture::Architecture::X64,
+        )
+    }
+
+    fn with_architecture(
+        broken_archive: bool,
+        wrong_manifest_hash: bool,
+        wrong_manifest_size: bool,
+        sdk: Option<sdk::Fault>,
+        msbuild: Option<(msbuild::Fixture, bool)>,
+        architecture: hanamori::architecture::Architecture,
+    ) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let base = format!("http://{address}");
@@ -77,7 +175,13 @@ impl Catalog {
         let fixture = msbuild
             .map(|(fixture, _)| fixture)
             .unwrap_or(msbuild::VS2022);
-        common::toolchain(temp.path(), fixture.compiler, None);
+        common::toolchain_for(
+            temp.path(),
+            fixture.compiler,
+            None,
+            architecture.host.as_str(),
+            architecture.target.as_str(),
+        );
         std::fs::write(temp.path().join("extra.txt"), b"additional payload file").unwrap();
         let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
         for path in inventory(temp.path()).unwrap().keys() {
@@ -97,16 +201,23 @@ impl Catalog {
         } else {
             writer.finish().unwrap().into_inner()
         };
-        let mut packages: Vec<_> = [".Tools.HostX64.TargetX64.base", ".CRT.Headers.base", ".CRT.x64.Desktop.base"].into_iter().map(|suffix| serde_json::json!({
+        let mut packages: Vec<_> = [format!(".Tools.Host{}.Target{}.base", architecture.host.package(), architecture.target.package()), ".CRT.Headers.base".into(), format!(".CRT.{}.Desktop.base", architecture.target.package())].into_iter().map(|suffix| serde_json::json!({
             "id": format!("Microsoft.VC.{}{suffix}", fixture.toolset_id), "version": fixture.compiler, "type": "Vsix",
             "payloads": [{"fileName": "compiler.vsix", "url": format!("{base}/compiler.vsix"), "size": payload.len(), "sha256": format!("{:x}", Sha256::digest(&payload))}]
         })).collect();
         let mut assets = HashMap::new();
         if let Some(fault) = sdk {
-            sdk::append(&base, fault, &mut packages, &mut assets);
+            sdk::append(&base, fault, &mut packages, &mut assets, architecture);
         }
         if let Some((fixture, missing_task)) = msbuild {
-            msbuild::append(&base, fixture, missing_task, &mut packages, &mut assets);
+            msbuild::append(
+                &base,
+                fixture,
+                missing_task,
+                &mut packages,
+                &mut assets,
+                architecture,
+            );
         }
         let package = serde_json::to_vec(&serde_json::json!({"packages": &packages})).unwrap();
         let package_hash = format!("{:x}", Sha256::digest(&package));
@@ -208,6 +319,7 @@ impl Catalog {
             mirror_requests,
             user_agents,
             thread: Some(thread),
+            architecture,
             include_sdk: sdk.is_some(),
             include_msbuild: msbuild.is_some(),
             packages,
@@ -220,7 +332,15 @@ impl Catalog {
             .current_dir(temp.path())
             .arg("--manager-dir")
             .arg(temp.path().join("manager"))
-            .args(["install", "--manifest", &self.url, "--connections", "1"]);
+            .args([
+                "install",
+                "--arch",
+                &self.architecture.to_string(),
+                "--manifest",
+                &self.url,
+                "--connections",
+                "1",
+            ]);
         if !self.include_sdk {
             command.arg("--no-sdk");
         } else if !self.include_msbuild {
@@ -439,7 +559,13 @@ fn strict_manifest_size_mismatch_blocks_both_installation_and_remote_listing() {
         .current_dir(temp.path())
         .arg("--manager-dir")
         .arg(temp.path().join("manager"))
-        .args(["list-remote", "--manifest", &catalog.url]);
+        .args([
+            "list-remote",
+            "--arch",
+            "x64/x64",
+            "--manifest",
+            &catalog.url,
+        ]);
     for mut command in [list, catalog.install(&temp)] {
         let output = command.arg("--strict-manifest-integrity").output().unwrap();
         assert!(!output.status.success());
@@ -456,7 +582,15 @@ fn default_manifest_integrity_warns_only_on_errors_and_installs_with_actual_cata
         let temp = tempfile::tempdir().unwrap();
         let catalog = Catalog::fixture(false, wrong_hash, wrong_size);
         let output = local_command(&temp)
-            .args(["list-remote", "--manifest", &catalog.url, "--log", "warn"])
+            .args([
+                "list-remote",
+                "--arch",
+                "x64/x64",
+                "--manifest",
+                &catalog.url,
+                "--log",
+                "warn",
+            ])
             .output()
             .unwrap();
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -726,7 +860,7 @@ fn actual_versions_require_evidence_and_project_constraints_are_checked_before_p
     assert!(second.is_dir());
     std::fs::write(
         temp.path().join("hanamori-toolchain.json"),
-        r#"{"toolset":"14.51.36260","sdk":null}"#,
+        r#"{"host":"x64","target":"x64","toolset":"14.51.36260","sdk":null}"#,
     )
     .unwrap();
     let before = inventory(&temp.path().join("manager/toolchains")).unwrap();
@@ -760,7 +894,14 @@ fn remote_json_distinguishes_ids_from_unknown_actual_versions() {
     let catalog = Catalog::with_sdks(sdk::Fault::None);
     let text = success(
         local_command(&temp)
-            .args(["list-remote", "--manifest", &catalog.url, "--json"])
+            .args([
+                "list-remote",
+                "--arch",
+                "x64/x64",
+                "--manifest",
+                &catalog.url,
+                "--json",
+            ])
             .output()
             .unwrap(),
     );

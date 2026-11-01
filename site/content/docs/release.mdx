@@ -54,9 +54,9 @@ gh workflow run release.yml --ref main -f tag=v0.1.0 -f target=crates-io
 
 1. 更新工作区版本和由 Cargo 生成的锁文件，创建指向目标源码的 `v*` 标签。
 2. Release 获取全部标签，解析所选标签的提交，并校验该提交的 Cargo 包名称、版本和二进制目标。
-3. 复用 [CI 工作流](https://github.com/licyk/Hanamori/blob/main/.github/workflows/ci.yml)，对所选提交运行一次 Linux/Windows 检查矩阵，包括格式、模块架构和测试。Windows 使用 release 配置及 `x86_64-pc-windows-msvc` 目标。
+3. 复用 [CI 工作流](https://github.com/licyk/Hanamori/blob/main/.github/workflows/ci.yml)，对所选提交运行一次 Linux/Windows 检查矩阵，包括格式、模块架构和测试。Windows 使用 release 配置及 `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc` 目标。
 4. 检查通过后，所选渠道分别从同一提交构建和发布。普通分支 CI 不响应标签推送；一次 Release 的两个渠道共用检查，不再分别运行 `cargo test`。
-5. GitHub 渠道打包 `hanamori-x86_64-pc-windows-msvc.exe` 和同名 ZIP，ZIP 内为 `hanamori.exe`，并验证 GitHub 报告的 EXE SHA-256 digest 与打包文件一致。
+5. GitHub 渠道分别在 Windows x64 和 `windows-11-arm` 构建 `hanamori-x86_64-pc-windows-msvc.exe`、`hanamori-aarch64-pc-windows-msvc.exe` 及各自同名 ZIP。ZIP 内为 `hanamori.exe`；四个资产都验证 GitHub 报告的 SHA-256 digest。
 6. crates.io 渠道运行 `cargo publish --locked`，保留包内源码的编译验证，仅发布 `hanamori`，不发布 `hanamori-test-support` 或 `xtask`。
 
 两种发布渠道在共享检查通过后独立执行。某个渠道失败时，可手动选择尚未发布的渠道和同一标签重试。手动发布旧标签时，检查和构建使用该标签源码，而不是工作流所在的 main 源码。

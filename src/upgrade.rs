@@ -12,7 +12,10 @@ use std::time::Duration;
 use tokio::io::AsyncReadExt;
 
 pub const RELEASE_URL: &str = "https://api.github.com/repos/licyk/Hanamori/releases/latest";
+#[cfg(not(target_arch = "aarch64"))]
 pub const ASSET_NAME: &str = "hanamori-x86_64-pc-windows-msvc.exe";
+#[cfg(target_arch = "aarch64")]
+pub const ASSET_NAME: &str = "hanamori-aarch64-pc-windows-msvc.exe";
 
 #[derive(Clone, Copy)]
 pub enum Mode {

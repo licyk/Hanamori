@@ -17,6 +17,7 @@ pub(super) fn install(mut args: InstallArgs, config: &ResolvedConfig) -> Result<
     if args.dry_run {
         println!("Installation plan");
         let mut rows = vec![
+            ("Architecture", result.architecture.to_string()),
             ("Toolset download ID", result.toolset_id.clone()),
             (
                 "SDK download ID",
@@ -71,6 +72,7 @@ pub(super) fn install(mut args: InstallArgs, config: &ResolvedConfig) -> Result<
         let reference = match &result.key {
             Some(key) => Reference::Managed { key: key.clone() },
             None => Reference::External {
+                architecture: result.architecture,
                 path: result.install_directory.clone(),
                 toolset: result.toolset_version.clone(),
                 sdk: (!result.sdk_version.is_empty()).then_some(result.sdk_version.clone()),
@@ -102,6 +104,13 @@ fn resolve_options(args: &mut InstallArgs, config: &ResolvedConfig) -> Result<In
         .cloned();
     if let Some(key) = &requested_key {
         let (toolset, sdk, msbuild) = toolchains::download_ids(key).unwrap();
+        let architecture =
+            toolchains::key_architecture(key).context("invalid toolchain architecture")?;
+        anyhow::ensure!(
+            args.arch.is_none_or(|a| a == architecture),
+            "--arch conflicts with the directory key"
+        );
+        args.arch = Some(architecture);
         args.toolset_id = Some(toolset.into());
         args.sdk_id = sdk.map(str::to_owned);
         args.no_sdk = sdk.is_none();
@@ -150,6 +159,10 @@ fn resolve_options(args: &mut InstallArgs, config: &ResolvedConfig) -> Result<In
             });
         }
     }
+    let architecture = args
+        .arch
+        .or_else(|| project.as_ref().map(|p| p.architecture()))
+        .unwrap_or_else(crate::architecture::Architecture::native);
     let expected_toolset = match args.version.as_deref() {
         Some("latest") => None,
         Some(value) => Some(
@@ -240,6 +253,7 @@ fn resolve_options(args: &mut InstallArgs, config: &ResolvedConfig) -> Result<In
                 let (toolset_id, sdk_id, _) =
                     toolchains::download_ids(&item.key).unwrap_or(("", None, None));
                 item.managed
+                    && item.architecture == architecture
                     && item.key.starts_with(&format!("{source}/"))
                     && args.toolset_id.as_deref().is_none_or(|id| id == toolset_id)
                     && args.sdk_id.as_deref().is_none_or(|id| Some(id) == sdk_id)
@@ -280,6 +294,7 @@ fn resolve_options(args: &mut InstallArgs, config: &ResolvedConfig) -> Result<In
     );
     options.toolchains_directory = args.dir.is_none().then(|| config.toolchains_dir.clone());
     options.source = source;
+    options.architecture = architecture;
     options.reinstall = args.reinstall;
     options.toolset_id = args.toolset_id.clone().unwrap_or_default();
     options.sdk_id = args.sdk_id.clone().unwrap_or_default();

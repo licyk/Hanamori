@@ -16,7 +16,7 @@
     <UniversalCRTSdkDir_10>$(WindowsSdkDir_10)</UniversalCRTSdkDir_10>
     <UniversalCRTSdkDir>$(WindowsSdkDir_10)</UniversalCRTSdkDir>
     <UCRTVersion>$(HanamoriSdkVersion)</UCRTVersion>
-    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <PreferredToolArchitecture>@HOST@</PreferredToolArchitecture>
     <DisableRegistryUse>true</DisableRegistryUse>
     <UseEnv>true</UseEnv>
   </PropertyGroup>

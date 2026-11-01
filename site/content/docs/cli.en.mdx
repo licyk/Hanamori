@@ -23,10 +23,10 @@ Installation includes MSVC + Windows SDK + MSBuild by default. Install help grou
 | `--sdk VER` | Actual SDK version; conflicts with sdk-id and no-sdk |
 | `--sdk-id ID` | SDK download ID; conflicts with sdk and no-sdk |
 | `--no-sdk` | Exclude the SDK and, by default, MSBuild; add `--no-msbuild` if the project explicitly requires MSBuild |
-| `--msbuild` | Explicitly enable MSBuild, overriding the project; enabled with the SDK by default, for VS 2022 x64/v143 and VS 2026 x64/v145; conflicts with `--no-sdk` and `--no-msbuild` |
+| `--msbuild` | Explicitly enable MSBuild, overriding the project; enabled with the SDK by default, for VS 2022 v143 and VS 2026 v145; conflicts with `--no-sdk` and `--no-msbuild` |
 | `--no-msbuild` | Disable MSBuild, overriding the default and the project; keeps the compiler and SDK by default |
 | `--reinstall` | Replace the whole tree; required for a nonempty external directory |
-| `--arch ARCH` | Defaults to and only accepts `x64/x64` |
+| `--arch ARCH` | `x64/x64`, `x64/arm64`, `arm64/x64`, `arm64/arm64`; explicit option → project → native Windows architecture |
 | `--dry-run` | May query manifests; no payload download, installation, reference or workspace writes |
 | `list-remote` | Defaults to VS 2026; `--all` queries VS 2022 and 2026; optional `--toolset-id ID` inspects a selected toolset; supports `--json` |
 
@@ -51,7 +51,7 @@ Both commands accept `--vs-version 2022/2026` (aliases 17/18; default 2026), `--
 
 SELECTOR is a full managed directory key, external reference key (`@NAME`), alias or unique actual-version prefix. Local selection does not accept latest. Without an explicit choice, use the nearest project, then default.
 
-Direct-directory options are `--dir/-d PATH`, `--toolset VER`, `--sdk VER` and `--no-sdk`. The latter three require dir, and sdk conflicts with no-sdk. Explicit SELECTOR or exec’s using conflicts with all directory options. Component selectors use actual directory versions.
+Direct-directory options are `--dir/-d PATH`, `--toolset VER`, `--sdk VER`, `--no-sdk` and `--arch HOST/TARGET`. These selectors require dir, and sdk conflicts with no-sdk. Explicit SELECTOR or exec’s using conflicts with all directory options. Component selectors use actual directory versions.
 
 ## Shell commands
 
@@ -80,7 +80,7 @@ Hook directory defaults use `--dir PATH` (no short `-d` here), `--toolset VER`, 
 | `doctor` | `--dir PATH`, `--json`; read-only, nonzero when errors exist |
 | `cache clean` | `--dry-run`, `--json`; clean idle complete cache payloads |
 | `config show` | Configuration table by default; `--resolved` includes sources and derived paths; `--json` prints JSON |
-| `upgrade` | Mutually exclusive `--check` or `--force`; Windows x64 MSVC only |
+| `upgrade` | Mutually exclusive `--check` or `--force`; Windows x64 / ARM64 MSVC only |
 | `self uninstall` | `--dry-run`, `--purge`; preserves manager data by default; no json |
 
 Import has no dry-run option; importing the same name updates that reference. Catalog queries and installation may access the network; local management does not automatically install. Do not assume every command supports json or dry-run.

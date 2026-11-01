@@ -18,7 +18,7 @@ Put `hanamori-toolchain.json` in the project root:
 | `toolset` | Required actual MSVC version or numeric prefix with one to three segments |
 | `sdk` | Actual four-part version; `null` means no SDK; omitted means unconstrained |
 | `msbuild` | Optional boolean: `true` requires MSBuild, `false` excludes it; omitted leaves local selection unconstrained; installation enables it by default with the SDK, or disables it when SDK is `null` |
-| `host`, `target` | Optional, default `x64`; no other architecture is implemented |
+| `host`, `target` | Optional `x64` or `arm64`; host defaults to native Windows architecture, target defaults to host |
 | `vs`, `channel` | Optional source constraints; source-unknown imports cannot satisfy them |
 | `schema_version` | Optional, currently `1` |
 

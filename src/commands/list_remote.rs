@@ -41,6 +41,8 @@ fn load_catalogs(
                 proxy,
                 args.common.strict_manifest_integrity,
                 show_progress,
+                args.arch
+                    .unwrap_or_else(crate::architecture::Architecture::native),
             ))?
             .with_context(|| format!("cannot query remote catalog {manifest_url}"))?;
             let toolset = args
@@ -49,8 +51,13 @@ fn load_catalogs(
                 .filter(|id| *id != "latest")
                 .unwrap_or(&latest)
                 .to_owned();
-            selector::validate_toolset(&packages, &toolset)
-                .with_context(|| format!("invalid toolset in remote catalog {manifest_url}"))?;
+            selector::validate_toolset(
+                &packages,
+                &toolset,
+                args.arch
+                    .unwrap_or_else(crate::architecture::Architecture::native),
+            )
+            .with_context(|| format!("invalid toolset in remote catalog {manifest_url}"))?;
             Ok(RemoteCatalog {
                 vs_version,
                 manifest_url,
@@ -69,14 +76,24 @@ fn format_catalogs(catalogs: &[RemoteCatalog], args: &ListRemoteArgs) -> Result<
     let mut documents = Vec::new();
     let mut text = String::new();
     for catalog in catalogs {
-        let toolsets = selector::list_toolset_versions(&catalog.packages);
+        let toolsets = selector::list_toolset_versions(
+            &catalog.packages,
+            args.arch
+                .unwrap_or_else(crate::architecture::Architecture::native),
+        );
         let sdks = selector::list_windows_sdk_versions(&catalog.packages);
-        let selected = selector::select_toolset_packages(&catalog.packages, &catalog.toolset);
+        let selected = selector::select_toolset_packages(
+            &catalog.packages,
+            &catalog.toolset,
+            args.arch
+                .unwrap_or_else(crate::architecture::Architecture::native),
+        );
         if args.json {
             let mut value = json!({
                 "toolsets": toolsets.iter().map(|id| json!({"toolset_id": id, "toolset_version": null})).collect::<Vec<_>>(),
                 "sdks": sdks.iter().map(|id| json!({"sdk_id": id, "sdk_version": null})).collect::<Vec<_>>(),
                 "selected_toolset_id": catalog.toolset,
+                "architecture": args.arch.unwrap_or_else(crate::architecture::Architecture::native),
                 "packages": selected.iter().map(|package| json!({"id": package.id, "package_version": package.version, "size": package.payloads.iter().map(|p| p.size).sum::<u64>()})).collect::<Vec<_>>()
             });
             if args.all {

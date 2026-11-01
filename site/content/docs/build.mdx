@@ -6,7 +6,7 @@ icon: Download
 
 ## 一键安装
 
-在 Windows x64 的 PowerShell 5.1 或 PowerShell 7 中运行：
+在 Windows x64 / ARM64 的 PowerShell 5.1 或 PowerShell 7 中运行：
 
 ```powershell
 irm https://hanamori.netlify.app/install.ps1 | iex
@@ -42,7 +42,7 @@ irm https://hanamori.netlify.app/install.ps1 | iex
 
 ## MSYS2 与 Git Bash
 
-在 Windows x64 的 MSYS2 或 Git Bash 中运行：
+在 Windows x64 / ARM64 的 MSYS2 或 Git Bash 中运行：
 
 ```bash
 curl -fsSL https://hanamori.netlify.app/install.sh | bash
@@ -69,7 +69,7 @@ curl -fsSL https://hanamori.netlify.app/install.sh | HANAMORI_INSTALL_DIR='/d/To
 
 ## 便携安装
 
-首先查看[下载页](/download)。发布流程约定两个 Windows x64 资产：`hanamori-x86_64-pc-windows-msvc.exe` 与 `hanamori-x86_64-pc-windows-msvc.zip`，ZIP 内的程序为 `hanamori.exe`。直接下载 EXE 后可以改名为 `hanamori.exe`。文件名约定不代表已有对应发布；旧名称的资产不代表支持当前命令。
+首先查看[下载页](/download)。发布流程为 x64 和 ARM64 分别提供 EXE 与 ZIP：`hanamori-x86_64-pc-windows-msvc.*` 与 `hanamori-aarch64-pc-windows-msvc.*`，ZIP 内的程序为 `hanamori.exe`。直接下载 EXE 后可以改名为 `hanamori.exe`。文件名约定不代表已有对应发布；旧名称的资产不代表支持当前命令。
 
 将程序放在自己的工具目录，例如 `D:\Tools\Hanamori`。临时在 PowerShell 添加 PATH：
 
@@ -91,4 +91,10 @@ cd Hanamori
 cargo build --locked --release -p hanamori --bin hanamori
 ```
 
-Windows 上输出为 `target/release/hanamori.exe`。发行流程使用 `x86_64-pc-windows-msvc` 目标，输出在 `target/x86_64-pc-windows-msvc/release/`。程序自我更新仅支持这一目标；GNU 或 Unix 构建不会获得该更新资产。开发与验收见[架构](/docs/architecture)、[测试](/docs/testing)和[发布流程](/docs/release)。
+Windows 上输出为 `target/release/hanamori.exe`。发行流程使用 `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc` 目标，输出在 `target/<目标>/release/`。程序自我更新支持这两个目标；GNU 或 Unix 构建不会获得该更新资产。开发与验收见[架构](/docs/architecture)、[测试](/docs/testing)和[发布流程](/docs/release)。
+
+## ARM64 程序版本
+
+安装脚本根据 Windows 原生架构选择程序，即使从仿真 Shell 启动也是如此。PowerShell 可用 `-Architecture x64` / `-Architecture arm64`，Bash 可用 `--architecture x64` / `--architecture arm64` 覆盖。该参数选择 Hanamori 本身；`hanamori install --arch HOST/TARGET` 独立选择编译工具链。
+
+ARM64 发布包含 `hanamori-aarch64-pc-windows-msvc.exe` 和 `.zip`，ZIP 内为 `hanamori.exe`。源码构建使用 `cargo build --release --target aarch64-pc-windows-msvc`，并准备相应的 MSVC 链接器。

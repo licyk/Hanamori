@@ -10,6 +10,7 @@ pub(super) fn import(args: ImportArgs, config: &ResolvedConfig) -> Result<()> {
         args.sdk.as_deref(),
         args.no_sdk,
         &args.name,
+        args.arch,
     )?;
     if args.json {
         println!("{}", serde_json::json!({"reference": args.name}));

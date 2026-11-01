@@ -97,6 +97,7 @@ fn dispatch_action(
                         target.directory.toolset = directory.toolset;
                         target.directory.sdk = directory.sdk;
                         target.directory.no_sdk = directory.no_sdk;
+                        target.directory.arch = directory.architecture;
                     }
                 }
                 let context = ConfigContext::from_environment(environment)?;

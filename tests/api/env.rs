@@ -6,7 +6,7 @@ fn selects_older_installed_toolset_and_sdk_without_falling_back() {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path();
     for version in ["14.44.35207", "14.51.36260"] {
-        std::fs::create_dir_all(root.join("VC/Tools/MSVC").join(version)).unwrap();
+        hanamori_test_support::toolchain::toolchain(root, version, None);
     }
     for version in ["10.0.22621.0", "10.0.26100.0"] {
         std::fs::create_dir_all(root.join("Windows Kits/10/Include").join(version)).unwrap();
@@ -20,9 +20,11 @@ fn selects_older_installed_toolset_and_sdk_without_falling_back() {
         .unwrap_err()
         .to_string()
         .contains("Windows SDK"));
-    assert!(!detect_selected(root, Some("14.44.35207"), None, true)
-        .unwrap()
-        .has_windows_sdk());
+    assert!(
+        !detect_selected(root, Some("14.44.35207"), None, true, None)
+            .unwrap()
+            .has_windows_sdk()
+    );
     let selected = detect_with_versions(root, Some("14.44.35207"), Some("10.0.22621.0")).unwrap();
     assert_eq!(selected.vc_tools_version, "14.44.35207");
     assert_eq!(selected.windows_sdk_version, "10.0.22621.0");
@@ -34,6 +36,7 @@ fn selects_older_installed_toolset_and_sdk_without_falling_back() {
 
 fn layout(with_sdk: bool) -> ToolchainLayout {
     ToolchainLayout {
+        architecture: hanamori::architecture::Architecture::X64,
         msbuild_version: None,
         root: PathBuf::from(r"C:\tools\toolchain"),
         vc_tools_version: "14.44.35207".to_owned(),
@@ -97,7 +100,7 @@ fn detect_reads_the_installed_tree() {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path();
 
-    std::fs::create_dir_all(root.join("VC/Tools/MSVC/14.44.35207/include")).unwrap();
+    hanamori_test_support::toolchain::toolchain(root, "14.44.35207", None);
     std::fs::create_dir_all(root.join("Windows Kits/10/Include/10.0.26100.0/um")).unwrap();
 
     let layout = detect(root).unwrap();
@@ -118,7 +121,7 @@ fn detect_ignores_manifest_identifiers_in_the_directory_tree() {
     let root = directory.path();
 
     std::fs::create_dir_all(root.join("VC/Tools/MSVC/14.40.1.1/include")).unwrap();
-    std::fs::create_dir_all(root.join("VC/Tools/MSVC/14.44.35207/include")).unwrap();
+    hanamori_test_support::toolchain::toolchain(root, "14.44.35207", None);
 
     // 14.40.1.1 has four segments, which is a package version and not a directory.
     assert_eq!(detect(root).unwrap().vc_tools_version, "14.44.35207");

@@ -87,12 +87,21 @@ fn compiler_directory_version(path: &Path) -> Result<Option<String>> {
         return Ok(None);
     }
     let expected = [
-        "VC", "Tools", "MSVC", parts[3], "bin", "Hostx64", "x64", "cl.exe",
+        "VC", "Tools", "MSVC", parts[3], "bin", parts[5], parts[6], "cl.exe",
     ];
     if !parts
         .iter()
         .zip(expected)
         .all(|(part, expected)| part.eq_ignore_ascii_case(expected))
+    {
+        return Ok(None);
+    }
+    if !["hostx64", "hostarm64"]
+        .iter()
+        .any(|host| parts[5].eq_ignore_ascii_case(host))
+        || !["x64", "arm64"]
+            .iter()
+            .any(|target| parts[6].eq_ignore_ascii_case(target))
     {
         return Ok(None);
     }

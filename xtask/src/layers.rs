@@ -18,6 +18,7 @@ pub const HANAMORI: &[Layer] = &[
     (
         "foundation",
         &[
+            "architecture",
             "env",
             "file_usage",
             "fs",

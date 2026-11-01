@@ -61,7 +61,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -84,4 +90,4 @@ jobs:
       - name: Test library and CLI
         env:
           HANAMORI_REQUIRE_SHELL_TESTS: '1'
-        run: cargo test --workspace --locked ${{ runner.os == 'Windows' && '--release --target x86_64-pc-windows-msvc' || '' }} -- --nocapture
+        run: cargo test --workspace --locked ${{ matrix.target && format('--release --target {0}', matrix.target) || '' }} -- --nocapture

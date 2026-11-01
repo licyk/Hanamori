@@ -36,6 +36,9 @@ pub(crate) struct HookArgs {
 
 #[derive(Args)]
 pub(crate) struct HookTargetArgs {
+    /// Compiler host/target pair for the bound directory.
+    #[arg(long, requires = "dir", value_name = "HOST/TARGET", value_parser = super::architecture::parser())]
+    pub(crate) arch: Option<crate::architecture::Architecture>,
     /// Bind no-argument use/env/exec/run to this exact directory instead of project/default selection.
     #[arg(long, value_hint = clap::ValueHint::DirPath)]
     pub(crate) dir: Option<PathBuf>,

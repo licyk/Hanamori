@@ -65,7 +65,13 @@ fn sdk_staging_lives_inside_the_installation_transaction() {
     let path = temp.path().join("sdk.msi");
     hanamori_test_support::msi::create_fixture(&path, false);
     let root = temp.path().join("installation tree");
-    let mut installer = Installer::new(InstallOptions::new(&root), |_| {});
+    let mut installer = Installer::new(
+        InstallOptions {
+            architecture: crate::architecture::Architecture::X64,
+            ..InstallOptions::new(&root)
+        },
+        |_| {},
+    );
     let package = msi::Package::open(&path).unwrap();
     let stage = installer
         .extract_sdk(
@@ -107,7 +113,13 @@ fn persistent_workspace_preserves_existing_data_and_releases_sdk_staging_on_ever
             std::fs::write(work.join(name).join("keep.txt"), name.as_bytes()).unwrap();
             before.push(hanamori_test_support::toolchain::inventory(&work.join(name)).unwrap());
         }
-        let mut installer = Installer::new(InstallOptions::new(&root), |_| {});
+        let mut installer = Installer::new(
+            InstallOptions {
+                architecture: crate::architecture::Architecture::X64,
+                ..InstallOptions::new(&root)
+            },
+            |_| {},
+        );
         installer.workspace = Some(workspace);
         let progress = ProgressBar::hidden();
         if boundary == "no sdk tree" {
@@ -170,9 +182,13 @@ fn extraction_progress_totals_vsix_and_msi_files_and_preserves_partial_failures(
         }
         let root = directory.path().join("out");
         let mut messages = Vec::new();
-        let mut installer = Installer::new(InstallOptions::new(&root), |message| {
-            messages.push(message.to_owned())
-        });
+        let mut installer = Installer::new(
+            InstallOptions {
+                architecture: crate::architecture::Architecture::X64,
+                ..InstallOptions::new(&root)
+            },
+            |message| messages.push(message.to_owned()),
+        );
         installer.workspace = Some(Workspace::create(None).unwrap());
         let progress = ProgressBar::hidden();
         let result = installer.install_with_progress(&requests, &progress);
@@ -205,7 +221,13 @@ fn extraction_failure_keeps_the_actual_count_and_finishes_the_display() {
     let tools = root.join("VC/Tools/MSVC/14.44.35207");
     std::fs::create_dir_all(&tools).unwrap();
     std::fs::write(tools.join("include"), b"not a directory").unwrap();
-    let mut installer = Installer::new(InstallOptions::new(&root), |_| {});
+    let mut installer = Installer::new(
+        InstallOptions {
+            architecture: crate::architecture::Architecture::X64,
+            ..InstallOptions::new(&root)
+        },
+        |_| {},
+    );
     let progress = ProgressBar::hidden();
     assert!(installer
         .install_with_progress(&requests, &progress)
@@ -270,7 +292,13 @@ fn installing_an_older_toolset_reports_the_extracted_compiler() {
             language: None,
         },
     }];
-    let mut installer = Installer::new(InstallOptions::new(&root), |_| {});
+    let mut installer = Installer::new(
+        InstallOptions {
+            architecture: crate::architecture::Architecture::X64,
+            ..InstallOptions::new(&root)
+        },
+        |_| {},
+    );
     let version = installer.install(&requests).unwrap();
     assert_eq!(version, "14.44.35207");
     let layout = env::detect_with_versions(&root, Some(&version), None).unwrap();

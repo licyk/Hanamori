@@ -50,6 +50,7 @@ pub(super) fn append(
     missing_task: bool,
     packages: &mut Vec<Value>,
     assets: &mut HashMap<String, Vec<u8>>,
+    arch: hanamori::architecture::Architecture,
 ) {
     let mut groups: Vec<(&str, &[&str])> = vec![
         (
@@ -130,6 +131,16 @@ pub(super) fn append(
             &["VC/Auxiliary/Build/Microsoft.VCToolsVersion.v143.default.props"],
         ),
     ];
+    if arch.host == hanamori::architecture::Arch::Arm64 {
+        groups.push((
+            "Microsoft.Build.Arm64",
+            &[
+                "MSBuild/Current/Bin/arm64/MSBuild.exe",
+                "MSBuild/Current/Bin/arm64/MSBuild.exe.config",
+                "MSBuild/Current/Bin/arm64/FileTrackerA4.dll",
+            ],
+        ));
+    }
     if fixture.platform == "145" {
         groups.push((
             "Microsoft.VC.Tools.Redirection.v145",
@@ -140,6 +151,16 @@ pub(super) fn append(
         let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
         for path in *paths {
             let mut path = fixture.expand(path);
+            if arch.target == hanamori::architecture::Arch::Arm64 {
+                path = path
+                    .replace("Platforms/x64", "Platforms/ARM64")
+                    .replace("/x64/", "/arm64/")
+                    .replace("Paths.x64", "Paths.ARM64")
+                    .replace("vc_redist.x64", "vc_redist.arm64");
+            }
+            if *id == "Microsoft.Build.Dependencies" {
+                path = path.replace("MSBuild/Current/Bin/amd64", arch.host.msbuild_bin());
+            }
             if fixture.platform == "145" {
                 if path.ends_with("MSBuild.exe.config") {
                     path.push_str(".template");
@@ -169,11 +190,19 @@ pub(super) fn append(
         }
         let bytes = writer.finish().unwrap().into_inner();
         let route = format!("/msbuild-{index}.vsix");
-        let mut package = json!({"id": fixture.expand(id), "version": fixture.engine, "type": "Vsix", "language": "neutral",
+        let id_for_target = if arch.target == hanamori::architecture::Arch::Arm64 {
+            fixture
+                .expand(id)
+                .replace(".X64", ".ARM64")
+                .replace(".x64", ".ARM64")
+        } else {
+            fixture.expand(id)
+        };
+        let mut package = json!({"id": id_for_target, "version": fixture.engine, "type": "Vsix", "language": "neutral",
             "payloads": [payload(base, &route, "payload.vsix", &bytes)]});
         if *id == "Microsoft.VisualCpp.CRT.Redist.X64" {
             package["dependencies"] = json!({
-                (format!("Microsoft.VC.{}.CRT.Redist.X64.base", fixture.toolset_id)): "14.0",
+                (format!("Microsoft.VC.{}.CRT.Redist.{}.base", fixture.toolset_id, arch.target.package())): "14.0",
                 "Microsoft.VisualCpp.CRT.Redist.Resources": {"version": "14.44.35211", "type": "Recommended"}
             });
         }
@@ -252,7 +281,10 @@ fn installation_is_independent_reusable_and_repairable(fixture: Fixture) {
         .find(|v| v["msbuild"].is_string())
         .unwrap();
     let key = build["key"].as_str().unwrap();
-    assert!(key.ends_with(&format!("_sdk-26100_msbuild-{}_x64", fixture.engine)));
+    assert!(key.ends_with(&format!(
+        "_sdk-26100_msbuild-{}_host-x64_target-x64",
+        fixture.engine
+    )));
     let root = std::path::PathBuf::from(build["path"].as_str().unwrap());
     assert_ne!(root, plain.path);
     assert_eq!(build["status"], "ready");
@@ -472,7 +504,7 @@ fn project_msbuild_requirement_can_be_selected_and_overridden() {
     success(catalog.install(&temp).output().unwrap());
     std::fs::write(
         temp.path().join("hanamori-toolchain.json"),
-        r#"{"toolset":"14.44.35207","msbuild":true}"#,
+        r#"{"host":"x64","target":"x64","toolset":"14.44.35207","msbuild":true}"#,
     )
     .unwrap();
     let output = assert_success(catalog.install(&temp).output().unwrap());
@@ -491,7 +523,7 @@ fn project_msbuild_requirement_can_be_selected_and_overridden() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("MSBuild: none"));
     std::fs::write(
         temp.path().join("hanamori-toolchain.json"),
-        r#"{"toolset":"14.44.35207","msbuild":false}"#,
+        r#"{"host":"x64","target":"x64","toolset":"14.44.35207","msbuild":false}"#,
     )
     .unwrap();
     let output = assert_success(catalog.install(&temp).output().unwrap());
@@ -507,17 +539,32 @@ fn component_defaults_follow_sdk_and_explicit_project_requirements() {
     let temp = tempfile::tempdir().unwrap();
     let catalog = Catalog::with_msbuild(false);
     for (project, arguments, sdk, msbuild) in [
-        (json!({"toolset":"14.44"}), vec![], true, true),
         (
-            json!({"toolset":"14.44"}),
+            json!({"host":"x64","target":"x64","toolset":"14.44"}),
+            vec![],
+            true,
+            true,
+        ),
+        (
+            json!({"host":"x64","target":"x64","toolset":"14.44"}),
             vec!["--no-msbuild"],
             true,
             false,
         ),
-        (json!({"toolset":"14.44"}), vec!["--no-sdk"], false, false),
-        (json!({"toolset":"14.44", "sdk":null}), vec![], false, false),
         (
-            json!({"toolset":"14.44", "msbuild":true}),
+            json!({"host":"x64","target":"x64","toolset":"14.44"}),
+            vec!["--no-sdk"],
+            false,
+            false,
+        ),
+        (
+            json!({"host":"x64","target":"x64","toolset":"14.44", "sdk":null}),
+            vec![],
+            false,
+            false,
+        ),
+        (
+            json!({"host":"x64","target":"x64","toolset":"14.44", "msbuild":true}),
             vec!["--no-sdk", "--no-msbuild"],
             false,
             false,
@@ -546,8 +593,14 @@ fn component_defaults_follow_sdk_and_explicit_project_requirements() {
         );
     }
     for (project, arguments) in [
-        (json!({"toolset":"14.44", "msbuild":true}), vec!["--no-sdk"]),
-        (json!({"toolset":"14.44", "sdk":null}), vec!["--msbuild"]),
+        (
+            json!({"host":"x64","target":"x64","toolset":"14.44", "msbuild":true}),
+            vec!["--no-sdk"],
+        ),
+        (
+            json!({"host":"x64","target":"x64","toolset":"14.44", "sdk":null}),
+            vec!["--msbuild"],
+        ),
     ] {
         std::fs::write(
             temp.path().join("hanamori-toolchain.json"),
@@ -624,6 +677,7 @@ fn msbuild_uses_the_catalog_redist_dependency_even_with_an_older_compiler() {
         false,
         &mut entries,
         &mut HashMap::new(),
+        hanamori::architecture::Architecture::X64,
     );
     for entry in &mut entries {
         let id = entry["id"].as_str().unwrap();
@@ -634,18 +688,35 @@ fn msbuild_uses_the_catalog_redist_dependency_even_with_an_older_compiler() {
     let parse =
         |entries: &[Value]| parse_packages(&json!({"packages": entries}).to_string()).unwrap();
     let catalog = parse(&entries);
-    let selection = select(&catalog, "14.40.17.10").unwrap();
+    let selection = select(
+        &catalog,
+        "14.40.17.10",
+        hanamori::architecture::Architecture::X64,
+    )
+    .unwrap();
     let runtime = "Microsoft.VC.14.44.17.14.CRT.Redist.X64.base";
     assert!(selection.packages.iter().any(|p| p.id == runtime));
     entries.retain(|p| p["id"] != runtime);
-    let error = select(&parse(&entries), "14.40.17.10").err().unwrap();
+    let error = select(
+        &parse(&entries),
+        "14.40.17.10",
+        hanamori::architecture::Architecture::X64,
+    )
+    .err()
+    .unwrap();
     assert!(error.to_string().contains(runtime));
     let redist = entries
         .iter_mut()
         .find(|p| p["id"] == "Microsoft.VisualCpp.CRT.Redist.X64")
         .unwrap();
     redist["dependencies"] = json!({"unknown": {"future": true}});
-    let error = select(&parse(&entries), "14.40.17.10").err().unwrap();
+    let error = select(
+        &parse(&entries),
+        "14.40.17.10",
+        hanamori::architecture::Architecture::X64,
+    )
+    .err()
+    .unwrap();
     assert!(error.to_string().contains("base dependency"));
 }
 
@@ -663,18 +734,30 @@ fn msbuild_2026_selects_both_download_id_formats_and_requires_redirection() {
             false,
             &mut entries,
             &mut HashMap::new(),
+            hanamori::architecture::Architecture::X64,
         );
         let parse =
             |entries: &[Value]| parse_packages(&json!({"packages": entries}).to_string()).unwrap();
         let catalog = parse(&entries);
-        let selected = select(&catalog, toolset_id).unwrap();
+        let selected = select(
+            &catalog,
+            toolset_id,
+            hanamori::architecture::Architecture::X64,
+        )
+        .unwrap();
         assert_eq!(selected.version, VS2026.engine);
         assert!(selected
             .packages
             .iter()
             .any(|p| p.id == "Microsoft.VisualStudio.VC.MSBuild.v180.X64.v145"));
         entries.retain(|p| p["id"] != "Microsoft.VC.Tools.Redirection.v145");
-        let error = select(&parse(&entries), toolset_id).err().unwrap();
+        let error = select(
+            &parse(&entries),
+            toolset_id,
+            hanamori::architecture::Architecture::X64,
+        )
+        .err()
+        .unwrap();
         assert!(error
             .to_string()
             .contains("Microsoft.VC.Tools.Redirection.v145"));

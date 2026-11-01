@@ -5,6 +5,7 @@ use std::path::PathBuf;
 /// The options that drive an installation.
 #[derive(Debug, Clone)]
 pub struct InstallOptions {
+    pub architecture: crate::architecture::Architecture,
     /// Directory the toolchain is installed into.
     pub install_directory: PathBuf,
     pub toolchains_directory: Option<PathBuf>,
@@ -57,6 +58,7 @@ impl InstallOptions {
     /// Builds the default options for the given directory.
     pub fn new(install_directory: impl Into<PathBuf>) -> Self {
         Self {
+            architecture: crate::architecture::Architecture::native(),
             install_directory: install_directory.into(),
             toolchains_directory: None,
             source: "vs2026-release".into(),
@@ -84,6 +86,7 @@ impl InstallOptions {
 /// The outcome of an installation.
 #[derive(Debug, Clone)]
 pub struct InstallResult {
+    pub architecture: crate::architecture::Architecture,
     /// Deterministic managed directory key, absent for portable installs.
     pub key: Option<String>,
     /// Final installation location, never the staging directory.

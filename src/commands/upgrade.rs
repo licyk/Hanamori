@@ -11,7 +11,7 @@ pub(super) fn upgrade(
     config: &ResolvedConfig,
     environment: &session::Environment,
 ) -> Result<()> {
-    ensure!(cfg!(all(target_os = "windows", target_arch = "x86_64", target_env = "msvc")), "self-update has no release asset for this build; currently only Windows x64 MSVC releases support upgrade");
+    ensure!(cfg!(all(target_os = "windows", any(target_arch = "x86_64", target_arch = "aarch64"), target_env = "msvc")), "self-update has no release asset for this build; currently only Windows x64/ARM64 MSVC releases support upgrade");
     let token = environment
         .get(std::ffi::OsStr::new("GITHUB_TOKEN"))
         .map(|value| {

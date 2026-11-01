@@ -36,7 +36,7 @@
 
 </div>
 
-Hanamori manages independent MSVC, Windows SDK and MSBuild installations on Windows x64. Install toolchains without a full Visual Studio installation, pin projects to specific versions, switch the current shell environment, or run a command with a selected toolchain.
+Hanamori manages independent MSVC, Windows SDK and MSBuild installations on Windows x64 / ARM64. Install toolchains without a full Visual Studio installation, pin projects to specific versions, switch the current shell environment, or run a command with a selected toolchain.
 
 It provides aliases and defaults, shared download caching, shell initialization, directory-based discovery and reinstallation, self-update, and scoped uninstallation. PowerShell, Bash and Zsh integration are supported; CMD integration is experimental.
 
@@ -53,7 +53,7 @@ Install Hanamori in Windows PowerShell 5.1 or PowerShell 7:
 irm https://hanamori.netlify.app/install.ps1 | iex
 ```
 
-The script installs the Windows x64 executable into `%LOCALAPPDATA%\Hanamori\bin`, adds that directory to your user PATH, and initializes the current PowerShell profile and session with completions. No administrator privileges are required. Toolchains are installed separately.
+The script installs the Windows x64 / ARM64 executable into `%LOCALAPPDATA%\Hanamori\bin`, adds that directory to your user PATH, and initializes the current PowerShell profile and session with completions. No administrator privileges are required. Toolchains are installed separately.
 
 Set `HANAMORI_INSTALL_DIR` to choose the executable directory in either installer. Explicit `-InstallDir` / `--install-dir` arguments take precedence; an unset or empty variable uses the default directory. `HANAMORI_HOME` separately selects manager data.
 
@@ -74,7 +74,9 @@ hanamori exec '--' cl.exe /nologo /EHsc /MT hello.cpp
 
 The [first compilation guide](https://hanamori.netlify.app/docs/quick-start) includes a complete `hello.cpp` and shell activation instructions.
 
-Installation defaults to VS 2026 stable and includes MSVC, the Windows SDK and MSBuild. MSBuild supports native C++ projects and solutions using VS 2026 x64/v145 or VS 2022 x64/v143 (`--vs-version 2022`):
+Use `--arch x64/arm64` for cross-compilation or `--arch arm64/arm64` for native ARM64 tools. Omit it to follow the native Windows architecture.
+
+Installation defaults to VS 2026 stable and includes MSVC, the Windows SDK and MSBuild. MSBuild supports native C++ projects and solutions using VS 2026 v145 or VS 2022 v143 (`--vs-version 2022`):
 
 ```powershell
 hanamori install latest --name build

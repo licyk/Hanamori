@@ -7,9 +7,6 @@ use std::path::{Path, PathBuf};
 fn schema_version() -> u32 {
     1
 }
-fn architecture() -> String {
-    "x64".into()
-}
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(untagged)]
@@ -31,13 +28,20 @@ pub struct Project {
     #[serde(default)]
     pub sdk: ProjectSdk,
     pub msbuild: Option<bool>,
-    #[serde(default = "architecture")]
-    pub host: String,
-    #[serde(default = "architecture")]
-    pub target: String,
+    #[serde(default)]
+    pub host: Option<crate::architecture::Arch>,
+    #[serde(default)]
+    pub target: Option<crate::architecture::Arch>,
 }
 
 impl Project {
+    pub fn architecture(&self) -> crate::architecture::Architecture {
+        let host = self.host.unwrap_or_else(crate::architecture::Arch::native);
+        crate::architecture::Architecture {
+            host,
+            target: self.target.unwrap_or(host),
+        }
+    }
     fn validate(&self) -> Result<()> {
         ensure!(
             self.schema_version == 1,
@@ -53,10 +57,6 @@ impl Project {
                 "project SDK must have four numeric segments, or be null for no SDK"
             );
         }
-        ensure!(
-            self.host == "x64" && self.target == "x64",
-            "only project host/target x64/x64 is supported"
-        );
         if let Some(vs) = &self.vs {
             ensure!(
                 vs.len() == 4 && vs.bytes().all(|c| c.is_ascii_digit()),
@@ -73,7 +73,8 @@ impl Project {
     }
 
     pub fn matches(&self, record: &Toolchain) -> bool {
-        self.toolset.matches(&record.toolset_version)
+        record.architecture == self.architecture()
+            && self.toolset.matches(&record.toolset_version)
             && self
                 .msbuild
                 .is_none_or(|required| required == record.msbuild_version.is_some())

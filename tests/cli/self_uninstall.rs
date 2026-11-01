@@ -48,7 +48,7 @@ impl Fixture {
     }
 
     fn install(&self) -> (PathBuf, String) {
-        let key = "vs2022-release/msvc-14.44.17.14_sdk-26100_x64".to_owned();
+        let key = "vs2022-release/msvc-14.44.17.14_sdk-26100_host-x64_target-x64".to_owned();
         let root = self.manager.join("toolchains").join(&key);
         toolchain(&root, "14.44.35207", Some("10.0.26100.0"));
         ToolchainStore::new(&self.manager)
@@ -266,7 +266,7 @@ fn active_session_and_unproven_ownership_leave_program_and_index_available() {
     let (root, receipt) = fixture.install();
     let selection = hanamori::state::local::Selection::new(
         Some(receipt.clone()),
-        hanamori::env::detect_selected(&root, None, None, false).unwrap(),
+        hanamori::env::detect_selected(&root, None, None, false, None).unwrap(),
     )
     .unwrap();
     let active =

@@ -21,13 +21,14 @@ pub fn append(
     fault: Fault,
     packages: &mut Vec<serde_json::Value>,
     assets: &mut HashMap<String, Vec<u8>>,
+    arch: hanamori::architecture::Architecture,
 ) {
     // Keep the older SDK usable even in failure fixtures, so a failed second install
     // can be checked against an already registered, receipted combination.
     for short in ["22621", "26100"] {
         let fault = if short == "26100" { fault } else { Fault::None };
         let version = format!("10.0.{short}.0");
-        let groups = [
+        let mut groups = vec![
             (
                 "Windows SDK for Windows Store Apps Tools-x86_en-us.msi",
                 vec![
@@ -73,16 +74,28 @@ pub fn append(
                 ],
             ),
         ];
+        if arch.target == hanamori::architecture::Arch::Arm64 {
+            groups.push((
+                "Windows SDK OnecoreUap Headers arm64-x86_en-us.msi",
+                vec![format!("Include/{version}/onecore/arm64/fixture.h")],
+            ));
+        }
         let mut payloads = Vec::new();
         for (index, (name, paths)) in groups.into_iter().enumerate() {
             if fault == Fault::MissingPackage && index == 2 {
                 continue;
             }
+            let name = name.replace("Desktop Libs x64", &format!("Desktop Libs {}", arch.target));
             let files: Vec<_> = paths
                 .into_iter()
                 .filter(|path| !(fault == Fault::MissingLibrary && path.ends_with("/kernel32.Lib")))
                 .filter(|path| !(fault == Fault::MissingTool && path.ends_with("/mt.exe")))
                 .map(|path| {
+                    let path = if path.starts_with("bin/") {
+                        path.replace("/x64/", &format!("/{}/", arch.host))
+                    } else {
+                        path.replace("/x64/", &format!("/{}/", arch.target))
+                    };
                     let bytes = format!("synthetic SDK {short}: {path}").into_bytes();
                     (format!("Windows Kits/10/{path}"), bytes)
                 })

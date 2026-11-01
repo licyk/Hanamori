@@ -49,7 +49,7 @@ fn config_command_preserves_explicitness_and_writes_only_json_to_stdout() {
 fn invalid_installation_options_fail_before_touching_disk_or_network() {
     let temp = tempfile::tempdir().unwrap();
     for args in [
-        vec!["--arch", "arm64/arm64"],
+        vec!["--arch", "x86/arm64"],
         vec!["--profile", "full"],
         vec!["--profile", "compiler-only", "--sdk", "26100"],
         vec!["--profile", "compiler-only", "--sdk", "latest"],

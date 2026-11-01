@@ -50,7 +50,7 @@ export default function HeroSection() {
             ) : null}
           </div>
           <div className="home-platforms" aria-label={copy.platformsLabel}>
-            <span>Windows x64</span>
+            <span>Windows x64 / ARM64</span>
             <Link href="/docs/quick-start">{locale === "zh-CN" ? "快速开始 →" : "Quick start →"}</Link>
           </div>
         </div>
