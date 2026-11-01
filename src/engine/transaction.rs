@@ -27,6 +27,8 @@ impl Transaction {
             if !root.exists() {
                 std::fs::rename(&previous, &root)?;
             } else {
+                crate::file_usage::close_users(&previous)
+                    .context("cannot release previous installation")?;
                 std::fs::remove_dir_all(&previous).context("cannot clean previous installation")?;
             }
         }
@@ -39,6 +41,8 @@ impl Transaction {
             ensure!(replace || std::fs::read_dir(&root)?.next().is_none(), "external installation directory is not empty; use --reinstall to replace this entire directory");
         }
         if stage.exists() {
+            crate::file_usage::close_users(&stage)
+                .context("cannot release previous installation staging directory")?;
             std::fs::remove_dir_all(&stage)?;
         }
         std::fs::create_dir(&stage)?;
@@ -55,8 +59,7 @@ impl Transaction {
     pub fn publish(self) -> Result<()> {
         let replacing = self.root.exists();
         if replacing {
-            #[cfg(windows)]
-            super::restart_manager::close_users(&self.root).with_context(|| {
+            crate::file_usage::close_users(&self.root).with_context(|| {
                 format!(
                     "cannot release installation at '{}'; the existing installation is unchanged",
                     self.root.display()

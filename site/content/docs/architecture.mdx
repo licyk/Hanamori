@@ -10,7 +10,7 @@ icon: Network
 
 | 层 | 模块 | 职责 | 可依赖 |
 | --- | --- | --- | --- |
-| foundation | `env`、`msbuild`、`fs`、`identity`、`locking`、`serde_helpers`、`version` | 路径、锁、布局、版本与产品身份 | — |
+| foundation | `env`、`msbuild`、`file_usage`、`fs`、`identity`、`locking`、`serde_helpers`、`version` | 路径、锁、文件占用处理、布局、版本与产品身份 | — |
 | archive | `archive` | VSIX、MSI、CAB 解包 | — |
 | catalog | `catalog` | 清单解析和安装包选择 | foundation |
 | download | `download` | 网络、完整性、分段与缓存 | foundation |
@@ -26,6 +26,8 @@ icon: Network
 - 父模块（`lib.rs` 和任何带子模块的文件）只包含 `mod` 声明和重新导出，实现位于叶子模块。
 
 `upgrade` 与 `self_uninstall` 模块提供 GitHub 自我更新与自身卸载编排。网站是独立 `site/` Bun 项目，不加入 Rust 程序运行依赖。
+
+`file_usage` 独立封装 Windows Restart Manager，支持单文件和目录树。安装替换、残留目录清理、工具链卸载、缓存清理、自更新备份和自身卸载元数据删除共用它；调用方仍负责操作锁和预览流程。模块不跟随链接，不关闭自身进程，其他平台沿用普通文件操作。
 
 <Mermaid chart={'flowchart TD\n  CLI[CLI and config] --> Engine[Install and lifecycle]\n  CLI --> Shell[Shell and sessions]\n  Engine --> State[Directories and references]\n  Engine --> Catalog[Catalog]\n  Engine --> Download[Downloads and cache]\n  Engine --> Archive[Extraction]\n  Shell --> State'} />
 

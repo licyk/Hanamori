@@ -9,6 +9,10 @@ use std::sync::OnceLock;
 mod console;
 #[cfg(windows)]
 pub use console::command as console_cmd;
+#[cfg(windows)]
+mod file_user;
+#[cfg(windows)]
+pub use file_user::FileUser;
 
 /// Isolate test configuration while retaining Windows socket and DLL initialization.
 pub fn clear_environment(command: &mut Command) -> &mut Command {

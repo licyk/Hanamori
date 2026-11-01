@@ -3,7 +3,7 @@ use crate::state::{
     active::ActiveToolchain,
     toolchains::{self, Reference, ToolchainStore},
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Context, Result};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 #[derive(Debug, Serialize)]
@@ -60,6 +60,12 @@ pub fn run(
                 && !crate::fs::is_link(&std::fs::symlink_metadata(plan.root.parent().unwrap())?),
             "managed directory must not be an external link"
         );
+        crate::file_usage::close_users(&plan.root).with_context(|| {
+            format!(
+                "cannot release toolchain for uninstall: {}",
+                plan.root.display()
+            )
+        })?;
         std::fs::remove_dir_all(&plan.root)?;
     }
     for name in &plan.aliases {

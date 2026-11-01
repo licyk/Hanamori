@@ -34,8 +34,9 @@ Updating requires write access to the executable's directory. Staging is created
 that executable, and a sibling `<executable>.update.lock` prevents simultaneous updates.
 The lock file may remain after completion; do not delete it to bypass an active update.
 The old executable is renamed to `<executable>.outdated`, retained while its process
-exits, and removed by the next actual update. Close processes still using that backup
-if its removal is blocked. These sibling names are reserved for the updater.
+exits, and removed by the next actual update. After verifying the new executable, if backup
+deletion is blocked by file usage, Windows Restart Manager closes its users and retries.
+Resolve any remaining error manually. These sibling names are reserved for the updater.
 
 Replacement failure attempts to restore the original executable. The two renames are
 not one atomic operation: if the process is terminated between them and the original

@@ -17,7 +17,7 @@ resolves typed inputs and retains source diagnostics separately. Everything is o
 
 | Layer | Modules | Responsibility | May use |
 | --- | --- | --- | --- |
-| foundation | `env`, `msbuild`, `fs`, `identity`, `locking`, `serde_helpers`, `version` | Paths, locking, layout, versions and identity | — |
+| foundation | `env`, `msbuild`, `file_usage`, `fs`, `identity`, `locking`, `serde_helpers`, `version` | Paths, locking, file usage handling, layout, versions and identity | — |
 | archive | `archive` | VSIX, MSI and CAB extraction | — |
 | catalog | `catalog` | Catalog parsing and package selection | foundation |
 | download | `download` | Network transfers, integrity, ranges and cache | foundation |
@@ -25,6 +25,12 @@ resolves typed inputs and retains source diagnostics separately. Everything is o
 | shell | `shell` | Sessions, scripts and startup integration | foundation, state |
 | engine | `engine` | Staged installation, publication, import, diagnosis and uninstall | foundation, archive, catalog, download, state |
 | application | `cli`, `commands`, `config`, `logging`, `runtime`, `self_uninstall`, `upgrade` | Command line, configuration, self-update and self-uninstall | all layers |
+
+`file_usage` encapsulates Windows Restart Manager for individual files and directory trees.
+Installation replacement, leftover directory cleanup, toolchain uninstall, cache cleanup,
+update backup removal and self-uninstall metadata removal share it. Callers retain operation
+locks and preview handling. The module skips links, never closes its own process and leaves
+other platforms using ordinary file operations.
 
 The unpublished `test-support` crate holds synthetic payloads, HTTP fixtures and shell
 probes for tests. `cargo xtask check` enforces the structure and runs in CI:

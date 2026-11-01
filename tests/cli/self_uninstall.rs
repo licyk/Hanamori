@@ -92,6 +92,38 @@ fn preview_does_not_create_manager_records_locks_or_helpers() {
     }
 }
 
+#[cfg(windows)]
+#[test]
+fn uninstall_and_purge_close_only_the_selected_toolchain_users_after_locking() {
+    for purge in [false, true] {
+        let fixture = Fixture::new();
+        let (root, _) = fixture.install();
+        let held_file = root.join("in-use.txt");
+        fs::write(&held_file, b"toolchain file").unwrap();
+        let other_file = fixture.temp.path().join("unrelated.txt");
+        fs::write(&other_file, b"keep").unwrap();
+        let mut held = support::FileUser::new(&held_file);
+        let mut unrelated = support::FileUser::new(&other_file);
+        let args = if purge {
+            vec!["self", "uninstall", "--purge"]
+        } else {
+            vec!["uninstall", "owned"]
+        };
+        success(fixture.cli().args(&args).arg("--dry-run").output().unwrap());
+        assert!(held.is_running());
+        let lock = hanamori::locking::lock_root(&root).unwrap();
+        assert!(!fixture.cli().args(&args).output().unwrap().status.success());
+        assert!(held.is_running());
+        assert!(root.is_dir());
+        drop(lock);
+        success(fixture.cli().args(&args).output().unwrap());
+        assert!(!held.is_running());
+        assert!(unrelated.is_running());
+        assert!(!root.exists());
+        assert!(!fixture.manager.join("references/owned.json").exists());
+    }
+}
+
 #[test]
 fn default_removes_only_program_backup_and_recorded_block() {
     let fixture = Fixture::new();

@@ -24,7 +24,7 @@ hanamori doctor --json
 | `self uninstall` | 删除程序及其启动入口，默认保留工具链 |
 | `self uninstall --purge` | 额外清理受管工具链、完整缓存、配置和引用，保留外部工具链 |
 
-`uninstall` 接受目录键、引用或唯一版本前缀；目标已经缺少文件仍可卸载。目录整体已删除时，使用精确目录键或失效的受管引用也能完成清理。当前会话正在使用目标时先 deactivate；其他终端不被跟踪，Windows 占用错误会直接报告。
+`uninstall` 接受目录键、引用或唯一版本前缀；目标已经缺少文件仍可卸载。目录整体已删除时，使用精确目录键或失效的受管引用也能完成清理。当前会话正在使用目标时先 deactivate；Windows 上取得目录锁后，会通过 Windows Restart Manager 关闭使用目标文件的进程，再删除目录。`self uninstall --purge` 清理工具链时使用相同流程。
 
 ```sh
 hanamori remove imported --dry-run --json
@@ -46,7 +46,7 @@ hanamori doctor --dir D:/ExistingTools --json
 
 Windows 上实际替换目录前，Hanamori 会将旧安装中的文件交给 Windows Restart Manager，查询使用这些文件的进程，打印名称和 PID，并请求关闭；未响应的进程会被强制关闭。操作按目标安装文件限定范围，不按 `MSBuild.exe`、`mspdbsrv.exe` 或 `vctip.exe` 等名称全局结束进程。微软包中的 PDB 服务和遥测程序均完整保留。
 
-关闭操作只发生在新内容解包、校验成功后。首次安装、复用已有安装、`--dry-run` 或准备失败不会关闭进程。重装前保存工作并等待相关构建结束，因为使用该工具链的进程会被结束。无法关闭的进程、目录句柄或权限问题仍会阻止替换，并保留旧安装；根据日志手动处理后重试。退出 Shell 激活不会结束已驻留的进程。
+替换当前安装所需的关闭操作只发生在新内容解包、校验成功后；复用或准备失败不会关闭当前安装的使用者。清理上次中断留下的 `.stage` / `.old` 目录时，也会关闭使用这些残留文件的进程。`--dry-run` 不关闭进程。重装或卸载前保存工作并等待相关构建结束，因为使用该工具链的进程会被结束。无法关闭的进程、目录句柄或权限问题仍会阻止操作；根据日志手动处理后重试。退出 Shell 激活不会结束已驻留的进程。
 
 包含 MSBuild 的组合还检查引擎、C++ targets、任务程序集、FileTracker 和生成配置；Windows 上的 `doctor` 会执行引擎版本探测，区分缺失文件与运行时启动失败。其他平台只检查文件。删除这些关键文件后，用 `list` 中的完整目录键重新安装即可修复。`import` 会保留 Hanamori 便携安装的 MSBuild 版本；不会把任意 Visual Studio 目录转换成受支持的独立 MSBuild 安装。
 

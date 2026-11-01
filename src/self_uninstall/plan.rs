@@ -186,7 +186,7 @@ fn regular_or_missing(path: &Path) -> Result<bool> {
 }
 
 fn remove_file(path: &Path) -> Result<()> {
-    match fs::remove_file(path) {
+    match crate::file_usage::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error).with_context(|| format!("cannot remove {}", path.display())),

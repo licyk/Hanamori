@@ -20,6 +20,7 @@ pub mod config;
 pub mod download;
 pub mod engine;
 pub mod env;
+pub mod file_usage;
 pub mod fs;
 pub mod identity;
 pub mod locking;

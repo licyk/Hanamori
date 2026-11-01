@@ -5,7 +5,8 @@ use std::process::{Command, Output};
 
 fn cli(home: &Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_hanamori"));
-    command.env_clear().arg("--manager-dir").arg(home);
+    crate::support::clear_environment(&mut command);
+    command.arg("--manager-dir").arg(home);
     command
 }
 
@@ -327,27 +328,34 @@ fn linked_cache_namespace_or_locks_are_rejected_without_deleting_external_files(
 
 #[cfg(windows)]
 #[test]
-fn windows_file_occupation_preserves_the_payload_and_can_be_retried_after_close() {
-    use std::os::windows::fs::OpenOptionsExt;
+fn windows_cleanup_releases_file_users_only_after_preview_and_cache_lock_checks() {
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     let cache = home.join("cache");
-    let (_, path) = payload(&cache, 'a', b"locked file");
-    let handle = std::fs::OpenOptions::new()
-        .read(true)
-        .share_mode(1)
-        .open(&path)
-        .unwrap();
-    let result = report(
+    let (digest, path) = payload(&cache, 'a', b"locked file");
+    let mut holder = crate::support::FileUser::new(&path);
+    report(
+        cli(&home)
+            .args(["cache", "clean", "--dry-run", "--json"])
+            .output()
+            .unwrap(),
+        true,
+    );
+    assert!(holder.is_running());
+    let lock_path = cache.join("locks").join(format!("{digest}.lock"));
+    std::fs::create_dir_all(lock_path.parent().unwrap()).unwrap();
+    let guard = FileLock::acquire(&lock_path).unwrap();
+    let busy = report(
         cli(&home)
             .args(["cache", "clean", "--json"])
             .output()
             .unwrap(),
         false,
     );
-    assert_eq!(result["removed_bytes"], 0);
+    assert_eq!(busy["removed_bytes"], 0);
+    assert!(holder.is_running());
     assert!(path.exists());
-    drop(handle);
+    drop(guard);
     report(
         cli(&home)
             .args(["cache", "clean", "--json"])
@@ -355,6 +363,7 @@ fn windows_file_occupation_preserves_the_payload_and_can_be_retried_after_close(
             .unwrap(),
         true,
     );
+    assert!(!holder.is_running());
     assert!(!path.exists());
 }
 

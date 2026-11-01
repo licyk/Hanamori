@@ -174,7 +174,7 @@ fn clean_entry(root: &Path, display: &Path, entry: &mut Entry) -> Result<()> {
         "cache payload was replaced by a nonregular file"
     );
     entry.bytes = metadata.len();
-    std::fs::remove_file(&path).context("cannot remove cached payload")?;
+    crate::file_usage::remove_file(&path).context("cannot remove cached payload")?;
     entry.outcome = Outcome::Removed;
     Ok(())
 }

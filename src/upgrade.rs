@@ -285,7 +285,7 @@ async fn verify_executable(path: &Path, expected: &Version, timeout: Duration) -
 
 fn replace_executable(target: &Path, staged: &Path) -> Result<PathBuf> {
     let backup = with_suffix(target, ".outdated");
-    match std::fs::remove_file(&backup) {
+    match crate::file_usage::remove_file(&backup) {
         Ok(()) => {}
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => {

@@ -17,6 +17,6 @@ hanamori cache clean --json
 
 `--file-workers` 限制并行 payload 数，`--connections` 限制每个 payload 的连接数。默认分别为 4 和 8。`--mirror` 替换负载主机/基础路径，失败时回退到原始 URL。具体字段及来源优先级见[配置](/docs/configuration)。
 
-清理只处理固定 SHA-256 命名空间中可识别的完整文件；保留未知文件、部分下载、目录和锁。忙碌文件跳过，部分失败返回非零状态并报告已处理项，可解决占用后重试。不改变工具链或引用或持久下载工作区。预览不取锁、不写文件。
+清理只处理固定 SHA-256 命名空间中可识别的完整文件；保留未知文件、部分下载、目录和锁。被其他 Hanamori 操作锁定的条目会跳过。Windows 上取得缓存锁后，若删除因文件占用失败，会通过 Windows Restart Manager 关闭使用该文件的进程并重试。部分失败返回非零状态并报告已处理项，可解决占用后重试。不改变工具链或引用或持久下载工作区。预览不取锁、不写文件、不关闭进程。
 
 自我更新使用 GitHub API 与 Release 资产，使用同一 proxy 配置，但不使用工具链 mirror、cache 或 download-dir。

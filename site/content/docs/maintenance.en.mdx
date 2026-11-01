@@ -22,7 +22,7 @@ Import requires `--name`. It checks the selected combination and saves only its 
 | `self uninstall` | Remove the executable and its startup entries, preserving toolchains by default |
 | `self uninstall --purge` | Also clean managed tools, complete cache entries, config and references; preserve external tools |
 
-Uninstall accepts a directory key, reference or unique version prefix. Missing payload files do not prevent removal. If the entire directory is gone, its exact key or dangling managed reference still allows cleanup. Deactivate a toolchain used by the current session first. Other terminals are not tracked; Windows sharing errors are reported directly.
+Uninstall accepts a directory key, reference or unique version prefix. Missing payload files do not prevent removal. If the entire directory is gone, its exact key or dangling managed reference still allows cleanup. Deactivate a toolchain used by the current session first. On Windows, after acquiring the directory lock, uninstall uses Windows Restart Manager to close processes using the target files before deleting the directory. Toolchain cleanup during `self uninstall --purge` follows the same flow.
 
 ```sh
 hanamori remove imported --dry-run --json
@@ -44,7 +44,7 @@ Downloads, extraction and required-file checks finish before replacing an old ma
 
 Before replacing a directory on Windows, Hanamori registers the old installation's files with Windows Restart Manager, queries their users, logs process names and PIDs, and requests shutdown. Unresponsive processes are forcibly closed. Selection is scoped to the installation's files, rather than globally terminating processes named `MSBuild.exe`, `mspdbsrv.exe` or `vctip.exe`. The PDB server and telemetry program from the Microsoft packages remain installed.
 
-Shutdown occurs only after the new contents have been extracted and validated. First installs, reuse, `--dry-run` and preparation failures do not close processes. Save work and finish related builds before reinstalling, as processes using the toolchain will be terminated. Processes that cannot be closed, directory handles or permissions can still block replacement; the old installation is preserved so you can resolve the reported issue and retry. Shell deactivation does not stop resident processes.
+Processes using the current installation are closed only after replacement contents have been extracted and validated; reuse and preparation failures leave those processes running. Cleanup of `.stage` / `.old` directories from an interrupted operation also closes processes using those leftover files. `--dry-run` never closes processes. Save work and finish related builds before reinstalling or uninstalling, as processes using the toolchain will be terminated. Processes that cannot be closed, directory handles or permissions can still block the operation; resolve the reported issue and retry. Shell deactivation does not stop resident processes.
 
 MSBuild combinations also check the engine, C++ targets, task assemblies, FileTracker and generated configuration. On Windows, doctor probes the engine version to distinguish runtime startup failures from missing files; other platforms only check files. Reinstall the full key from `list` to repair missing required components. Import preserves the MSBuild version of a Hanamori portable installation; it does not convert an arbitrary Visual Studio directory into a supported standalone MSBuild installation.
 

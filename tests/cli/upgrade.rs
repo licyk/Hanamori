@@ -97,6 +97,44 @@ async fn force_never_downgrades() {
     assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 1);
 }
 
+#[cfg(windows)]
+#[tokio::test]
+async fn backup_users_are_closed_only_after_the_update_is_verified() {
+    let temp = tempfile::tempdir().unwrap();
+    let executable = target(temp.path());
+    let backup = temp.path().join("custom name.exe.outdated");
+    std::fs::write(&backup, b"old backup").unwrap();
+    let mut holder = support::FileUser::new(&backup);
+    let version = hanamori::identity::VERSION;
+    let invalid = Release::new(version, b"invalid executable".to_vec(), |_| {});
+    assert!(invalid
+        .updater()
+        .run(
+            &executable,
+            Version::new(0, 0, 0),
+            Mode::Upgrade { force: false }
+        )
+        .await
+        .is_err());
+    assert!(holder.is_running());
+    assert_eq!(std::fs::read(&backup).unwrap(), b"old backup");
+    let bytes = std::fs::read(env!("CARGO_BIN_EXE_hanamori")).unwrap();
+    let valid = Release::new(version, bytes.clone(), |_| {});
+    let report = valid
+        .updater()
+        .run(
+            &executable,
+            Version::new(0, 0, 0),
+            Mode::Upgrade { force: false },
+        )
+        .await
+        .unwrap();
+    assert_eq!(report.status, Status::Updated);
+    assert!(!holder.is_running());
+    assert_eq!(std::fs::read(&backup).unwrap(), b"original executable");
+    assert_eq!(std::fs::read(&executable).unwrap(), bytes);
+}
+
 #[tokio::test]
 async fn a_held_update_lock_prevents_download_and_replacement() {
     let temp = tempfile::tempdir().unwrap();

@@ -17,6 +17,6 @@ hanamori cache clean --json
 
 `--file-workers` controls concurrent payloads; `--connections` controls connections per payload. Defaults are 4 and 8. `--mirror` changes the payload host/base path with fallback to the original URL. See [configuration](/docs/configuration) for fields and precedence.
 
-Cleanup recognizes complete files only in the fixed SHA-256 namespace. It preserves unknown files, partial downloads, directories and locks. Busy entries are skipped; incomplete cleanup returns a nonzero status and reports completed removals. Resolve contention and retry. It does not modify toolchains or references or persistent workspaces. Previews take no locks and write no files.
+Cleanup recognizes complete files only in the fixed SHA-256 namespace. It preserves unknown files, partial downloads, directories and locks. Entries locked by another Hanamori operation are skipped. On Windows, after acquiring the cache lock, a deletion blocked by file usage closes that file's users through Windows Restart Manager and retries. Incomplete cleanup returns a nonzero status and reports completed removals. Resolve contention and retry. It does not modify toolchains or references or persistent workspaces. Previews take no locks, write no files and close no processes.
 
 Self-update uses GitHub API and Release assets with the same proxy configuration, but does not use the toolchain mirror, cache or download directory.

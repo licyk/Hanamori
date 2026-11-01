@@ -1,4 +1,4 @@
-//! Release users of the old installation only after its replacement is ready.
+//! Windows Restart Manager integration for explicit file and directory operations.
 use anyhow::{ensure, Context, Result};
 use std::{os::windows::ffi::OsStrExt, path::Path, ptr};
 use windows_sys::Win32::{
@@ -10,12 +10,12 @@ use windows_sys::Win32::{
     },
 };
 
-pub(super) fn close_users(root: &Path) -> Result<()> {
-    let files = file_names(&std::fs::canonicalize(root)?)?;
+pub(super) fn close_users(path: &Path) -> Result<()> {
+    let files = file_names(path)?;
     if files.is_empty() {
         return Ok(());
     }
-    tracing::info!("Checking processes using installation {}", root.display());
+    tracing::info!("Checking processes using {}", path.display());
     let mut handle = 0;
     let mut key = [0u16; CCH_RM_SESSION_KEY as usize + 1];
     check(
@@ -36,7 +36,7 @@ pub(super) fn close_users(root: &Path) -> Result<()> {
                 ptr::null(),
             )
         },
-        "cannot register installation files with Windows Restart Manager",
+        "cannot register files with Windows Restart Manager",
     )?;
     let (users, reboot_reasons) = session.users()?;
     for user in &users {
@@ -46,7 +46,7 @@ pub(super) fn close_users(root: &Path) -> Result<()> {
             .position(|c| *c == 0)
             .unwrap_or(user.strAppName.len());
         tracing::info!(
-            "Installation is in use by {} (PID {})",
+            "Files are in use by {} (PID {})",
             String::from_utf16_lossy(&user.strAppName[..length]),
             user.Process.dwProcessId
         );
@@ -55,20 +55,22 @@ pub(super) fn close_users(root: &Path) -> Result<()> {
         !users
             .iter()
             .any(|user| user.Process.dwProcessId == std::process::id()),
-        "Hanamori itself is using installation files; run it from outside the toolchain"
+        "the current process is using {}; cannot close itself to release files",
+        path.display()
     );
     ensure!(
         reboot_reasons == 0,
-        "Windows Restart Manager cannot close all installation users (reason flags: {reboot_reasons:#x}); close them manually and retry"
+        "Windows Restart Manager cannot close all file users (reason flags: {reboot_reasons:#x}); close them manually and retry"
     );
     if !users.is_empty() {
         tracing::info!(
-            "Closing {} process(es) using the old installation",
-            users.len()
+            "Closing {} process(es) using {}",
+            users.len(),
+            path.display()
         );
         check(
             unsafe { RmShutdown(session.0, RmForceShutdown as u32, None) },
-            "cannot close all processes using the installation; close the remaining processes and retry",
+            "cannot close all processes using the files; close the remaining processes and retry",
         )?;
     }
     Ok(())
@@ -94,7 +96,7 @@ impl Session {
                 users.resize(needed as usize, RM_PROCESS_INFO::default());
                 continue;
             }
-            check(result, "cannot query processes using installation files")?;
+            check(result, "cannot query processes using files")?;
             users.truncate(count as usize);
             return Ok((users, reasons));
         }
@@ -108,15 +110,27 @@ impl Drop for Session {
 }
 
 fn file_names(root: &Path) -> Result<Vec<Vec<u16>>> {
-    let mut pending = vec![root.to_path_buf()];
+    let metadata = match std::fs::symlink_metadata(root) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error).context("cannot inspect file usage target"),
+    };
+    if crate::fs::is_link(&metadata) {
+        return Ok(Vec::new());
+    }
+    let root = std::fs::canonicalize(root)?;
+    if metadata.is_file() {
+        return Ok(vec![resource_name(&root)?]);
+    }
+    let mut pending = vec![root];
     let mut files = Vec::new();
     while let Some(directory) = pending.pop() {
-        for entry in std::fs::read_dir(&directory).with_context(|| {
-            format!("cannot list installation directory {}", directory.display())
-        })? {
+        for entry in std::fs::read_dir(&directory)
+            .with_context(|| format!("cannot list file usage directory {}", directory.display()))?
+        {
             let path = entry?.path();
             let metadata = std::fs::symlink_metadata(&path)?;
-            // A link may point outside the installation being replaced.
+            // A link may point outside the caller's selected files.
             if crate::fs::is_link(&metadata) {
                 continue;
             }
@@ -146,7 +160,7 @@ fn resource_name(path: &Path) -> Result<Vec<u16>> {
         return Err(std::io::Error::last_os_error())
             .context("cannot get a short path for Windows Restart Manager");
     }
-    ensure!(short.len() <= 260, "Windows Restart Manager requires a path under 260 characters, but this file has no sufficiently short name: {}; use a shorter installation directory", path.display());
+    ensure!(short.len() <= 260, "Windows Restart Manager requires a path under 260 characters, but this file has no sufficiently short name: {}; use a shorter directory", path.display());
     Ok(short)
 }
 

@@ -19,6 +19,7 @@ pub const HANAMORI: &[Layer] = &[
         "foundation",
         &[
             "env",
+            "file_usage",
             "fs",
             "identity",
             "msbuild",

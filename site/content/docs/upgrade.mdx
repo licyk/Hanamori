@@ -16,6 +16,6 @@ hanamori upgrade --force
 
 代理采用 `--proxy`、`HANAMORI_PROXY` 或配置文件的 proxy。可选 `GITHUB_TOKEN` 仅用于 API 查询，不发送给资产下载请求；它不意味着私有资产下载必然可用。工具链 mirror、cache、download-dir 和项目文件不控制更新。
 
-更新需要程序目录写权限。同目录创建暂存与 `<executable>.update.lock`，旧程序重命名为 `<executable>.outdated`，在下一次实际更新时尝试删除。锁文件可能留下，不要删除它来绕过正在进行的操作；备份被占用时先关闭使用它的进程。
+更新需要程序目录写权限。同目录创建暂存与 `<executable>.update.lock`，旧程序重命名为 `<executable>.outdated`，在下一次实际更新时尝试删除。新程序通过验证后，若删除备份被占用阻止，Windows Restart Manager 会关闭使用备份的进程并重试；无法释放时按错误提示手动处理。锁文件可能留下，不要删除它来绕过正在进行的操作。
 
 两次 rename 不是原子事务。替换失败尝试恢复原程序；若进程被终止在两次重命名之间，且原程序名已不存在，将 `.outdated` 改回原名再重试。回滚失败会显示具体路径。更新不修改工具链、引用或 Shell 配置；已有旧钩子需要时按[Shell 文档](/docs/bash-zsh)重新生成。

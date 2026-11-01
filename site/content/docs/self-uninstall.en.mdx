@@ -32,7 +32,7 @@ A shared cache may lose complete payloads, as with `cache clean`.
 
 Deactivate the current session first and close other terminals using Hanamori. Toolchain
 or cache cleanup failures stop before deleting the program and remaining manager metadata.
-Earlier completed removals are not rolled back. Close programs holding files and resolve the reported error before retrying. Incomplete managed directories can still be uninstalled. A dry run performs no writes, registry edits, lock acquisition or helper launch.
+Earlier completed removals are not rolled back. `--purge` reuses the file usage handling from [toolchain uninstall](/docs/maintenance) and [cache cleanup](/docs/cache). Resolve the reported error before retrying. Incomplete managed directories can still be uninstalled. A dry run performs no writes, registry edits, lock acquisition, process shutdown or helper launch.
 
 New `shell init` calls record the executable, selected runtime when available, actual profile
 locations and owned content in the user data directory's `Hanamori/shell/registrations`
