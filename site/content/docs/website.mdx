@@ -25,7 +25,7 @@ bun run test
 - `src/lib/releases.ts` 只接受指定名称的稳定 Release 资产；查询失败与没有匹配资产分开展示。
 - MDX 正文中的尖括号、花括号需要转义或放入代码块，不能直接当普通 Markdown 使用。
 
-默认不加载统计脚本。文档评论使用 Hanamori GitHub Discussions 的 `Comment` 分类，配置位于 `src/lib/giscus.ts`。Giscus 按 pathname 关联讨论，使用中文（`zh-CN`）界面，并跟随系统配色，无需额外设置评论相关环境变量。
+Umami 统计脚本及网站 ID 配置位于 `src/routes/__root.tsx`。文档评论使用 Hanamori GitHub Discussions 的 `Comment` 分类，配置位于 `src/lib/giscus.ts`。Giscus 按 pathname 关联讨论，使用中文（`zh-CN`）界面，并跟随系统配色，无需额外设置评论相关环境变量。
 
 ## 构建与发布
 

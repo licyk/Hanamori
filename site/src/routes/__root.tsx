@@ -26,6 +26,13 @@ export const Route = createRootRoute({
         href: favicon,
       },
     ],
+    scripts: [
+      {
+        src: "https://licyk-umami.netlify.app/script.js",
+        async: true,
+        "data-website-id": "2e330dae-ac34-4228-9597-fd3c49496026",
+      },
+    ],
   }),
   component: RootComponent,
 });
