@@ -1,6 +1,6 @@
 # Repository Rules
 
-- This project is unreleased. Any breaking refactoring is allowed; backward compatibility is not required. Do not add compatibility layers or retain obsolete interfaces solely to preserve existing behavior.
+- Any breaking refactoring is allowed; backward compatibility is not required. Do not add compatibility layers or retain obsolete interfaces solely to preserve existing behavior.
 - Avoid excessive checks and overly strict field validation. Validate only what is necessary for correct operation, and tolerate unknown fields in configuration files and upstream data instead of rejecting otherwise usable input.
 - Do not add complexity for speculative, extremely unlikely race conditions or security edge cases. If you believe such complexity is necessary, first explain exactly what could go wrong, how likely it is, and how much additional code it would require. Proceed only after I approve. Do not silently expand the scope of changes.
 - Validate external data only once, at the entry boundary. Pass values of known types into internal code, and do not repeat defensive checks internally.
