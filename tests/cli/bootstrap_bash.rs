@@ -90,7 +90,7 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
             msys.display()
         );
     }
-    for shell in shells {
+    for shell in &shells {
         let temp = tempfile::tempdir().unwrap();
         let directory = temp.path().join("用户 '& [test]");
         fs::create_dir(&directory).unwrap();
@@ -109,7 +109,8 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
         let root = RegKey::predef(HKEY_CURRENT_USER);
         let (key, _) = root.create_subkey(&location).unwrap();
         key.set_value("Path", &r"D:\Keep").unwrap();
-        let output = crate::support::shell_command(&shell)
+        let mut command = crate::support::shell_command(shell);
+        command
             .args([
                 "--noprofile",
                 "--norc",
@@ -124,9 +125,26 @@ fn native_msys_installers_download_and_initialize_their_own_bash() {
             .env("HANAMORI_HOME", temp.path().join("manager"))
             .env_remove("GITHUB_TOKEN")
             .env_remove("BASH_ENV")
-            .env_remove("PSModulePath")
-            .output()
-            .unwrap();
+            .env_remove("PSModulePath");
+        // A developer's PATH may put the other MSYS runtime's cygpath first.
+        if let Some(other) = shells.iter().find(|other| *other != shell) {
+            let foreign_bin = success(
+                crate::support::shell_command(other)
+                    .args([
+                        "--noprofile",
+                        "--norc",
+                        "-c",
+                        "/usr/bin/cygpath -aw /usr/bin",
+                    ])
+                    .output()
+                    .unwrap(),
+            );
+            let inherited = std::env::var_os("PATH").unwrap_or_default();
+            let paths = std::iter::once(PathBuf::from(foreign_bin.trim()))
+                .chain(std::env::split_paths(&inherited));
+            command.env("PATH", std::env::join_paths(paths).unwrap());
+        }
+        let output = command.output().unwrap();
         let path: String = key.get_value("Path").unwrap();
         drop(key);
         root.delete_subkey_all(&location).unwrap();

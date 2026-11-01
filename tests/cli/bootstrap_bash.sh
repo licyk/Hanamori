@@ -1,11 +1,13 @@
 set -euo pipefail
+export PATH="/usr/bin:/bin:$PATH"
 root=$(cygpath -au -- "$INSTALLER_ROOT")
 export HOME="$root/home"
-export PATH="/usr/bin:/bin:$PATH"
 mkdir -p -- "$HOME"
 printf '# user bashrc\n' > "$HOME/.bashrc"
 printf '# user login\n' > "$HOME/.bash_profile"
 installer="$root/install.sh"
+printf 'Bash runtime: %s\ncygpath: %s\nInstaller: %s\n' \
+    "$(cygpath -aw -- "$BASH")" "$(command -v cygpath)" "$installer" >&2
 directory="$root/custom bin"
 export HANAMORI_INSTALL_DIR="$directory"
 "$BASH" "$installer"
