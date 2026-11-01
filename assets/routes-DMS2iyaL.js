@@ -1,0 +1,1 @@
+var e={"zh-CN":{title:`Hanamori — 独立 MSVC 工具链管理`,description:`独立安装 MSVC 与 Windows SDK，按项目选择工具链，在终端中编译和构建。`},en:{title:`Hanamori — Standalone MSVC toolchain manager`,description:`Install independent MSVC and Windows SDK combinations, select toolchains per project and build from your terminal.`}};export{e as t};
