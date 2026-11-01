@@ -681,6 +681,7 @@ fn default_manifest_integrity_does_not_bypass_payload_or_json_checks() {
                 "--connections",
                 "1",
             ])
+            .args(["--arch", &catalog.architecture.to_string()])
             .output()
             .unwrap();
         assert!(!output.status.success());

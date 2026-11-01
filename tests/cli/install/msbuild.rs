@@ -654,11 +654,15 @@ fn msbuild_dry_run_and_rejected_combinations_create_no_installation() {
     let missing = Catalog::with_sdks(super::sdk::Fault::None);
     let output = super::local_command(&temp)
         .args(["install", "--manifest", &missing.url])
+        .args(["--arch", &missing.architecture.to_string()])
         .output()
         .unwrap();
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("required MSBuild package Microsoft.Build"));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("required MSBuild package Microsoft.Build"),
+        "{stderr}"
+    );
     assert_eq!(
         missing
             .payload_requests
