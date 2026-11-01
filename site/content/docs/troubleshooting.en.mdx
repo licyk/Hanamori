@@ -23,8 +23,8 @@ icon: CircleQuestionMark
 | Interrupted install left .stage / .old | Repeat the same install; it cleans staging and restores the old tree when needed |
 | External directory moved | Update the reference with `import --dir NEW --name NAME` |
 | A reference file is broken | Fix it or delete it with `remove NAME`; other directories remain usable |
-| Legacy tools missing from list | Old installation databases are ignored; `import --dir PATH --name NAME` references the old tree, or install again |
-| Update asset/digest missing | Verify that a new-named asset was actually published; do not rename old payloads to bypass checks |
+| External toolchain missing from list | Reference the existing directory with `import --dir PATH --name NAME` |
+| Update asset/digest missing | Check that the release includes an EXE matching the program architecture and a SHA-256 digest |
 | Windows self removal failed | Read failure.txt in the reported directory, close occupying processes and rerun uninstall.ps1 |
 
 Keep the complete error, command, shell identity and `hanamori --version`. `config show --resolved` shows configuration sources. `doctor --json` diagnoses without repairs and still returns nonzero on errors. Logs may include complete request URLs.

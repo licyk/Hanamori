@@ -26,4 +26,4 @@ hanamori shell init --use-on-cd --completions
 
 撤销只影响后续加载，不会退出当前工具链，也不会立即移除内存中的函数。当前终端先 `hanamori deactivate`，然后重开终端。`--dry-run` 不写 profile、备份、锁、记录或注册表。CMD 使用不同机制，见[CMD 集成](/docs/cmd)。
 
-启动 loader 不保存管理目录；自定义位置通过 profile 中的 `HANAMORI_HOME` 设置。若从生成过 `--binding` 的旧版升级，按所需选项重新运行 `shell init` 并重开终端；手工保存的钩子和补全脚本也需重新生成。
+启动 loader 不保存管理目录；自定义位置通过 profile 中的 `HANAMORI_HOME` 设置。

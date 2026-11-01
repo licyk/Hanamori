@@ -23,8 +23,8 @@ icon: CircleQuestionMark
 | 安装中断留下 .stage / .old | 重新执行同一安装；安装会清理暂存树，必要时还原旧树后重试 |
 | 外部目录移动后路径失效 | `import --dir NEW --name NAME` 更新原引用 |
 | 单个引用文件损坏 | 修正或 `remove NAME` 删除该引用；其他目录继续可用 |
-| 旧版目录未出现在列表 | 新版不读取旧安装数据库；用 `import --dir PATH --name NAME` 引用旧目录，或重新安装 |
-| 更新缺少资产或 digest | 检查是否真正发布新名称资产；不要改名旧负载来跳过验证 |
+| 外部工具链未出现在列表 | 用 `import --dir PATH --name NAME` 引用已有目录 |
+| 更新缺少资产或 digest | 检查 Release 是否包含与程序架构匹配的 EXE 和 SHA-256 digest |
 | Windows 自删失败 | 查看显示目录的 failure.txt，关闭占用进程后重新运行 uninstall.ps1 |
 
 优先保留完整错误、命令、Shell 类型与 `hanamori --version`。运行 `config show --resolved` 可以查看配置来源；`doctor --json` 只诊断不修复，有错误时仍返回非零状态。分享日志前注意其中可能包含完整请求 URL。

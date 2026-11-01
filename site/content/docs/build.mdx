@@ -38,7 +38,7 @@ irm https://hanamori.netlify.app/install.ps1 | iex
 
 重复运行会替换程序并复用已有配置；下载或验证失败时保留旧程序。`HANAMORI_HOME` 仍控制管理器数据目录，不控制程序安装目录。脚本保留原有 PATH 和 Profile 内容，不修改执行策略；受策略限制的 Profile 会给出提示。其他 Shell 可按 [Shell 集成](/docs/shell) 配置。
 
-安装完成后按需运行 `hanamori install latest --name stable` 安装工具链。之后使用 `hanamori upgrade` 更新本体，使用 `hanamori self uninstall` 卸载。当前开发版本的卸载命令会根据程序旁的 `.install.json` 记录清理脚本添加的 PATH 条目；旧版程序可能需要手动清理 PATH。
+安装完成后按需运行 `hanamori install latest --name stable` 安装工具链。之后使用 `hanamori upgrade` 更新本体，使用 `hanamori self uninstall` 卸载。卸载命令会根据程序旁的 `.install.json` 记录清理脚本添加的 PATH 条目。
 
 ## MSYS2 与 Git Bash
 
@@ -69,7 +69,7 @@ curl -fsSL https://hanamori.netlify.app/install.sh | HANAMORI_INSTALL_DIR='/d/To
 
 ## 便携安装
 
-首先查看[下载页](/download)。发布流程为 x64 和 ARM64 分别提供 EXE 与 ZIP：`hanamori-x86_64-pc-windows-msvc.*` 与 `hanamori-aarch64-pc-windows-msvc.*`，ZIP 内的程序为 `hanamori.exe`。直接下载 EXE 后可以改名为 `hanamori.exe`。文件名约定不代表已有对应发布；旧名称的资产不代表支持当前命令。
+首先查看[下载页](/download)。发布流程为 x64 和 ARM64 分别提供 EXE 与 ZIP：`hanamori-x86_64-pc-windows-msvc.*` 与 `hanamori-aarch64-pc-windows-msvc.*`，ZIP 内的程序为 `hanamori.exe`。直接下载 EXE 后可以改名为 `hanamori.exe`。
 
 将程序放在自己的工具目录，例如 `D:\Tools\Hanamori`。临时在 PowerShell 添加 PATH：
 
@@ -83,7 +83,7 @@ hanamori --help
 
 ## 从源码构建
 
-构建需要 Rust 工具链以及对应目标的链接器和构建依赖；运行已构建的安装器不需要 Rust。仓库为私有状态时，克隆和下载需要访问权限。
+构建需要 Rust 工具链以及对应目标的链接器和构建依赖；运行已构建的安装器不需要 Rust。
 
 ```sh
 git clone https://github.com/licyk/Hanamori.git

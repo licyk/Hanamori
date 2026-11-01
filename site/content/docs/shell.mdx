@@ -22,7 +22,7 @@ Bash/Zsh 中使用 `hanamori env --output hanamori-init.sh && . ./hanamori-init.
 
 `env` 和 `shell init/deinit/activate/deactivate` 不指定 `--shell` 时，沿父进程链最多查找 16 层，选择最近的受支持 Shell。支持 Bash、Zsh、PowerShell、CMD，不使用可能已过时的 `$SHELL` 或 `COMSPEC`。显式 `--shell` 优先，无法检测则要求明确指定。
 
-管理目录按每次命令的 `--manager-dir` → `HANAMORI_HOME` → 平台默认目录选择；Windows 默认为 `%LOCALAPPDATA%\Hanamori`。生成钩子或初始化脚本时传入的 `--manager-dir` 不会固定后续命令的管理目录。需要自定义长期使用的目录，在启动配置中设置 `HANAMORI_HOME`。`env --dir PATH` 仍可为未显式指定选择器的调用保存工具链目录默认值，不会注册目录，也不再使用编码的 `--binding` 参数。
+管理目录按每次命令的 `--manager-dir` → `HANAMORI_HOME` → 平台默认目录选择；Windows 默认为 `%LOCALAPPDATA%\Hanamori`。生成钩子或初始化脚本时传入的 `--manager-dir` 不会固定后续命令的管理目录。需要自定义长期使用的目录，在启动配置中设置 `HANAMORI_HOME`。`env --dir PATH` 可为未显式指定选择器的调用保存工具链目录默认值，不会注册目录。
 
 ## 会话语义
 

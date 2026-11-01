@@ -32,7 +32,7 @@ hanamori uninstall stable
 
 ## Reinstall and interrupted operations
 
-Rerun installation when a managed directory is absent, empty or missing required files. Use `--reinstall` for arbitrary damage beyond the small required-file check. No per-file hash receipts or installation database are needed.
+Rerun installation when a managed directory is absent, empty or missing required files. Use `--reinstall` for arbitrary damage beyond the small required-file check. These checks do not hash individual files.
 
 ```sh
 hanamori install --vs-version 2022 --toolset-id 14.44.17.14 --sdk-id 26100
@@ -47,5 +47,3 @@ Before replacing a directory on Windows, Hanamori registers the old installation
 Processes using the current installation are closed only after replacement contents have been extracted and validated; reuse and preparation failures leave those processes running. Cleanup of `.stage` / `.old` directories from an interrupted operation also closes processes using those leftover files. `--dry-run` never closes processes. Save work and finish related builds before reinstalling or uninstalling, as processes using the toolchain will be terminated. Processes that cannot be closed, directory handles or permissions can still block the operation; resolve the reported issue and retry. Shell deactivation does not stop resident processes.
 
 MSBuild combinations also check the engine, C++ targets, task assemblies, FileTracker and generated configuration. On Windows, doctor probes the engine version to distinguish runtime startup failures from missing files; other platforms only check files. Reinstall the full key from `list` to repair missing required components. Import preserves the MSBuild version of a Hanamori portable installation; it does not convert an arbitrary Visual Studio directory into a supported standalone MSBuild installation.
-
-The `restore`, `relocate` and `recover` commands were removed. Old indexes and receipts are neither read, migrated nor deleted. Reference old toolchains with `import --name NAME --dir PATH`; new installations use deterministic directory keys.

@@ -13,7 +13,7 @@ const copy = {
     "title": "下载 Hanamori",
     "description": "获取 Windows x64 / ARM64 程序，然后安装你的第一套 MSVC 与 Windows SDK。",
     "loading": "正在查询公开 Release…",
-    "unavailable": "暂未找到可公开下载的新版程序。仓库可能尚未公开，或最新 Release 还没有 Hanamori 资产。",
+    "unavailable": "暂未找到可下载的程序。请打开 GitHub Release 页面查看可用版本。",
     "error": "暂时无法查询 Release。请重试，或直接打开 GitHub Release 页面查看。",
     "retry": "重新查询",
     "release": "所有 Release",
@@ -26,9 +26,7 @@ const copy = {
     "bashInstall": "MSYS2 / Git Bash",
     "bashDescription": "配置 Bash 启动入口与补全。安装后重开终端，或执行脚本输出的加载命令。",
     "portable": "便携程序，无需安装 Visual Studio。EXE 可直接运行；ZIP 内为 hanamori.exe。将程序放入自己的工具目录，并按文档配置 PATH。",
-    "note": "本文档面向当前开发版本。旧 msvc-installer 资产不包含这里介绍的新命令，不作为新版下载提供。",
     "update": "已安装？运行 hanamori upgrade 检查并更新。",
-    "source": "源码构建和 GitHub 下载需要拥有仓库访问权限；私有资产无法供匿名用户下载。",
     "date": "发布日期",
     "exe": "下载 EXE",
     "zip": "下载 ZIP"
@@ -37,7 +35,7 @@ const copy = {
     "title": "Download Hanamori",
     "description": "Get the Windows x64 / ARM64 executable, then install your first MSVC and Windows SDK combination.",
     "loading": "Checking public releases…",
-    "unavailable": "No publicly accessible new build was found. The repository may not be public yet, or the latest release may not include Hanamori assets.",
+    "unavailable": "No downloadable build was found. Open the GitHub releases page to check available versions.",
     "error": "Could not query releases. Try again, or open the GitHub releases page directly.",
     "retry": "Try again",
     "release": "All releases",
@@ -50,9 +48,7 @@ const copy = {
     "bashInstall": "MSYS2 / Git Bash",
     "bashDescription": "Configures Bash startup and completions. Open a new terminal afterward, or run the printed hook command.",
     "portable": "A portable executable, without a Visual Studio installation. Run the EXE directly, or extract hanamori.exe from the ZIP. Place it in your tools directory and configure PATH using the guide.",
-    "note": "These docs describe the current development version. Old msvc-installer assets do not contain the new commands and are not offered as new downloads.",
     "update": "Already installed? Run hanamori upgrade to check and update.",
-    "source": "Source and GitHub downloads require repository access. Private assets are not available to anonymous visitors.",
     "date": "Published",
     "exe": "Download EXE",
     "zip": "Download ZIP"
@@ -140,7 +136,6 @@ function DownloadPage() {
               {text.retry}
             </button>
           ) : null}
-          <p className="download-note">{text.note}</p>
         </section>
         <div className="download-actions">
           <a className="secondary-action" href={RELEASES_URL}>
@@ -153,7 +148,6 @@ function DownloadPage() {
           {text.update}{" "}
           <Link href="/docs/upgrade">{locale === "zh-CN" ? "更新说明" : "Update guide"} →</Link>
         </p>
-        <p className="download-note">{text.source}</p>
       </main>
     </HomeLayout>
   );

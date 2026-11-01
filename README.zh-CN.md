@@ -40,8 +40,6 @@ Hanamori 在 Windows x64 / ARM64 上管理独立的 MSVC、Windows SDK 和 MSBui
 
 支持别名与默认工具链、共享下载缓存、Shell 初始化、按目录发现配置、重新安装、自我更新和按范围卸载。支持 PowerShell、Bash 和 Zsh 集成；CMD 集成仍处于实验阶段。
 
-本仓库描述当前开发版本。历史 `msvc-installer` 发布资产不包含当前命令。网站下载页仅提供实际存在且名称匹配的 `hanamori` 资产；私有仓库不提供匿名下载。
-
 - **官网：** <https://hanamori.netlify.app/>
 - **文档：** <https://hanamori.netlify.app/docs/>（中文与英文）
 

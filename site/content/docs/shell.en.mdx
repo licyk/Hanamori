@@ -70,7 +70,7 @@ hanamori use stable
 # The same command detects Zsh when run from Zsh.
 ```
 
-Each command selects its manager through `--manager-dir`, then `HANAMORI_HOME`, then the platform default (`%LOCALAPPDATA%\Hanamori` on Windows). A generation-time `--manager-dir` does not pin future commands. Set `HANAMORI_HOME` in your startup configuration to persist a custom manager directory. An explicit `env --dir PATH` still supplies a toolchain directory default for calls without an explicit selector; it does not register that directory or use an encoded `--binding` parameter.
+Each command selects its manager through `--manager-dir`, then `HANAMORI_HOME`, then the platform default (`%LOCALAPPDATA%\Hanamori` on Windows). A generation-time `--manager-dir` does not pin future commands. Set `HANAMORI_HOME` in your startup configuration to persist a custom manager directory. An explicit `env --dir PATH` supplies a toolchain directory default for calls without an explicit selector; it does not register that directory.
 
 `use`, `exec --using` and `shell activate` share local selection. For a direct,
 unregistered directory, use `--dir`, and supply `--toolset`/`--sdk` or `--no-sdk` if

@@ -46,10 +46,6 @@
   gap: .75rem;
   margin: 1.25rem 0;
 }
-.download-note {
-  color: var(--color-fd-muted-foreground);
-  font-size: .85rem;
-}
 .download-command {
   overflow-x: auto;
   padding: 1rem;

@@ -40,8 +40,6 @@ Hanamori manages independent MSVC, Windows SDK and MSBuild installations on Wind
 
 It provides aliases and defaults, shared download caching, shell initialization, directory-based discovery and reinstallation, self-update, and scoped uninstallation. PowerShell, Bash and Zsh integration are supported; CMD integration is experimental.
 
-This repository describes the current development version. Historical `msvc-installer` release assets do not contain the current commands. The website download page offers only actual matching `hanamori` assets; a private repository does not provide anonymous downloads.
-
 - **Website:** <https://hanamori.netlify.app/>
 - **Documentation:** <https://hanamori.netlify.app/docs/> (English and Chinese)
 

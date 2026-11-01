@@ -38,7 +38,7 @@ The priority is `-InstallDir`, then `HANAMORI_INSTALL_DIR`, then `%LOCALAPPDATA%
 
 Repeat installation replaces the executable and reuses existing configuration. Download or verification failures preserve the previous executable. `HANAMORI_HOME` still selects manager data, independently of the executable directory. Existing PATH entries and profile content are preserved. The installer warns about restrictive execution policies without changing them. Configure other shells through the [shell integration guide](/docs/shell).
 
-Install toolchains when needed with `hanamori install latest --name stable`. Use `hanamori upgrade` for later updates and `hanamori self uninstall` for removal. The development version removes installer-owned PATH entries using the adjacent `.install.json` receipt; older executables may require manual PATH cleanup.
+Install toolchains when needed with `hanamori install latest --name stable`. Use `hanamori upgrade` for later updates and `hanamori self uninstall` for removal. Self uninstall removes installer-owned PATH entries using the adjacent `.install.json` receipt.
 
 ## MSYS2 and Git Bash
 
@@ -79,14 +79,13 @@ On Windows the executable is `target/release/hanamori.exe`. No `aria2c`, `msiexe
 Visual Studio installation is needed to run the installer. Building requires Rust and a linker for the chosen target; the Windows MSVC target needs the corresponding build tools.
 The repository is [licyk/Hanamori](https://github.com/licyk/Hanamori).
 
-Build this revision from source. The existing release workflow produces
+The release workflow produces
 EXE and ZIP assets for `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`, named
-`hanamori-<target>.exe` and `hanamori-<target>.zip`. The ZIP entry is `hanamori.exe`. These are intended artifact names, not evidence that this refactor
-has been published. Historical assets do not establish support for the commands below.
+`hanamori-<target>.exe` and `hanamori-<target>.zip`. The ZIP entry is `hanamori.exe`.
 
 ## Portable installation
 
-Use the [download page](/download) to find an actual matching release. Rename the standalone EXE to `hanamori.exe`, or extract it from the ZIP, and place it in a tools directory such as `D:\Tools\Hanamori`. No Rust installation is needed to run a downloaded executable.
+Use the [download page](/download) to choose a release for your architecture. Rename the standalone EXE to `hanamori.exe`, or extract it from the ZIP, and place it in a tools directory such as `D:\Tools\Hanamori`. No Rust installation is needed to run a downloaded executable.
 
 For the current PowerShell session:
 
@@ -97,7 +96,7 @@ hanamori --version
 
 For future sessions, add that directory to your user PATH through Windows Environment Variables. Shell initialization creates a command hook; it does not install the executable or permanently edit PATH.
 
-A private repository requires access for cloning and downloading. The website does not provide credentials for private assets. Self-update supports the Windows x64 / ARM64 MSVC build; a different development target does not establish support for installing native MSVC on that host.
+Self-update supports the Windows x64 / ARM64 MSVC build; a different development target does not establish support for installing native MSVC on that host.
 
 ## ARM64 program builds
 
