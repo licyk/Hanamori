@@ -4,8 +4,6 @@ mod support;
 
 #[cfg(unix)]
 mod bash_startup;
-mod bootstrap;
-mod bootstrap_bash;
 mod cache;
 mod cmd_hook;
 mod cmd_startup;

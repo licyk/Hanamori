@@ -1,0 +1,88 @@
+name: Installers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'install.ps1'
+      - 'install.sh'
+      - 'tests/installers/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - '.cargo/**'
+      - 'rust-toolchain*'
+      - '.gitattributes'
+      - '.github/workflows/installers.yml'
+      - '.github/workflows/release.yml'
+  pull_request:
+    paths:
+      - 'install.ps1'
+      - 'install.sh'
+      - 'tests/installers/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - '.cargo/**'
+      - 'rust-toolchain*'
+      - '.gitattributes'
+      - '.github/workflows/installers.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source:
+        description: Commit to check
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installers-${{ github.workflow }}-${{ inputs.source || github.ref }}
+  cancel-in-progress: ${{ github.workflow == 'Installers' }}
+
+jobs:
+  portable:
+    name: Arguments and release metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.source || github.ref }}
+      - name: Test without Cargo or website dependencies
+        run: node tests/installers/run.mjs --suite portable --require-shells
+
+  windows:
+    name: Native installation (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.source || github.ref }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2.9.3
+      - name: Select Git Bash
+        shell: pwsh
+        run: '"HANAMORI_TEST_BASH=$env:ProgramFiles\Git\bin\bash.exe" >> $env:GITHUB_ENV'
+      - name: Require MSYS2 on Windows x64
+        if: runner.arch == 'X64'
+        shell: pwsh
+        run: '"HANAMORI_TEST_MSYS2_BASH=$env:SystemDrive\msys64\usr\bin\bash.exe" >> $env:GITHUB_ENV'
+      - name: Build executable for installation
+        run: cargo build --locked --release -p hanamori --bin hanamori --target ${{ matrix.target }}
+      - name: Test PowerShell and native Bash installers
+        run: node tests/installers/run.mjs --suite windows --require-shells --binary target/${{ matrix.target }}/release/hanamori.exe --target ${{ matrix.target }}

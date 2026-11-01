@@ -35,11 +35,13 @@ CI uses the existing Linux and Windows workflow. Tests use real implementation p
 local HTTP servers, synthetic archives and real available shells. Required-shell mode
 prevents silently treating missing shells as successful integration coverage.
 
-For main pushes and pull requests, Rust CI runs only when Rust source, tests, workspace
-packages, Cargo/toolchain configuration, installer scripts or release automation change.
-README-only and website-only changes skip Rust CI; the Website workflow checks changes
-under `site/` separately. Manual CI runs and Release's reusable CI call always run the
-full Linux/Windows checks, regardless of the changed paths.
+For main pushes and pull requests, Rust CI runs only when Rust source, Rust tests, workspace
+packages, Cargo/toolchain configuration or related release automation change. The Installers
+workflow checks the root installer scripts and `tests/installers/`; Rust source and build
+configuration changes also trigger installer integration checks. Website checks `site/` and
+rebuilds distributed installer files when the scripts change. README-only, website-only and
+installer-only changes skip Rust CI. Release calls Rust CI and Installers with the same source
+commit and requires both to pass before publishing, regardless of changed-path filters.
 
 For ordinary local checks, run `cargo test --workspace`. Unavailable optional shells are
 reported as skipped; an explicitly configured runtime must exist. Windows Bash/Zsh tests
@@ -48,21 +50,44 @@ Windows temporary directory while isolating Hanamori state and configuration. CM
 fixtures use a small system PATH so the developer's installed tools do not consume the
 batch command length limit.
 
-Windows CI includes `cargo test --locked -p hanamori --test cli bootstrap::` for the
-PowerShell 5.1/7 installer. It serves the real built executable through a local HTTP
-fixture and uses temporary profiles and isolated registry keys. Coverage includes
-first and repeated installation, Unicode paths, PATH preservation, skip options,
-and retaining the old executable after download, digest, size or version failures.
-Library tests cover receipt-based PATH cleanup without editing the user's real PATH.
+Installer tests run through `tests/installers/run.mjs`, using only Node built-in modules,
+without website dependencies. The portable suite needs Node, Bash and PowerShell 7, but
+does not need Cargo or a Hanamori executable. It checks arguments, platform rejection,
+release metadata, architecture selection and preservation after a corrupt download:
 
-`cargo test --locked -p hanamori --test cli bootstrap_bash::` checks Bash installer arguments
-and platform rejection. On Windows it uses real Git Bash and available MSYS2 Bash to
-install the built EXE through local HTTP fixtures, covering piped installation, both
-path formats, repeat installation, failure preservation, skip options and hook loading
-in a fresh Bash session. The primary Bash uses the same lookup described above, including
-MSYS2 installed at a custom location on PATH.
-MSYS2 uses `HANAMORI_TEST_MSYS2_BASH` or `msys64/usr/bin/bash.exe` on the system drive;
-an unavailable default is explicitly skipped, while a missing explicit runtime fails.
+```sh
+node tests/installers/run.mjs --suite portable --require-shells
+```
+
+The Windows suite accepts a real built EXE; the test runner never invokes Cargo itself.
+For a native x64 host:
+
+```powershell
+cargo build --locked -p hanamori --bin hanamori --target x86_64-pc-windows-msvc
+node tests/installers/run.mjs --suite windows --require-shells --binary target/x86_64-pc-windows-msvc/debug/hanamori.exe --target x86_64-pc-windows-msvc
+```
+
+On native ARM64, replace the build target, executable path and test target with
+`aarch64-pc-windows-msvc`. Version, size and SHA-256 come from the supplied executable.
+Local HTTP fixtures serve releases and downloads; profiles and registry keys are isolated.
+PowerShell 5.1/7 cover first and repeated installation, Unicode paths, PATH preservation,
+skip options and retaining the old executable after download, digest, size or version failures.
+Git Bash and MSYS2 each cover piped installation, both path formats, repeat installation,
+failure preservation, skip options and hook loading in a fresh Bash session.
+
+Override installer runtimes with `HANAMORI_TEST_POWERSHELL`, `HANAMORI_TEST_PWSH` and
+`HANAMORI_TEST_BASH`. Bash also checks PATH, the Git installation found on PATH and the
+default Git installation. Additional MSYS2 uses `HANAMORI_TEST_MSYS2_BASH` or
+`msys64/usr/bin/bash.exe` on the system drive. Without `--require-shells`, unavailable
+default runtimes are reported as skipped; explicit missing runtimes always fail, as does
+an entirely skipped run. `--require-shells` requires all primary shells for the suite;
+additional MSYS2 may still be skipped unless explicitly configured. Windows CI explicitly
+selects Git Bash; x64 also requires MSYS2, while ARM64 checks additional MSYS2 when available.
+
+`cargo test --workspace` does not execute root installer tests. Toolchain installation,
+self-uninstall, shell integration and completions remain Rust tests. Library tests still
+cover receipt-based PATH cleanup without editing the user's real PATH. Website build,
+type checking and tests remain independent; see [Website maintenance](/docs/website).
 
 Run `cargo test --locked -p hanamori --lib --test api` for
 extraction, publication and directory discovery coverage. The CAB regression uses a real MSZIP

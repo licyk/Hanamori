@@ -63,9 +63,16 @@ jobs:
     with:
       source: ${{ needs.plan.outputs.commit }}
 
+  installer-checks:
+    name: Installer checks
+    needs: plan
+    uses: ./.github/workflows/installers.yml
+    with:
+      source: ${{ needs.plan.outputs.commit }}
+
   build:
     name: Build (${{ matrix.target }})
-    needs: [plan, checks]
+    needs: [plan, checks, installer-checks]
     if: github.event_name == 'push' || inputs.target != 'crates-io'
     strategy:
       fail-fast: false
@@ -149,7 +156,7 @@ jobs:
 
   crates-io:
     name: Publish to crates.io
-    needs: [plan, checks]
+    needs: [plan, checks, installer-checks]
     if: github.event_name == 'push' || inputs.target != 'github'
     runs-on: windows-latest
     steps:
