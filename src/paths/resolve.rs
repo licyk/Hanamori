@@ -70,8 +70,9 @@ pub fn absolute(path: &Path, base: &Path) -> io::Result<PathBuf> {
             "resolved path must be absolute",
         ));
     }
-    // Let the OS resolve `..` after symlinks; lexical collapsing changes its target.
-    std::path::absolute(path)
+    // Configuration preserves spelling, including trailing spaces that Windows
+    // absolute-path conversion would remove. Filesystem resolution is separate.
+    Ok(path)
 }
 
 pub fn canonical_root(root: &Path) -> io::Result<PathBuf> {
@@ -140,5 +141,5 @@ pub fn resolve_future(path: &Path) -> io::Result<PathBuf> {
 }
 
 pub fn absolutize(path: impl AsRef<Path>) -> io::Result<PathBuf> {
-    absolute(path.as_ref(), &std::env::current_dir()?)
+    std::path::absolute(absolute(path.as_ref(), &std::env::current_dir()?)?)
 }
