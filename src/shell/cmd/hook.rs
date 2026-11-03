@@ -87,6 +87,8 @@ pub fn generate(
 @if exist "%_HANAMORI_CMD_WORK%" echo Hanamori: temporary directory retained because it is not empty or removable 1>&2
 @endlocal & exit /b %_HANAMORI_CMD_RESULT%
 :_hanamori_no_temp
+@if defined _HANAMORI_CMD_TRACE echo Hanamori CMD entry: temporary setup failed with status %errorlevel%, directory "%_HANAMORI_CMD_WORK%", code page "%_HANAMORI_CMD_CP%" 1>&2
+@if defined _HANAMORI_CMD_TRACE if exist "%_HANAMORI_CMD_WORK%\codepage.txt" type "%_HANAMORI_CMD_WORK%\codepage.txt" 1>&2
 @if not defined _HANAMORI_CMD_PROBE echo Hanamori: cannot prepare the batch entry; check TEMP and the console code page 1>&2
 @if defined _HANAMORI_CMD_CP chcp %_HANAMORI_CMD_CP% >nul
 @if defined _HANAMORI_CMD_OWNED del /q "%_HANAMORI_CMD_WORK%\codepage.txt" >nul 2>nul

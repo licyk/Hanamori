@@ -22,6 +22,8 @@ fn imported_verbatim_paths_stay_native_in_records_queries_and_environment() {
     toolchain(&root, "14.44.35207", None);
     let system = std::fs::canonicalize(&root).unwrap();
     assert!(system.to_str().unwrap().starts_with(r"\\?\"));
+    // Windows expands the runner's RUNNER~1 temporary directory to its full name.
+    let root = Path::new(system.to_str().unwrap().strip_prefix(r"\\?\").unwrap());
     success(
         command(&manager)
             .args(["import", "--name", "external", "--dir"])
