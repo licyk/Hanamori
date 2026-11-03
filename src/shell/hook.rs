@@ -24,6 +24,8 @@ pub fn decode_arguments(value: &str) -> Result<Vec<OsString>> {
 
 /// Ordinary commands run outside command substitution, retaining terminal I/O and status.
 pub fn forward_script(program: &Path, arguments: &[OsString], shell: Shell) -> Result<String> {
+    let native_program = crate::paths::native(program);
+    let program = native_program.as_path();
     match shell {
         Shell::Bash | Shell::Zsh => {
             let program = posix_executable(program)?;
@@ -74,6 +76,8 @@ pub fn generate(
     auto_activate: bool,
     use_on_cd: bool,
 ) -> Result<String> {
+    let native_program = crate::paths::native(program);
+    let program = native_program.as_path();
     if shell == Shell::Cmd {
         ensure!(!use_on_cd, "CMD directory switching requires persistent initialization: hanamori shell init --shell cmd --use-on-cd");
         return crate::shell::cmd::hook::generate(program, directory, auto_activate);
@@ -178,6 +182,8 @@ function global:hanamori {{
 }
 
 pub fn posix_executable(program: &Path) -> Result<String> {
+    let native_program = crate::paths::native(program);
+    let program = native_program.as_path();
     let quoted = posix_literal(program.as_os_str())?;
     // Native Windows paths must be translated by the shell's own MSYS runtime.
     if cfg!(windows) {
@@ -196,6 +202,8 @@ pub fn loader(
     completions: bool,
     use_on_cd: bool,
 ) -> Result<String> {
+    let native_program = crate::paths::native(program);
+    let program = native_program.as_path();
     ensure!(
         program.is_absolute(),
         "initialization executable path must be absolute"

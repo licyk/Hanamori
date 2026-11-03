@@ -1,6 +1,7 @@
 //! Offline selection from actual toolchain directories.
 use crate::env::{self, ToolchainLayout};
 pub use crate::identity::PROJECT_FILE;
+use crate::paths::PathExt;
 use crate::state::{
     project::find_project,
     toolchains::{self, ToolchainStore},
@@ -63,7 +64,7 @@ pub fn resolve_optional(
         return Selection::new(
             None,
             env::detect_selected(
-                &std::path::absolute(cwd.join(path))?,
+                &crate::paths::absolute(path, cwd)?,
                 *toolset,
                 *sdk,
                 *no_sdk,
@@ -83,7 +84,7 @@ pub fn resolve_optional(
                 .filter(|i| i.status == "ready" && project.matches(i))
                 .collect(),
         )
-        .with_context(|| format!("cannot resolve project {}", path.display()))?
+        .with_context(|| format!("cannot resolve project {}", path.native_display()))?
     } else {
         if !items.references.contains_key("default") {
             match std::fs::symlink_metadata(store.home.join("references/default.json")) {

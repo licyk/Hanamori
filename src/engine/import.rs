@@ -11,14 +11,14 @@ pub fn run(
     name: &str,
     architecture: Option<crate::architecture::Architecture>,
 ) -> Result<()> {
-    let root = std::fs::canonicalize(root)?;
-    let layout = env::detect_selected(&root, toolset, sdk, no_sdk, architecture)?;
+    let root = crate::paths::ResolvedPath::resolve(root)?;
+    let layout = env::detect_selected(root.system(), toolset, sdk, no_sdk, architecture)?;
     env::verify(&layout)?;
     store.write_reference(
         name,
         &Reference::External {
             architecture: layout.architecture,
-            path: root,
+            path: root.native(),
             toolset: layout.vc_tools_version,
             sdk: (!layout.windows_sdk_version.is_empty()).then_some(layout.windows_sdk_version),
             msbuild: layout.msbuild_version,

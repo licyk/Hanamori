@@ -3,6 +3,7 @@ use crate::cli::install::InstallArgs;
 use crate::config::ResolvedConfig;
 use crate::engine::install::{InstallOptions, Installer};
 use crate::logging;
+use crate::paths::PathExt;
 use crate::state::toolchains::{self, Reference};
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
@@ -51,7 +52,10 @@ pub(super) fn install(mut args: InstallArgs, config: &ResolvedConfig) -> Result<
                     .unwrap_or("none")
                     .to_owned(),
             ),
-            ("Directory", result.install_directory.display().to_string()),
+            (
+                "Directory",
+                result.install_directory.native_display().to_string(),
+            ),
         ];
         if let Some(name) = &args.name {
             rows.push(("Reference", name.clone()));
@@ -67,7 +71,10 @@ pub(super) fn install(mut args: InstallArgs, config: &ResolvedConfig) -> Result<
         result.sdk_version,
         result.msbuild_version.as_deref().unwrap_or("none")
     );
-    tracing::info!("Install directory: {}", result.install_directory.display());
+    tracing::info!(
+        "Install directory: {}",
+        result.install_directory.native_display()
+    );
     if let Some(name) = args.name {
         let reference = match &result.key {
             Some(key) => Reference::Managed { key: key.clone() },
@@ -85,8 +92,8 @@ pub(super) fn install(mut args: InstallArgs, config: &ResolvedConfig) -> Result<
         tracing::info!("Activate with: hanamori use {key}");
     } else {
         tracing::info!(
-            "Activate with: hanamori use --dir {:?}",
-            result.install_directory.display()
+            "Activate with: hanamori use --dir \"{}\"",
+            result.install_directory.native_display()
         );
     }
     Ok(())

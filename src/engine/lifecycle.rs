@@ -1,11 +1,13 @@
 //! Read-only diagnostics of directories and references.
 use crate::env;
+use crate::paths::PathExt;
 use crate::state::toolchains::{Reference, ToolchainStore};
 use anyhow::Result;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 #[derive(Serialize)]
 pub struct DoctorReport {
+    #[serde(with = "crate::paths::serde")]
     pub manager_dir: PathBuf,
     pub healthy: bool,
     pub issues: Vec<String>,
@@ -27,7 +29,7 @@ pub fn doctor(
                 Ok(())
             })
         {
-            issues.push(format!("{}: {error:#}", root.display()));
+            issues.push(format!("{}: {error:#}", root.native_display()));
         }
     } else {
         for item in items.installations.values() {
@@ -69,7 +71,7 @@ pub fn doctor(
                 }) {
                     issues.push(format!(
                         "installation residue: {}; retry installation for this target",
-                        path.display()
+                        path.native_display()
                     ));
                 }
             }

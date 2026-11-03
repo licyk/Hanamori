@@ -7,6 +7,7 @@ mod env;
 mod locking;
 mod manifest;
 mod msi;
+mod paths;
 mod profile;
 mod selector;
 mod syntax;

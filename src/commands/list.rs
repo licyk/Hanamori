@@ -1,5 +1,6 @@
 use crate::cli::list::ListArgs;
 use crate::config::ResolvedConfig;
+use crate::paths::PathExt;
 use crate::shell::session::{self, Session};
 use crate::state::toolchains::{Toolchain, Toolchains};
 use anyhow::Result;
@@ -65,7 +66,7 @@ pub(super) fn list(
                             aliases.join(", ")
                         }
                     ),
-                    ("Directory", item.path.display().to_string()),
+                    ("Directory", item.path.native_display().to_string()),
                 ])
             );
         }
@@ -78,7 +79,7 @@ pub(super) fn list(
 fn list_json(items: &Toolchains, active: Option<&Session>) -> serde_json::Value {
     let rows: Vec<_> = items.installations.values().map(|item| serde_json::json!({
         "host": item.architecture.host, "target": item.architecture.target,
-        "key": item.key, "path": item.path, "managed": item.managed,
+        "key": item.key, "path": crate::paths::native(&item.path), "managed": item.managed,
         "toolset": item.toolset_version, "sdk": item.sdk_version, "msbuild": item.msbuild_version, "status": item.status,
         "aliases": items.aliases(item), "default": items.references.get("default") == Some(&item.reference()),
         "active": is_active(item, active)
@@ -90,7 +91,7 @@ fn is_active(item: &Toolchain, session: Option<&Session>) -> bool {
     session.is_some_and(|session| {
         item.architecture.host == session.active.host
             && item.architecture.target == session.active.target
-            && item.path.to_str() == Some(session.active.root.as_str())
+            && crate::paths::same_path(&item.path, std::path::Path::new(&session.active.root))
             && item.toolset_version == session.active.toolset
             && item.sdk_version == session.active.sdk
             && item.msbuild_version == session.active.msbuild

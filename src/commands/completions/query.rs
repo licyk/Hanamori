@@ -166,7 +166,7 @@ fn local_values(kind: Kind, input: &LocalInput) -> Result<BTreeSet<String>> {
         let Some(directory) = &input.directory else {
             return Ok(BTreeSet::new());
         };
-        let directory = crate::config::absolute(directory, &input.context.cwd)?;
+        let directory = crate::paths::absolute(directory, &input.context.cwd)?;
         return Ok(match kind {
             Kind::Toolset => env::list_installed_toolsets(&directory)?,
             Kind::Sdk if !input.no_sdk => env::list_installed_sdks(&directory)?,

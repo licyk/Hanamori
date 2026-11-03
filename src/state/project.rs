@@ -1,3 +1,4 @@
+use crate::paths::PathExt;
 use crate::state::toolchains::Toolchain;
 use crate::{identity::PROJECT_FILE, version::VersionPrefix};
 use anyhow::{ensure, Context, Result};
@@ -104,25 +105,25 @@ pub fn find_project(cwd: &Path) -> Result<Option<(PathBuf, Project)>> {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(error) => {
                 return Err(error)
-                    .with_context(|| format!("cannot inspect project {}", path.display()))
+                    .with_context(|| format!("cannot inspect project {}", path.native_display()))
             }
             Ok(_) => {}
         }
         // Read-only: follow an explicit project symlink, but never silently skip a broken one.
         ensure!(
             std::fs::metadata(&path)
-                .with_context(|| format!("cannot inspect project {}", path.display()))?
+                .with_context(|| format!("cannot inspect project {}", path.native_display()))?
                 .is_file(),
             "project {} must be a regular file",
-            path.display()
+            path.native_display()
         );
         let text = std::fs::read_to_string(&path)
-            .with_context(|| format!("cannot read project {}", path.display()))?;
+            .with_context(|| format!("cannot read project {}", path.native_display()))?;
         let project: Project = serde_json::from_str(&text)
-            .with_context(|| format!("invalid project {}", path.display()))?;
+            .with_context(|| format!("invalid project {}", path.native_display()))?;
         project
             .validate()
-            .with_context(|| format!("invalid project {}", path.display()))?;
+            .with_context(|| format!("invalid project {}", path.native_display()))?;
         return Ok(Some((path, project)));
     }
     Ok(None)

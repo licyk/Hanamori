@@ -27,6 +27,7 @@ pub mod identity;
 pub mod locking;
 pub mod logging;
 pub mod msbuild;
+pub mod paths;
 mod progress;
 pub mod runtime;
 pub mod self_uninstall;

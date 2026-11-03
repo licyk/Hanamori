@@ -365,7 +365,7 @@ exit /b 0
     assert_eq!(first["status"], "ready");
     assert_eq!(
         first["active"]["root"],
-        serde_json::to_value(root.canonicalize().unwrap()).unwrap()
+        serde_json::to_value(hanamori::paths::native(&root.canonicalize().unwrap())).unwrap()
     );
     assert_eq!(second["active"]["toolset"], "14.51.36260");
     assert_eq!(second["status"], "ready");

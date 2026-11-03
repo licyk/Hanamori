@@ -2,43 +2,15 @@
 
 use super::document::{transform, Document, Encoding};
 use super::platform::{replace, save_backup};
-use crate::locking::{path_key, same_path, FileLock};
+use crate::locking::FileLock;
+use crate::paths::PathExt;
+use crate::paths::{path_key, same_path};
 use crate::shell::syntax::Shell;
 use anyhow::{ensure, Context, Result};
 use sha2::{Digest, Sha256};
 use std::fs::{self, Metadata};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-
-/// Resolve links without replacing them, including an existing ancestor of a new path.
-fn resolve(path: &Path) -> Result<PathBuf> {
-    let absolute = std::path::absolute(path)?;
-    let mut existing = absolute.as_path();
-    let mut missing = Vec::new();
-    loop {
-        match fs::symlink_metadata(existing) {
-            Ok(_) => break,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                missing.push(
-                    existing
-                        .file_name()
-                        .context("cannot resolve profile path")?
-                        .to_owned(),
-                );
-                existing = existing
-                    .parent()
-                    .context("profile has no existing ancestor")?;
-            }
-            Err(error) => return Err(error).context("cannot inspect profile path"),
-        }
-    }
-    let mut canonical =
-        fs::canonicalize(existing).context("cannot resolve profile link or ancestor")?;
-    for component in missing.into_iter().rev() {
-        canonical.push(component);
-    }
-    Ok(canonical)
-}
 
 struct Snapshot {
     bytes: Vec<u8>,
@@ -54,7 +26,7 @@ fn snapshot(path: &Path) -> Result<Option<Snapshot>> {
     ensure!(
         metadata.file_type().is_file(),
         "profile target is not a regular file: {}",
-        path.display()
+        path.native_display()
     );
     #[cfg(unix)]
     {
@@ -131,8 +103,8 @@ impl ProfilePlan {
             !matches!(shell, Shell::Cmd),
             "CMD uses AutoRun, not a profile file"
         );
-        let requested = std::path::absolute(path)?;
-        let target = resolve(&requested)?;
+        let requested = crate::paths::absolutize(path)?;
+        let target = crate::paths::resolve_future(&requested)?;
         let before = snapshot(&target)?;
         let mut document =
             Document::decode(before.as_ref().map_or(&[], |value| &value.bytes), shell)?;
@@ -191,7 +163,7 @@ impl ProfilePlan {
                 ensure!(
                     !before.metadata.permissions().readonly(),
                     "profile is read-only: {}",
-                    self.requested.display()
+                    self.requested.native_display()
                 );
             }
         }
@@ -209,14 +181,17 @@ impl ProfilePlan {
         fs::create_dir_all(parent).context("cannot create profile directory")?;
         let path = parent.join(format!(
             ".hanamori-profile-{:x}.lock",
-            Sha256::digest(path_key(&self.target))
+            Sha256::digest(path_key(&self.target).digest_bytes())
         ));
         Ok(Some(FileLock::acquire(&path)?))
     }
 
     fn verify(&self) -> Result<()> {
         ensure!(
-            same_path(&resolve(&self.requested)?, &self.target),
+            same_path(
+                &crate::paths::resolve_future(&self.requested)?,
+                &self.target
+            ),
             "profile link changed since planning; retry"
         );
         ensure!(
@@ -288,7 +263,7 @@ impl ProfilePlan {
                 |path| {
                     format!(
                         "cannot publish profile; original bytes are backed up at {}",
-                        path.display()
+                        path.native_display()
                     )
                 },
             )
@@ -327,8 +302,12 @@ pub fn apply_batch(plans: &[ProfilePlan]) -> Result<Vec<Option<PathBuf>>> {
         ))?;
         if plan.changed() {
             completed.push(match &backup {
-                Some(path) => format!("{} (backup {})", plan.requested.display(), path.display()),
-                None => format!("{} (new file)", plan.requested.display()),
+                Some(path) => format!(
+                    "{} (backup {})",
+                    plan.requested.native_display(),
+                    path.native_display()
+                ),
+                None => format!("{} (new file)", plan.requested.native_display()),
             });
         }
         backups.push(backup);

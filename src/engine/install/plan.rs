@@ -145,7 +145,7 @@ impl Installer<'_> {
 
         let mut destinations = BTreeSet::new();
         for request in &requests {
-            if !destinations.insert(crate::locking::path_key(&request.path())) {
+            if !destinations.insert(crate::paths::path_key(&request.path())) {
                 bail!("selected payloads collide in the download workspace");
             }
         }

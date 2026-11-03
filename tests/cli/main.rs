@@ -16,6 +16,7 @@ mod information;
 mod install;
 mod logging;
 mod native_toolchain;
+mod paths;
 mod posix_hook_paths;
 mod profile;
 mod release;

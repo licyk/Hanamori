@@ -1,3 +1,4 @@
+use crate::paths::PathExt;
 use anyhow::{bail, Context, Result};
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -13,7 +14,7 @@ pub fn validate_digest(digest: &str) -> Result<()> {
 pub async fn compute_sha256(path: &Path) -> Result<String> {
     let mut file = tokio::fs::File::open(path)
         .await
-        .with_context(|| format!("cannot read {}", path.display()))?;
+        .with_context(|| format!("cannot read {}", path.native_display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1 << 20];
     loop {

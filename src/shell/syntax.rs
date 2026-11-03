@@ -7,6 +7,7 @@
 //! the target runtime's cygpath; the simple drive conversion here is only a display helper.
 
 use crate::env::ToolchainLayout;
+use crate::paths::{to_posix, PathExt};
 use anyhow::{bail, Context, Result};
 use std::path::Path;
 
@@ -64,10 +65,10 @@ impl Shell {
     /// The command that makes the current shell adopt a generated script.
     pub fn invocation(self, script: &Path) -> Result<String> {
         Ok(match self {
-            Self::Cmd => format!("call \"{}\"", script.display()),
+            Self::Cmd => format!("call \"{}\"", script.native_display()),
             Self::PowerShell => format!(
                 ". {}",
-                crate::shell::quote::powershell_literal(script.to_str().context(
+                crate::shell::quote::powershell_literal(&script.native_text().context(
                     "script path cannot be represented in the PowerShell invocation hint"
                 )?)
             ),
@@ -116,12 +117,12 @@ impl ShellEnvironment {
             variables.push((key.clone(), value_for(shell, &key, value)));
         }
 
-        let mut path_entries = vec![layout.host_bin_directory().display().to_string()];
+        let mut path_entries = vec![layout.host_bin_directory().native_display().to_string()];
         if layout.has_windows_sdk() {
             path_entries.push(
                 layout
                     .windows_sdk_host_bin_directory()
-                    .display()
+                    .native_display()
                     .to_string(),
             );
         }
@@ -131,17 +132,17 @@ impl ShellEnvironment {
                 layout
                     .root
                     .join(layout.architecture.host.msbuild_bin())
-                    .display()
+                    .native_display()
                     .to_string(),
             );
         }
 
-        let mut include_entries = vec![layout.include_directory().display().to_string()];
+        let mut include_entries = vec![layout.include_directory().native_display().to_string()];
         let mut lib_entries = vec![layout
             .tools_directory()
             .join("lib")
             .join(layout.architecture.target.as_str())
-            .display()
+            .native_display()
             .to_string()];
 
         if layout.has_windows_sdk() {
@@ -150,7 +151,7 @@ impl ShellEnvironment {
                     layout
                         .windows_sdk_include_directory()
                         .join(directory)
-                        .display()
+                        .native_display()
                         .to_string(),
                 );
             }
@@ -160,7 +161,7 @@ impl ShellEnvironment {
                     .windows_sdk_lib_directory()
                     .join("ucrt")
                     .join(layout.architecture.target.as_str())
-                    .display()
+                    .native_display()
                     .to_string(),
             );
             lib_entries.push(
@@ -168,7 +169,7 @@ impl ShellEnvironment {
                     .windows_sdk_lib_directory()
                     .join("um")
                     .join(layout.architecture.target.as_str())
-                    .display()
+                    .native_display()
                     .to_string(),
             );
         }
@@ -201,26 +202,4 @@ fn value_for(shell: Shell, key: &str, value: String) -> String {
     } else {
         value
     }
-}
-
-/// Limited drive-style path conversion for display hints, not a Cygwin/WSL path resolver.
-///
-/// `D:\tools\toolchain` becomes `/d/tools/toolchain`. Anything that is not a drive lettered path is
-/// returned unchanged, because there is no portable meaning to give it.
-pub fn to_posix(value: &Path) -> String {
-    let text = value.display().to_string();
-
-    let Some((drive, rest)) = text.split_once(':') else {
-        return text.replace('\\', "/");
-    };
-
-    // Only a single letter is a drive.
-    if drive.len() != 1 || !drive.as_bytes()[0].is_ascii_alphabetic() {
-        return text.replace('\\', "/");
-    }
-
-    let rest = rest.replace('\\', "/");
-    let rest = rest.strip_prefix('/').unwrap_or(&rest);
-
-    format!("/{}/{}", drive.to_ascii_lowercase(), rest)
 }

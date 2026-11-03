@@ -64,7 +64,11 @@ fn fixture(
                 .unwrap(),
         );
     }
-    (home, a.canonicalize().unwrap(), b.canonicalize().unwrap())
+    (
+        home,
+        hanamori::paths::native(&a.canonicalize().unwrap()),
+        hanamori::paths::native(&b.canonicalize().unwrap()),
+    )
 }
 
 fn require_shell(name: &str) -> bool {

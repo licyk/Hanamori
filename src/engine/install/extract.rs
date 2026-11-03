@@ -4,6 +4,7 @@ use super::payload::{is_extension, PayloadRequest, PayloadRole};
 use super::Installer;
 use crate::archive::{msi, vsix};
 use crate::engine::workspace;
+use crate::paths::PathExt;
 use crate::progress::{configure, progress_spinner};
 use anyhow::{bail, Context, Result};
 use indicatif::ProgressBar;
@@ -106,7 +107,7 @@ impl Installer<'_> {
                 .extract(&self.options.install_directory, &mut || {
                     progress.inc(1);
                 })
-                .with_context(|| format!("cannot extract {}", path.display()))?;
+                .with_context(|| format!("cannot extract {}", path.native_display()))?;
         }
 
         for (path, package) in msbuild_packages {
@@ -233,7 +234,7 @@ impl Installer<'_> {
 fn file_label(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.display().to_string())
+        .unwrap_or_else(|| path.native_display().to_string())
 }
 
 #[cfg(test)]

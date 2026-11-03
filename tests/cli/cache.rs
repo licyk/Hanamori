@@ -199,7 +199,10 @@ fn cleanup_uses_cache_config_precedence_and_ignores_unrelated_install_options() 
     );
     assert_eq!(
         result["cache_dir"],
-        serde_json::to_value(std::fs::canonicalize(&cli_cache).unwrap()).unwrap()
+        serde_json::to_value(hanamori::paths::native(
+            &std::fs::canonicalize(&cli_cache).unwrap()
+        ))
+        .unwrap()
     );
     assert!(!cli_payload.exists() && env_payload.exists() && file_payload.exists());
     report(

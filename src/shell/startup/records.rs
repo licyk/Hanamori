@@ -1,7 +1,8 @@
 //! Exact startup locations and content installed by each executable.
 
+use crate::fs::atomic_write;
+use crate::paths::PathExt;
 use crate::shell::{session::Environment, startup::profile::ProfilePlan, Shell};
-use crate::{fs::atomic_write, locking};
 use anyhow::{ensure, Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -73,7 +74,7 @@ impl Store {
     fn path(&self, kind: &str, target: &Path) -> PathBuf {
         self.directory.join(format!(
             "{kind}-{:x}.json",
-            Sha256::digest(locking::path_key(target))
+            Sha256::digest(crate::paths::path_key(target).digest_bytes())
         ))
     }
 
@@ -91,11 +92,14 @@ impl Store {
             } else {
                 let record = Record {
                     schema_version: 1,
-                    program: fs::canonicalize(program)?.into_os_string(),
-                    runtime: runtime.cloned(),
+                    program: crate::paths::ResolvedPath::resolve(program)?
+                        .native()
+                        .into_os_string(),
+                    runtime: runtime
+                        .map(|path| crate::paths::native(Path::new(path)).into_os_string()),
                     entry: Entry::Profile {
-                        path: plan.requested.as_os_str().to_owned(),
-                        target: plan.target.as_os_str().to_owned(),
+                        path: crate::paths::native(&plan.requested).into_os_string(),
+                        target: crate::paths::native(&plan.target).into_os_string(),
                         shell: shell.name().into(),
                         block: plan.preview.clone(),
                     },
@@ -116,11 +120,21 @@ impl Store {
     ) -> Result<()> {
         let record = Record {
             schema_version: 1,
-            program: fs::canonicalize(program)?.into_os_string(),
+            program: crate::paths::ResolvedPath::resolve(program)?
+                .native()
+                .into_os_string(),
             runtime: None,
             entry: Entry::Cmd {
-                loader: loader.as_os_str().to_owned(),
-                files,
+                loader: crate::paths::native(loader).into_os_string(),
+                files: files
+                    .into_iter()
+                    .map(|(path, bytes)| {
+                        (
+                            crate::paths::native(Path::new(&path)).into_os_string(),
+                            bytes,
+                        )
+                    })
+                    .collect(),
             },
         };
         fs::create_dir_all(&self.directory)?;
@@ -131,7 +145,7 @@ impl Store {
     }
 
     pub fn removal(&self, program: &Path) -> Result<Removal> {
-        let program = fs::canonicalize(program)?;
+        let program = crate::paths::canonicalize(program)?;
         let mut removal = Removal {
             profiles: Vec::new(),
             files: Vec::new(),
@@ -168,15 +182,15 @@ impl Store {
             let record: Record = serde_json::from_slice(&fs::read(&path)?).with_context(|| {
                 format!(
                     "cannot read startup record {}; preserve it or repair it before retrying",
-                    path.display()
+                    path.native_display()
                 )
             })?;
             ensure!(
                 record.schema_version == 1,
                 "unsupported startup record: {}",
-                path.display()
+                path.native_display()
             );
-            if !locking::same_path(Path::new(&record.program), &program) {
+            if !crate::paths::same_path(Path::new(&record.program), &program) {
                 continue;
             }
             match record.entry {
@@ -191,12 +205,12 @@ impl Store {
                         "invalid startup profile path"
                     );
                     let plan = ProfilePlan::new(Path::new(&profile), Shell::parse(&shell)?, None)?;
-                    if !locking::same_path(&plan.target, Path::new(&target))
+                    if !crate::paths::same_path(&plan.target, Path::new(&target))
                         || (!plan.preview.is_empty() && plan.preview != block)
                     {
                         removal.notes.push(format!(
                             "Preserved changed startup entry: {} (remove manually)",
-                            Path::new(&profile).display()
+                            Path::new(&profile).native_display()
                         ));
                         continue;
                     }
@@ -213,7 +227,8 @@ impl Store {
                     for (file, expected) in &files {
                         let file = Path::new(file);
                         ensure!(
-                            file.parent() == Some(directory)
+                            file.parent()
+                                .is_some_and(|parent| crate::paths::same_path(parent, directory))
                                 && matches!(
                                     file.file_name().and_then(|s| s.to_str()),
                                     Some("hanamori.cmd" | "init.cmd" | "cd.cmd")
@@ -231,7 +246,7 @@ impl Store {
                     if changed {
                         removal.notes.push(format!(
                             "Preserved modified CMD helpers: {}",
-                            directory.display()
+                            directory.native_display()
                         ));
                         continue;
                     }
@@ -277,7 +292,7 @@ impl Removal {
     pub fn apply(&self) -> Result<()> {
         let backups = crate::shell::startup::profile::apply_batch(&self.profiles)?;
         for backup in backups.into_iter().flatten() {
-            tracing::info!("Original profile backed up at {}", backup.display());
+            tracing::info!("Original profile backed up at {}", backup.native_display());
         }
         #[cfg(windows)]
         if let Some(cmd) = &self.cmd {
@@ -303,6 +318,8 @@ fn remove_file(path: &Path) -> Result<()> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error).with_context(|| format!("cannot remove {}", path.display())),
+        Err(error) => {
+            Err(error).with_context(|| format!("cannot remove {}", path.native_display()))
+        }
     }
 }

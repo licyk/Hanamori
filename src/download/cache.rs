@@ -3,6 +3,7 @@
 use crate::download::digest::compute_sha256;
 use crate::fs::ensure_safe_path;
 use crate::locking::FileLock;
+use crate::paths::PathExt;
 use anyhow::{bail, ensure, Context, Result};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -25,7 +26,7 @@ impl CacheEntry {
     pub fn acquire(root: &Path, digest: &str) -> Result<Self> {
         let digest = digest.to_ascii_lowercase();
         std::fs::create_dir_all(root).context("cannot create payload cache")?;
-        let root = std::fs::canonicalize(root)?;
+        let root = crate::paths::canonicalize(root)?;
         let relative = Path::new("sha256").join(&digest[..2]).join(&digest);
         ensure_safe_path(&root, &relative)?;
         let lock_path = lock_path(&root, &digest)?;
@@ -65,7 +66,10 @@ pub(crate) fn regular_or_missing(path: &Path) -> Result<bool> {
     )?;
     match std::fs::symlink_metadata(path) {
         Ok(metadata) if metadata.is_file() => Ok(true),
-        Ok(_) => bail!("payload path is not a regular file: {}", path.display()),
+        Ok(_) => bail!(
+            "payload path is not a regular file: {}",
+            path.native_display()
+        ),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(error).context("cannot inspect payload file"),
     }

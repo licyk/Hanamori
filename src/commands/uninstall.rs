@@ -1,5 +1,6 @@
 use crate::cli::remove::RemoveArgs;
 use crate::config::ResolvedConfig;
+use crate::paths::PathExt;
 use crate::shell::session::{self, Session};
 use anyhow::Result;
 pub(super) fn uninstall(
@@ -17,14 +18,14 @@ pub(super) fn uninstall(
     if args.json {
         println!("{}", serde_json::to_string_pretty(&plan)?);
     } else if plan.completed {
-        tracing::info!("Uninstalled {} ({})", plan.key, plan.root.display());
+        tracing::info!("Uninstalled {} ({})", plan.key, plan.root.native_display());
     } else {
         println!("Uninstall plan");
         print!(
             "{}",
             super::output::fields(&[
                 ("Toolchain", plan.key.clone()),
-                ("Remove directory", plan.root.display().to_string()),
+                ("Remove directory", plan.root.native_display().to_string()),
                 (
                     "Remove references",
                     if plan.aliases.is_empty() {

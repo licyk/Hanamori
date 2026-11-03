@@ -238,9 +238,15 @@ hanamori deactivate
                 .env("PROFILE_FILE", &profile)
                 .env("SHELL_NAME", shell_name)
                 .env("HANAMORI_HOME", home)
-                .env("EXPECTED", expected.canonicalize().unwrap())
+                .env(
+                    "EXPECTED",
+                    hanamori::paths::native(&expected.canonicalize().unwrap()),
+                )
                 .env("OTHER_MANAGER", other)
-                .env("OTHER_ROOT", other_root.canonicalize().unwrap())
+                .env(
+                    "OTHER_ROOT",
+                    hanamori::paths::native(&other_root.canonicalize().unwrap()),
+                )
                 .env("REMOVE_PROFILE", if remove { "yes" } else { "no" })
                 .output()
                 .unwrap(),

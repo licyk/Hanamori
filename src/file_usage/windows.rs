@@ -1,4 +1,5 @@
 //! Windows Restart Manager integration for explicit file and directory operations.
+use crate::paths::PathExt;
 use anyhow::{ensure, Context, Result};
 use std::{os::windows::ffi::OsStrExt, path::Path, ptr};
 use windows_sys::Win32::{
@@ -15,7 +16,7 @@ pub(super) fn close_users(path: &Path) -> Result<()> {
     if files.is_empty() {
         return Ok(());
     }
-    tracing::info!("Checking processes using {}", path.display());
+    tracing::info!("Checking processes using {}", path.native_display());
     let mut handle = 0;
     let mut key = [0u16; CCH_RM_SESSION_KEY as usize + 1];
     check(
@@ -56,7 +57,7 @@ pub(super) fn close_users(path: &Path) -> Result<()> {
             .iter()
             .any(|user| user.Process.dwProcessId == std::process::id()),
         "the current process is using {}; cannot close itself to release files",
-        path.display()
+        path.native_display()
     );
     ensure!(
         reboot_reasons == 0,
@@ -66,7 +67,7 @@ pub(super) fn close_users(path: &Path) -> Result<()> {
         tracing::info!(
             "Closing {} process(es) using {}",
             users.len(),
-            path.display()
+            path.native_display()
         );
         check(
             unsafe { RmShutdown(session.0, RmForceShutdown as u32, None) },
@@ -118,16 +119,19 @@ fn file_names(root: &Path) -> Result<Vec<Vec<u16>>> {
     if crate::fs::is_link(&metadata) {
         return Ok(Vec::new());
     }
-    let root = std::fs::canonicalize(root)?;
+    let root = crate::paths::canonicalize(root)?;
     if metadata.is_file() {
         return Ok(vec![resource_name(&root)?]);
     }
     let mut pending = vec![root];
     let mut files = Vec::new();
     while let Some(directory) = pending.pop() {
-        for entry in std::fs::read_dir(&directory)
-            .with_context(|| format!("cannot list file usage directory {}", directory.display()))?
-        {
+        for entry in std::fs::read_dir(&directory).with_context(|| {
+            format!(
+                "cannot list file usage directory {}",
+                directory.native_display()
+            )
+        })? {
             let path = entry?.path();
             let metadata = std::fs::symlink_metadata(&path)?;
             // A link may point outside the caller's selected files.
@@ -160,7 +164,7 @@ fn resource_name(path: &Path) -> Result<Vec<u16>> {
         return Err(std::io::Error::last_os_error())
             .context("cannot get a short path for Windows Restart Manager");
     }
-    ensure!(short.len() <= 260, "Windows Restart Manager requires a path under 260 characters, but this file has no sufficiently short name: {}; use a shorter directory", path.display());
+    ensure!(short.len() <= 260, "Windows Restart Manager requires a path under 260 characters, but this file has no sufficiently short name: {}; use a shorter directory", path.native_display());
     Ok(short)
 }
 

@@ -1,7 +1,7 @@
 //! Explicit cleanup of completed payload paths, independent of installed toolchains.
 
 use crate::download::cache;
-use crate::locking::{self, FileLock};
+use crate::locking::FileLock;
 use anyhow::{ensure, Context, Result};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -19,7 +19,7 @@ pub enum Outcome {
 
 #[derive(Serialize)]
 pub struct Entry {
-    #[serde(serialize_with = "display_path")]
+    #[serde(serialize_with = "crate::paths::serde::serialize_display")]
     pub path: PathBuf,
     pub bytes: u64,
     pub outcome: Outcome,
@@ -29,7 +29,7 @@ pub struct Entry {
 #[derive(Serialize)]
 pub struct Report {
     pub schema_version: u32,
-    #[serde(serialize_with = "display_path")]
+    #[serde(serialize_with = "crate::paths::serde::serialize_display")]
     pub cache_dir: PathBuf,
     pub exists: bool,
     pub dry_run: bool,
@@ -38,15 +38,6 @@ pub struct Report {
     pub entries: Vec<Entry>,
     /// False for previews or when some candidate files were busy/failed.
     pub completed: bool,
-}
-
-// Diagnostic paths must remain printable even when an unrelated retained filename
-// contains native non-Unicode bytes; JSON emission must not fail after removals.
-fn display_path<S: serde::Serializer>(
-    path: &Path,
-    serializer: S,
-) -> std::result::Result<S::Ok, S::Error> {
-    serializer.serialize_str(&path.to_string_lossy())
 }
 
 fn lowercase_hex(text: &str, length: usize) -> bool {
@@ -137,7 +128,7 @@ fn scan(root: &Path) -> Result<Vec<Entry>> {
 
 fn clean_entry(root: &Path, display: &Path, entry: &mut Entry) -> Result<()> {
     ensure!(
-        locking::same_path(&std::fs::canonicalize(display)?, root),
+        crate::paths::same_path(&crate::paths::canonicalize(display)?, root),
         "cache directory changed during cleanup"
     );
     crate::fs::ensure_safe_path(root, &entry.path)?;
@@ -156,7 +147,7 @@ fn clean_entry(root: &Path, display: &Path, entry: &mut Entry) -> Result<()> {
     // Downloaders hold this same digest lock from cache verification through publication.
     // Recheck after locking: another cleaner may have removed this entry already.
     ensure!(
-        locking::same_path(&std::fs::canonicalize(display)?, root),
+        crate::paths::same_path(&crate::paths::canonicalize(display)?, root),
         "cache directory changed during cleanup"
     );
     crate::fs::ensure_safe_path(root, &entry.path)?;
@@ -183,7 +174,7 @@ fn clean_entry(root: &Path, display: &Path, entry: &mut Entry) -> Result<()> {
 /// Keep lock files and directories: removing a lock path can split cooperating writers.
 /// An interrupted clean is resumed simply by running it again; no index is modified.
 pub fn run(directory: &Path, dry_run: bool) -> Result<Report> {
-    let display = std::path::absolute(directory)?;
+    let display = crate::paths::absolutize(directory)?;
     let mut report = Report {
         schema_version: 1,
         cache_dir: display.clone(),
@@ -199,7 +190,7 @@ pub fn run(directory: &Path, dry_run: bool) -> Result<Report> {
         Err(error) => return Err(error).context("cannot inspect cache directory"),
         Ok(_) => {}
     }
-    let root = std::fs::canonicalize(&display).context("cannot resolve cache directory")?;
+    let root = crate::paths::canonicalize(&display).context("cannot resolve cache directory")?;
     ensure!(root.is_dir(), "cache root must be a directory");
     report.exists = true;
     report.cache_dir = root.clone();

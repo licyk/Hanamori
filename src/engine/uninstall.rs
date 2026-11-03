@@ -1,4 +1,5 @@
 use crate::locking;
+use crate::paths::PathExt;
 use crate::state::{
     active::ActiveToolchain,
     toolchains::{self, Reference, ToolchainStore},
@@ -9,6 +10,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Serialize)]
 pub struct Plan {
     pub key: String,
+    #[serde(with = "crate::paths::serde")]
     pub root: PathBuf,
     pub aliases: Vec<String>,
     pub completed: bool,
@@ -46,7 +48,7 @@ pub fn run(
         completed: false,
     };
     ensure!(
-        !session.is_some_and(|s| locking::same_path(Path::new(&s.root), &plan.root)),
+        !session.is_some_and(|s| crate::paths::same_path(Path::new(&s.root), &plan.root)),
         "deactivate this toolchain before uninstalling it"
     );
     if dry_run {
@@ -63,7 +65,7 @@ pub fn run(
         crate::file_usage::close_users(&plan.root).with_context(|| {
             format!(
                 "cannot release toolchain for uninstall: {}",
-                plan.root.display()
+                plan.root.native_display()
             )
         })?;
         std::fs::remove_dir_all(&plan.root)?;

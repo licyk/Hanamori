@@ -1,3 +1,4 @@
+use crate::paths::PathExt;
 use crate::shell::syntax::Shell;
 use anyhow::{Context, Result};
 use std::{io::Write, path::PathBuf};
@@ -21,7 +22,7 @@ pub(super) fn write_script_mode(
             } else {
                 script
             };
-            let absolute = std::path::absolute(&path)?;
+            let absolute = crate::paths::absolutize(&path)?;
             let metadata = match std::fs::symlink_metadata(&absolute) {
                 Ok(metadata) => {
                     anyhow::ensure!(
@@ -53,9 +54,13 @@ pub(super) fn write_script_mode(
             temporary.as_file().sync_all()?;
             temporary
                 .persist(&absolute)
-                .with_context(|| format!("cannot write {}", path.display()))?;
+                .with_context(|| format!("cannot write {}", path.native_display()))?;
 
-            tracing::info!("Wrote the {} script to {}", shell.name(), path.display());
+            tracing::info!(
+                "Wrote the {} script to {}",
+                shell.name(),
+                path.native_display()
+            );
             if cmd_entry {
                 tracing::info!("Invoke this CMD batch entry with a command (use call from another batch file):\n  {invocation} use\n  {invocation} deactivate");
             } else {

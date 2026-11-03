@@ -1,6 +1,7 @@
 //! Bash's interactive startup file plus an idempotent login-only Hanamori bridge.
 
-use crate::locking::{path_key, same_path};
+use crate::paths::PathExt;
+use crate::paths::{path_key, same_path};
 use crate::shell::startup::profile::{ProfilePlan, END, START};
 use crate::shell::syntax::Shell;
 use anyhow::{bail, ensure, Context, Result};
@@ -24,7 +25,7 @@ fn marked(plan: &ProfilePlan, marker: &str) -> bool {
 }
 
 fn interactive_loader(target: &Path, loader: &str) -> String {
-    let token = format!("{:x}", Sha256::digest(path_key(target)));
+    let token = format!("{:x}", Sha256::digest(path_key(target).digest_bytes()));
     format!("{INTERACTIVE}\n{loader}_HANAMORI_BASH_PROFILE_SEEN=\"$$:{token}\"\n")
 }
 
@@ -47,7 +48,7 @@ fn owns_bridge(path: &Path) -> Result<bool> {
         _ => {}
     }
     let bytes = fs::read(path)
-        .with_context(|| format!("cannot check Hanamori bridge in {}", path.display()))?;
+        .with_context(|| format!("cannot check Hanamori bridge in {}", path.native_display()))?;
     // Avoid decoding unrelated lower-priority files, which may use another encoding.
     if !bytes
         .windows(BRIDGE.len())
@@ -70,7 +71,7 @@ fn select_login(home: &Path) -> Result<PathBuf> {
             },
             Ok(_) => bail!(
                 "Bash login path is not a file: {}; select --profile explicitly",
-                path.display()
+                path.native_display()
             ),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(error) => return Err(error).context("cannot inspect Bash login profile"),
@@ -88,7 +89,10 @@ pub fn plan(rc_path: &Path, loader: Option<&str>) -> Result<BashProfiles> {
         .parent()
         .context("Bash startup path has no parent")?;
     let rc_before = ProfilePlan::new(rc_path, Shell::Bash, None)?;
-    let token = format!("{:x}", Sha256::digest(path_key(&rc_before.target)));
+    let token = format!(
+        "{:x}",
+        Sha256::digest(path_key(&rc_before.target).digest_bytes())
+    );
     // This shell-local marker is deliberately tied to the shell PID: exporting it accidentally
     // must not make an inherited child skip registration of its own function.
     let mut files = vec![if let Some(loader) = loader {
@@ -113,7 +117,7 @@ pub fn plan(rc_path: &Path, loader: Option<&str>) -> Result<BashProfiles> {
         if same_path(&old.target, &files[0].target) {
             notices.push("The selected Bash login profile resolves to .bashrc; no separate bridge is needed.".into());
         } else if !old.preview.is_empty() && !marked(&old, BRIDGE) {
-            notices.push(format!("{} has an independently initialized Hanamori block; it is preserved. Use --profile to change that entry explicitly.", path.display()));
+            notices.push(format!("{} has an independently initialized Hanamori block; it is preserved. Use --profile to change that entry explicitly.", path.native_display()));
         } else {
             let created = !old.existed() || marked(&old, CREATED);
             // .profile may also be parsed by /bin/sh, even when its Bash branch

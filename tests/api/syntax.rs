@@ -1,4 +1,5 @@
 use hanamori::env::ToolchainLayout;
+use hanamori::paths::to_posix;
 use hanamori::shell::syntax::*;
 use std::path::Path;
 use std::path::PathBuf;

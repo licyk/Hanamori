@@ -7,7 +7,7 @@ use crate::download::ranges::{
     Probe,
 };
 use crate::fs::ensure_safe_path;
-use crate::locking::{self, FileLock};
+use crate::locking::FileLock;
 use crate::progress::configure;
 use anyhow::{bail, Context, Result};
 use futures_util::{stream, StreamExt};
@@ -133,8 +133,8 @@ impl Downloader {
         for (index, (request, url)) in requests.iter().zip(urls).enumerate() {
             std::fs::create_dir_all(&request.directory)?;
             let mut request = request.clone();
-            request.directory = std::fs::canonicalize(&request.directory)?;
-            if !targets.insert(locking::path_key(&request.target())) {
+            request.directory = crate::paths::canonicalize(&request.directory)?;
+            if !targets.insert(crate::paths::path_key(&request.target())) {
                 bail!("duplicate payload destination");
             }
             // Same-digest jobs within this batch run sequentially and reuse their first cache write.
@@ -217,7 +217,7 @@ impl Downloader {
         regular_or_missing(&target)?;
         let key = format!(
             "{:x}",
-            Sha256::digest(locking::path_key(Path::new(&request.file_name)))
+            Sha256::digest(crate::paths::path_key(Path::new(&request.file_name)).digest_bytes())
         );
         let locks = Path::new(".hanamori-parts/locks");
         ensure_safe_path(&request.directory, &locks.join(format!("{key}.lock")))?;

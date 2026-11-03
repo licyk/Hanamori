@@ -7,6 +7,7 @@
 //! A persistent location is still available for the one case that wants it: resuming a
 //! download after the process died.
 
+use crate::paths::PathExt;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
@@ -34,7 +35,7 @@ impl Workspace {
         match persistent {
             Some(path) => {
                 std::fs::create_dir_all(path)
-                    .with_context(|| format!("cannot create {}", path.display()))?;
+                    .with_context(|| format!("cannot create {}", path.native_display()))?;
 
                 let lock =
                     crate::locking::FileLock::acquire(&path.join(".hanamori-download.lock"))?;
@@ -79,15 +80,21 @@ impl Workspace {
 /// not, so a rename across volumes is the normal case rather than an edge case.
 pub fn move_directory(from: &Path, to: &Path) -> Result<()> {
     if to.exists() {
-        std::fs::remove_dir_all(to).with_context(|| format!("cannot clear {}", to.display()))?;
+        std::fs::remove_dir_all(to)
+            .with_context(|| format!("cannot clear {}", to.native_display()))?;
     }
 
     match std::fs::rename(from, to) {
         Ok(()) => return Ok(()),
         Err(error) if is_cross_device(&error) => {}
         Err(error) => {
-            return Err(error)
-                .with_context(|| format!("cannot move {} to {}", from.display(), to.display()))
+            return Err(error).with_context(|| {
+                format!(
+                    "cannot move {} to {}",
+                    from.native_display(),
+                    to.native_display()
+                )
+            })
         }
     }
 
@@ -111,18 +118,19 @@ pub fn merge_directory(from: &Path, to: &Path) -> Result<()> {
 }
 
 fn copy_directory(from: &Path, to: &Path) -> Result<()> {
-    std::fs::create_dir_all(to).with_context(|| format!("cannot create {}", to.display()))?;
+    std::fs::create_dir_all(to)
+        .with_context(|| format!("cannot create {}", to.native_display()))?;
 
-    let entries =
-        std::fs::read_dir(from).with_context(|| format!("cannot read {}", from.display()))?;
+    let entries = std::fs::read_dir(from)
+        .with_context(|| format!("cannot read {}", from.native_display()))?;
 
     for entry in entries {
-        let entry = entry.with_context(|| format!("cannot read {}", from.display()))?;
+        let entry = entry.with_context(|| format!("cannot read {}", from.native_display()))?;
         let source = entry.path();
         let destination = to.join(entry.file_name());
         let file_type = entry
             .file_type()
-            .with_context(|| format!("cannot inspect {}", source.display()))?;
+            .with_context(|| format!("cannot inspect {}", source.native_display()))?;
 
         if file_type.is_dir() {
             copy_directory(&source, &destination)?;
@@ -130,8 +138,8 @@ fn copy_directory(from: &Path, to: &Path) -> Result<()> {
             std::fs::copy(&source, &destination).with_context(|| {
                 format!(
                     "cannot copy {} to {}",
-                    source.display(),
-                    destination.display()
+                    source.native_display(),
+                    destination.native_display()
                 )
             })?;
         }

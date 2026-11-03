@@ -13,7 +13,10 @@ pub struct DirectoryTarget {
 
 impl DirectoryTarget {
     pub fn arguments(&self) -> Vec<OsString> {
-        let mut arguments = vec!["--dir".into(), self.path.as_os_str().to_owned()];
+        let mut arguments = vec![
+            "--dir".into(),
+            crate::paths::native(&self.path).into_os_string(),
+        ];
         for (flag, value) in [("--toolset", &self.toolset), ("--sdk", &self.sdk)] {
             if let Some(value) = value {
                 arguments.extend([flag.into(), value.into()]);

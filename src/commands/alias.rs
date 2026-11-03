@@ -1,5 +1,6 @@
 use crate::cli::alias::{AliasArgs, DefaultArgs, UnaliasArgs};
 use crate::config::ResolvedConfig;
+use crate::paths::PathExt;
 use crate::state::toolchains;
 use anyhow::Result;
 pub(super) fn default(args: DefaultArgs, config: &ResolvedConfig) -> Result<()> {
@@ -54,7 +55,7 @@ fn print_reference(name: &str, reference: &toolchains::Reference, items: &toolch
             rows.push(("Type", "managed".to_owned()));
             rows.push(("Toolchain", key.clone()));
             if let Some(item) = items.installations.get(key) {
-                rows.push(("Directory", item.path.display().to_string()));
+                rows.push(("Directory", item.path.native_display().to_string()));
             }
         }
         toolchains::Reference::External {
@@ -70,7 +71,7 @@ fn print_reference(name: &str, reference: &toolchains::Reference, items: &toolch
                 ("Windows SDK", sdk.as_deref().unwrap_or("none").to_owned()),
                 ("MSBuild", msbuild.as_deref().unwrap_or("none").to_owned()),
                 ("Architecture", architecture.to_string()),
-                ("Directory", path.display().to_string()),
+                ("Directory", path.native_display().to_string()),
             ]);
         }
     }

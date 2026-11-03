@@ -2,6 +2,7 @@
 
 #[cfg(windows)]
 use super::UserPath;
+use crate::paths::PathExt;
 
 use crate::download::cache_clean;
 use crate::engine::uninstall;
@@ -36,7 +37,8 @@ impl Plan {
         startup: &records::Store,
     ) -> Result<Self> {
         let manager = &store.home;
-        let executable = fs::canonicalize(executable).context("cannot resolve this executable")?;
+        let executable =
+            crate::paths::canonicalize(executable).context("cannot resolve this executable")?;
         let backup = with_suffix(&executable, ".outdated");
         for path in [&executable, &backup] {
             regular_or_missing(path)?;
@@ -61,12 +63,15 @@ impl Plan {
                     plan.imports.push(item.path.clone());
                     continue;
                 }
-                let identity = fs::canonicalize(&item.path)?;
+                let identity = crate::paths::canonicalize(&item.path)?;
                 ensure!(
-                    !plan.executable.starts_with(&identity)
-                        && !std::path::absolute(manager)?.starts_with(&identity),
+                    !crate::paths::path_key(&plan.executable)
+                        .starts_with(&crate::paths::path_key(&identity))
+                        && !crate::paths::ResolvedPath::resolve(manager)?
+                            .key()
+                            .starts_with(&crate::paths::path_key(&identity)),
                     "executable or manager is inside toolchain {}",
-                    item.path.display()
+                    item.path.native_display()
                 );
                 plan.toolchains
                     .push(uninstall::run(store, &item.key, None, true)?);
@@ -97,15 +102,15 @@ impl Plan {
         let deferred = Deferred::prepare(&self.executable, &self.backup)?;
         #[cfg(windows)]
         {
-            let helper_directory = fs::canonicalize(deferred.directory.path())?;
+            let helper_directory = crate::paths::canonicalize(deferred.directory.path())?;
             for toolchain in &self.toolchains {
-                ensure!(!helper_directory.starts_with(fs::canonicalize(&toolchain.root)?),
+                ensure!(!crate::paths::path_key(&helper_directory).starts_with(&crate::paths::ResolvedPath::resolve(&toolchain.root)?.key()),
                     "temporary helper is inside a toolchain scheduled for deletion; set TEMP outside that toolchain");
             }
         }
         for toolchain in &self.toolchains {
             let result = uninstall::run(&self.store, &toolchain.key, None, false)?;
-            tracing::info!("Removed toolchain: {}", result.root.display());
+            tracing::info!("Removed toolchain: {}", result.root.native_display());
         }
         if let Some(cache) = &self.cache {
             let result = cache_clean::run(&cache.cache_dir, false)?;
@@ -113,7 +118,7 @@ impl Plan {
                 let message = format!(
                     "Cache {:?}: {}{}",
                     entry.outcome,
-                    result.cache_dir.join(&entry.path).display(),
+                    result.cache_dir.join(&entry.path).native_display(),
                     entry
                         .reason
                         .as_ref()
@@ -145,7 +150,7 @@ impl Plan {
             if self.manager.exists() {
                 tracing::info!(
                     "Preserved remaining manager files and lock directories: {}",
-                    self.manager.display()
+                    self.manager.native_display()
                 );
             }
         }
@@ -176,12 +181,14 @@ fn regular_or_missing(path: &Path) -> Result<bool> {
             ensure!(
                 meta.is_file() && !crate::fs::is_link(&meta),
                 "expected a regular file: {}",
-                path.display()
+                path.native_display()
             );
             Ok(true)
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(error).with_context(|| format!("cannot inspect {}", path.display())),
+        Err(error) => {
+            Err(error).with_context(|| format!("cannot inspect {}", path.native_display()))
+        }
     }
 }
 
@@ -189,7 +196,9 @@ fn remove_file(path: &Path) -> Result<()> {
     match crate::file_usage::remove_file(path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error).with_context(|| format!("cannot remove {}", path.display())),
+        Err(error) => {
+            Err(error).with_context(|| format!("cannot remove {}", path.native_display()))
+        }
     }
 }
 
@@ -209,7 +218,10 @@ impl Deferred {
         fs::write(&script, include_str!("../self_uninstall.ps1"))?;
         fs::write(
             directory.path().join("files.json"),
-            serde_json::to_vec(&[backup, executable])?,
+            serde_json::to_vec(&[
+                crate::paths::native(backup),
+                crate::paths::native(executable),
+            ])?,
         )?;
         Ok(Self { directory, script })
     }
@@ -228,7 +240,7 @@ impl Deferred {
                 "Bypass",
                 "-File",
             ])
-            .arg(&self.script)
+            .arg(crate::paths::native(&self.script))
             .arg("-ParentProcessId")
             .arg(std::process::id().to_string())
             .stdin(std::process::Stdio::null())

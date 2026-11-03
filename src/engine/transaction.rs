@@ -1,5 +1,6 @@
 //! Publish a prepared tree on the destination volume, without an installation database.
 use crate::locking::{self, FileLock};
+use crate::paths::PathExt;
 use anyhow::{ensure, Context, Result};
 use std::path::{Path, PathBuf};
 
@@ -11,7 +12,7 @@ pub struct Transaction {
 }
 impl Transaction {
     pub fn begin(root: &Path, replace: bool) -> Result<Self> {
-        let root = std::path::absolute(root)?;
+        let root = crate::paths::absolutize(root)?;
         let parent = root
             .parent()
             .context("installation needs a parent directory")?;
@@ -62,13 +63,13 @@ impl Transaction {
             crate::file_usage::close_users(&self.root).with_context(|| {
                 format!(
                     "cannot release installation at '{}'; the existing installation is unchanged",
-                    self.root.display()
+                    self.root.native_display()
                 )
             })?;
             std::fs::rename(&self.root, &self.previous).with_context(|| {
                 format!(
                     "cannot replace installation at '{}'; the existing installation is unchanged; close programs using this directory (including MSBuild.exe nodes left after a build) and retry; if access is still denied, check directory permissions",
-                    self.root.display()
+                    self.root.native_display()
                 )
             })?;
         }

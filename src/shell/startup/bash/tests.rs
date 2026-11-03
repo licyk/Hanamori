@@ -57,7 +57,7 @@ fn batch_locks_all_profiles_before_writing_and_can_retry_after_contention() {
     let batch = plan(&rc, Some("# loader\n")).unwrap();
     let path = temp.path().join(format!(
         ".hanamori-profile-{:x}.lock",
-        Sha256::digest(path_key(&batch.files[1].target))
+        Sha256::digest(path_key(&batch.files[1].target).digest_bytes())
     ));
     let held = crate::locking::FileLock::acquire(&path).unwrap();
     assert!(apply_batch(&batch.files).is_err());

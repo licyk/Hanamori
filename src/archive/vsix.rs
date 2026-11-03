@@ -1,5 +1,6 @@
 //! VSIX extraction into an installation transaction's private staging tree.
 
+use crate::paths::PathExt;
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 use std::fs::File;
@@ -18,7 +19,7 @@ pub struct Archive {
 impl Archive {
     pub fn open(path: &Path) -> Result<Self> {
         let mut zip = zip::ZipArchive::new(BufReader::new(File::open(path)?))
-            .with_context(|| format!("cannot read VSIX {}", path.display()))?;
+            .with_context(|| format!("cannot read VSIX {}", path.native_display()))?;
         let mut entries = Vec::new();
         let mut compiler_version = None;
         let mut file_count = 0;
@@ -35,7 +36,7 @@ impl Archive {
                         .as_ref()
                         .is_some_and(|current| current != &version)
                     {
-                        bail!("multiple compiler versions in {}", path.display());
+                        bail!("multiple compiler versions in {}", path.native_display());
                     }
                     compiler_version = Some(version);
                 }
@@ -71,9 +72,9 @@ impl Archive {
             crate::archive::fs::create_directory(destination.parent().unwrap(), &mut directories)?;
             let mut entry = self.zip.by_index(*index)?;
             let mut output = File::create(&destination)
-                .with_context(|| format!("cannot create {}", destination.display()))?;
+                .with_context(|| format!("cannot create {}", destination.native_display()))?;
             io::copy(&mut entry, &mut output)
-                .with_context(|| format!("cannot extract {}", relative.display()))?;
+                .with_context(|| format!("cannot extract {}", relative.native_display()))?;
             written += 1;
             on_file();
         }

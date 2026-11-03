@@ -1,6 +1,7 @@
 //! Explicit self-updates from a GitHub release, independent of toolchain management.
 
 use crate::download::transfer::{validate_digest, DownloadRequest, Downloader};
+use crate::paths::PathExt;
 use crate::{fs::with_suffix, identity, locking::FileLock};
 use anyhow::{bail, ensure, Context, Result};
 use reqwest::{Client, StatusCode, Url};
@@ -83,8 +84,8 @@ impl Updater {
 
     pub async fn run(&self, executable: &Path, current: Version, mode: Mode) -> Result<Report> {
         let release = self.latest().await?;
-        let executable =
-            std::fs::canonicalize(executable).context("cannot locate the running executable")?;
+        let executable = crate::paths::canonicalize(executable)
+            .context("cannot locate the running executable")?;
         let status = match current.cmp_precedence(&release.version) {
             std::cmp::Ordering::Less => Status::Available,
             std::cmp::Ordering::Equal => Status::UpToDate,
@@ -295,7 +296,7 @@ fn replace_executable(target: &Path, staged: &Path) -> Result<PathBuf> {
             return Err(error).with_context(|| {
                 format!(
                     "cannot remove previous update backup {}; close processes using it and retry",
-                    backup.display()
+                    backup.native_display()
                 )
             })
         }
@@ -303,12 +304,12 @@ fn replace_executable(target: &Path, staged: &Path) -> Result<PathBuf> {
     std::fs::rename(target, &backup).with_context(|| {
         format!(
             "cannot rename running executable {}; check permissions and file sharing",
-            target.display()
+            target.native_display()
         )
     })?;
     if let Err(error) = std::fs::rename(staged, target) {
         if let Err(restore) = std::fs::rename(&backup, target) {
-            bail!("cannot install new executable: {error}; rollback also failed: {restore}. Restore {} to {} manually", backup.display(), target.display());
+            bail!("cannot install new executable: {error}; rollback also failed: {restore}. Restore {} to {} manually", backup.native_display(), target.native_display());
         }
         return Err(error)
             .context("cannot install new executable; the original executable was restored");

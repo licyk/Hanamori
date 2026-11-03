@@ -10,6 +10,7 @@
 //! The layout produced here was verified byte for byte against the output of
 //! `msiexec ACTION=ADMIN` for the eight SDK packages the toolchain needs.
 
+use crate::paths::PathExt;
 use anyhow::{bail, Context, Result};
 use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
@@ -80,11 +81,14 @@ fn sanitize_relative(path: &Path) -> Result<PathBuf> {
             PathComponent::ParentDir => {
                 bail!(
                     "the MSI contains '{}', which escapes the target directory",
-                    path.display()
+                    path.native_display()
                 )
             }
             PathComponent::RootDir | PathComponent::Prefix(_) => {
-                bail!("the MSI contains the absolute path '{}'", path.display())
+                bail!(
+                    "the MSI contains the absolute path '{}'",
+                    path.native_display()
+                )
             }
         }
     }
@@ -98,9 +102,9 @@ fn sanitize_relative(path: &Path) -> Result<PathBuf> {
 /// `Media` table is the only place that says which cabinets a package needs.
 pub fn cabinet_names(msi_path: &Path) -> Result<Vec<String>> {
     let mut package = msi::Package::open(BufReader::new(File::open(msi_path)?))
-        .with_context(|| format!("cannot read MSI {}", msi_path.display()))?;
+        .with_context(|| format!("cannot read MSI {}", msi_path.native_display()))?;
 
-    let media = read_media(&mut package, &msi_path.display().to_string())?;
+    let media = read_media(&mut package, &msi_path.native_display().to_string())?;
     Ok(media.into_iter().map(|cabinet| cabinet.name).collect())
 }
 
@@ -113,8 +117,8 @@ pub struct Package {
 impl Package {
     pub fn open(path: &Path) -> Result<Self> {
         let mut database = msi::Package::open(BufReader::new(File::open(path)?))
-            .with_context(|| format!("cannot read MSI {}", path.display()))?;
-        let name = path.display().to_string();
+            .with_context(|| format!("cannot read MSI {}", path.native_display()))?;
+        let name = path.native_display().to_string();
         let files = extractable_files(&mut database, &name)?;
         let mut cabinets: Vec<_> = read_media(&mut database, &name)?
             .into_iter()
@@ -158,10 +162,10 @@ impl Package {
                 extract_cabinet(stream, files, target, &mut directories, on_file)
             } else {
                 let path = cab_directory.join(&media.name);
-                let source = BufReader::new(
-                    File::open(&path)
-                        .with_context(|| format!("cannot open cabinet {}", path.display()))?,
-                );
+                let source =
+                    BufReader::new(File::open(&path).with_context(|| {
+                        format!("cannot open cabinet {}", path.native_display())
+                    })?);
                 extract_cabinet(source, files, target, &mut directories, on_file)
             };
             written += result.with_context(|| format!("cannot extract cabinet {}", media.name))?;
@@ -205,7 +209,7 @@ fn extract_cabinet(
             let destination = target.join(&relative);
             crate::archive::fs::create_directory(destination.parent().unwrap(), directories)?;
             let mut output = File::create(&destination)
-                .with_context(|| format!("cannot create {}", destination.display()))?;
+                .with_context(|| format!("cannot create {}", destination.native_display()))?;
             let size = entry.uncompressed_size() as u64;
             let copied = io::copy(&mut (&mut reader).take(size), &mut output)?;
             anyhow::ensure!(copied == size, "truncated CAB entry {}", entry.name());

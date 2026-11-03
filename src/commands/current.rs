@@ -22,11 +22,11 @@ pub(super) fn current(args: ListArgs, environment: &session::Environment) -> Res
         windows_sdk_version: active.sdk.clone().unwrap_or_default(),
         msbuild_version: active.msbuild.clone(),
     };
-    let status = match std::fs::canonicalize(&layout.root) {
+    let status = match crate::paths::canonicalize(&layout.root) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => "missing",
         Err(_) => "inaccessible",
         Ok(path)
-            if !crate::locking::same_path(&path, std::path::Path::new(&active.canonical_root)) =>
+            if !crate::paths::same_path(&path, std::path::Path::new(&active.canonical_root)) =>
         {
             "path_changed"
         }

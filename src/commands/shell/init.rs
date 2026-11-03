@@ -1,6 +1,7 @@
 use super::hook::hook_directory;
 use crate::cli::shell::{DeinitArgs, InitArgs};
 use crate::commands::{completions, report_status};
+use crate::paths::PathExt;
 #[cfg(windows)]
 use crate::shell::target::DirectoryTarget;
 use crate::shell::{hook, session, startup::profile::ProfilePlan, syntax::Shell};
@@ -133,8 +134,8 @@ fn initialize_cmd(
             "{}",
             crate::commands::output::fields(&[
                 ("Registry", format!("HKCU\\{USER_KEY}\\AutoRun")),
-                ("Loader", report.loader.display().to_string()),
-                ("Entry", report.entry.display().to_string()),
+                ("Loader", report.loader.native_display().to_string()),
+                ("Entry", report.entry.native_display().to_string()),
                 (
                     "Action",
                     if report.changed {
@@ -149,8 +150,8 @@ fn initialize_cmd(
         println!("Dry run: no files or registry values written.");
     } else {
         tracing::info!("CMD registry: HKCU\\{USER_KEY}\\AutoRun");
-        tracing::info!("CMD loader: {}", report.loader.display());
-        tracing::info!("CMD entry: {}", report.entry.display());
+        tracing::info!("CMD loader: {}", report.loader.native_display());
+        tracing::info!("CMD entry: {}", report.entry.native_display());
     }
     if !report.changed && !dry_run {
         tracing::info!("No changes needed.");
@@ -167,7 +168,7 @@ fn initialize_cmd(
             } else {
                 "To use,"
             },
-            report.loader.display()
+            report.loader.native_display()
         ),
     );
     report_status(dry_run, format_args!("The interactive hanamori macro calls the batch entry; in another batch file, use call \"%_HANAMORI_CMD_ENTRY%\" COMMAND."));
@@ -233,7 +234,7 @@ fn discover_and_edit(
         if let Some(login) = batch.login {
             report_status(
                 dry_run,
-                format_args!("Bash login profile: {}", login.display()),
+                format_args!("Bash login profile: {}", login.native_display()),
             );
         }
         for notice in batch.notices {
@@ -304,9 +305,9 @@ fn report_profiles(plans: &[ProfilePlan], dry_run: bool) -> Result<()> {
             } else {
                 "Add or replace this managed block"
             };
-            let mut rows = vec![("Profile", plan.requested.display().to_string())];
+            let mut rows = vec![("Profile", plan.requested.native_display().to_string())];
             if plan.requested != plan.target {
-                rows.push(("Resolved target", plan.target.display().to_string()));
+                rows.push(("Resolved target", plan.target.native_display().to_string()));
             }
             rows.push(("Action", action.to_owned()));
             print!("{}", crate::commands::output::fields(&rows));
@@ -317,9 +318,9 @@ fn report_profiles(plans: &[ProfilePlan], dry_run: bool) -> Result<()> {
                 println!();
             }
         } else {
-            tracing::info!("Profile: {}", plan.requested.display());
+            tracing::info!("Profile: {}", plan.requested.native_display());
             if plan.requested != plan.target {
-                tracing::info!("Resolved target: {}", plan.target.display());
+                tracing::info!("Resolved target: {}", plan.target.native_display());
             }
             if !plan.changed() {
                 tracing::info!("No changes needed.");
@@ -330,7 +331,7 @@ fn report_profiles(plans: &[ProfilePlan], dry_run: bool) -> Result<()> {
         let backups = crate::shell::startup::profile::apply_batch(plans)?;
         for (plan, backup) in plans.iter().zip(backups) {
             if let Some(backup) = backup {
-                tracing::info!("Original profile backed up at {}", backup.display());
+                tracing::info!("Original profile backed up at {}", backup.native_display());
             }
             if plan.changed() {
                 let action = if plan.removes_file() {
@@ -340,7 +341,7 @@ fn report_profiles(plans: &[ProfilePlan], dry_run: bool) -> Result<()> {
                 } else {
                     "Updated Hanamori initialization block in"
                 };
-                tracing::info!("{action} {}", plan.requested.display());
+                tracing::info!("{action} {}", plan.requested.native_display());
             }
         }
     }

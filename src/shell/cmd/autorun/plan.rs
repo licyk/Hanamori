@@ -195,7 +195,7 @@ impl Plan {
     pub fn removal_for(before: Snapshot, loader: &std::path::Path) -> Result<Option<Self>> {
         let receipt = before.receipt.as_ref().map(Receipt::read).transpose()?;
         if !receipt.as_ref().is_some_and(|receipt| {
-            crate::locking::same_path(std::path::Path::new(&receipt.loader), loader)
+            crate::paths::same_path(std::path::Path::new(&receipt.loader), loader)
         }) {
             return Ok(None);
         }

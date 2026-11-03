@@ -35,7 +35,7 @@ pub(crate) fn registration(shell: Shell) -> Result<String> {
     let mut output = Vec::new();
     generator.try_generate(&command, &mut output)?;
     let script = String::from_utf8(output)?;
-    let program = std::env::current_exe()?;
+    let program = crate::paths::native(&std::env::current_exe()?);
     let dynamic =
         match shell {
             Shell::PowerShell => include_str!("local.ps1").replace(

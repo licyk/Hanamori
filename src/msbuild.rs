@@ -1,5 +1,6 @@
 //! Layout and generated configuration for standalone VS 2022/2026 C++ builds.
 use crate::architecture::{Arch, Architecture};
+use crate::paths::PathExt;
 use anyhow::{ensure, Context, Result};
 use std::path::{Path, PathBuf};
 
@@ -182,7 +183,7 @@ pub fn required_files(
     let redist = std::fs::read_to_string(&version_file).with_context(|| {
         format!(
             "cannot read CRT redistributable version at '{}'",
-            version_file.display()
+            version_file.native_display()
         )
     })?;
     let redist = redist.trim();
@@ -191,7 +192,7 @@ pub fn required_files(
             .parse::<crate::version::VersionPrefix>()
             .is_ok_and(|version| version.segments() == 3),
         "invalid CRT redistributable directory version at '{}'",
-        version_file.display()
+        version_file.native_display()
     );
     let directory = root.join("VC/Redist/MSVC").join(redist).join(format!(
         "{}/Microsoft.VC{}.CRT",

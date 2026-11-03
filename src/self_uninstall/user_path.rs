@@ -31,7 +31,11 @@ impl UserPath {
             "installer PATH receipt must contain an absolute directory"
         );
         // A copied executable and receipt do not own the original installation's PATH.
-        if fs::canonicalize(directory).ok().as_deref() != executable.parent() {
+        if !crate::paths::canonicalize(directory)
+            .ok()
+            .zip(executable.parent())
+            .is_some_and(|(directory, parent)| crate::paths::same_path(&directory, parent))
+        {
             return Ok(None);
         }
         Ok(Some(Self {
@@ -70,8 +74,7 @@ impl UserPath {
                     let original = String::from_reg_value(&raw)?;
                     let mut entries: Vec<_> = original.split(';').collect();
                     if let Some(index) = entries.iter().position(|entry| {
-                        entry.trim_end_matches('\\').to_lowercase()
-                            == self.entry.trim_end_matches('\\').to_lowercase()
+                        crate::paths::same_path(Path::new(entry), Path::new(&self.entry))
                     }) {
                         entries.remove(index);
                         let text = entries.join(";");

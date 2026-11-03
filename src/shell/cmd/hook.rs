@@ -15,7 +15,8 @@ pub fn generate(
         program.is_absolute(),
         "CMD executable path must be absolute"
     );
-    let program = program
+    let native_program = crate::paths::native(program);
+    let program = native_program
         .to_str()
         .context("CMD executable path must be Unicode")?;
     ensure!(

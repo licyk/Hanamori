@@ -2,6 +2,7 @@
 //! Only managed variables are saved; unrelated environment values never enter the state.
 
 use crate::env;
+use crate::paths::{same_path, PathExt, ResolvedPath};
 use crate::shell::syntax::{Shell, ShellEnvironment};
 pub use crate::state::active::ActiveToolchain;
 use crate::state::local::Selection;
@@ -131,11 +132,20 @@ impl<'de> Deserialize<'de> for Session {
         }
 
         let snapshot = Snapshot::deserialize(deserializer)?;
-        let session = Self {
+        let mut session = Self {
             schema_version: snapshot.schema_version,
             active: snapshot.active,
             baseline: snapshot.baseline,
         };
+        for path in [
+            &mut session.active.manager_dir,
+            &mut session.active.root,
+            &mut session.active.canonical_root,
+        ] {
+            *path = Path::new(path)
+                .native_text()
+                .map_err(serde::de::Error::custom)?;
+        }
         session.validate().map_err(serde::de::Error::custom)?;
         Ok(session)
     }
@@ -300,18 +310,15 @@ pub fn prepare(
         active: ActiveToolchain {
             key: selection.key().map(str::to_owned),
             manager_dir: manager_dir
-                .to_str()
-                .context("manager path cannot be represented in session state")?
-                .to_owned(),
+                .native_text()
+                .context("manager path cannot be represented in session state")?,
             root: layout
                 .root
-                .to_str()
-                .context("toolchain path cannot be represented in the compiler environment")?
-                .to_owned(),
-            canonical_root: std::fs::canonicalize(&layout.root)?
-                .to_str()
-                .context("canonical toolchain path cannot be represented in session state")?
-                .to_owned(),
+                .native_text()
+                .context("toolchain path cannot be represented in the compiler environment")?,
+            canonical_root: ResolvedPath::resolve(&layout.root)?
+                .native_text()
+                .context("canonical toolchain path cannot be represented in session state")?,
             toolset: layout.vc_tools_version.clone(),
             sdk: layout
                 .has_windows_sdk()
@@ -325,9 +332,13 @@ pub fn prepare(
     session.validate()?;
     let changes = session.native_changes()?;
     let toolchain_changed = previous_active.is_none_or(|previous| {
-        previous.manager_dir != session.active.manager_dir
-            || previous.canonical_root != session.active.canonical_root
-            || previous.toolset != session.active.toolset
+        !same_path(
+            Path::new(&previous.manager_dir),
+            Path::new(&session.active.manager_dir),
+        ) || !same_path(
+            Path::new(&previous.canonical_root),
+            Path::new(&session.active.canonical_root),
+        ) || previous.toolset != session.active.toolset
             || previous.sdk != session.active.sdk
             || previous.msbuild != session.active.msbuild
             || previous.host != session.active.host

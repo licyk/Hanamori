@@ -1,4 +1,5 @@
 use crate::support::{self, assert_success};
+use hanamori::paths::PathExt;
 use hanamori::shell::session::{self, Changes, Environment, Session};
 use hanamori::state::local::Selection;
 use hanamori_test_support::toolchain as common;
@@ -155,7 +156,7 @@ fn run_preserves_literal_arguments_stdin_stdout_stderr_cwd_and_nonzero_status() 
             root.join("VC/Tools/MSVC/14.44.35207/include")
                 .canonicalize()
                 .unwrap()
-                .display()
+                .native_display()
         ))))
     );
     assert!(!home.exists(), "run must not create a management directory");
@@ -214,7 +215,7 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
     common::toolchain(&b, "14.51.36260", None);
     import(&home, &a, "old");
     import(&other_home, &b, "new");
-    let b = b.canonicalize().unwrap();
+    let b = hanamori::paths::native(&b.canonicalize().unwrap());
     let result = temp.path().join("nested");
     let path = temp.path().join("baseline bin");
     let output = command(&home)
@@ -238,9 +239,10 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
         .unwrap();
     assert_success(output);
     let (_, environment) = report(&result);
-    let new_tools = b.join("VC/Tools/MSVC/14.51.36260").canonicalize().unwrap();
+    let new_tools =
+        hanamori::paths::native(&b.join("VC/Tools/MSVC/14.51.36260").canonicalize().unwrap());
     let expected_path = std::env::join_paths([
-        new_tools.join("bin/Hostx64/x64").canonicalize().unwrap(),
+        hanamori::paths::native(&new_tools.join("bin/Hostx64/x64").canonicalize().unwrap()),
         path,
     ])
     .unwrap();
@@ -251,11 +253,13 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
     assert_eq!(
         env_value(&environment, "CC"),
         Some(&encode(
-            new_tools
-                .join("bin/Hostx64/x64/cl.exe")
-                .canonicalize()
-                .unwrap()
-                .as_os_str()
+            hanamori::paths::native(
+                &new_tools
+                    .join("bin/Hostx64/x64/cl.exe")
+                    .canonicalize()
+                    .unwrap()
+            )
+            .as_os_str()
         ))
     );
     assert_eq!(env_value(&environment, "WindowsSDKVersion"), None);
@@ -284,7 +288,11 @@ fn nested_exec_switches_roots_sdks_and_managers_using_the_first_baseline() {
         env_value(&environment, "LIB"),
         Some(&encode(OsStr::new(&format!(
             "{};user lib",
-            new_tools.join("lib/x64").canonicalize().unwrap().display()
+            new_tools
+                .join("lib/x64")
+                .canonicalize()
+                .unwrap()
+                .native_display()
         ))))
     );
 }

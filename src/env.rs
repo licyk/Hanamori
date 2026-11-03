@@ -4,6 +4,7 @@
 //! systems that look for `VCINSTALLDIR` or `WindowsSDKVersion` keep working.
 
 use crate::architecture::Architecture;
+use crate::paths::PathExt;
 use anyhow::{bail, Context, Result};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -110,14 +111,14 @@ impl ToolchainLayout {
         environment.insert("VCToolsVersion".to_owned(), self.vc_tools_version.clone());
         environment.insert(
             "VCToolsInstallDir".to_owned(),
-            self.tools_directory().display().to_string(),
+            self.tools_directory().native_display().to_string(),
         );
         environment.insert(
             "VCINSTALLDIR".to_owned(),
-            self.root.join("VC").display().to_string(),
+            self.root.join("VC").native_display().to_string(),
         );
 
-        let compiler = self.compiler_path().display().to_string();
+        let compiler = self.compiler_path().native_display().to_string();
         environment.insert("CC".to_owned(), compiler.clone());
         environment.insert("CXX".to_owned(), compiler);
 
@@ -160,24 +161,24 @@ impl ToolchainLayout {
                 ),
                 (
                     "MSBuildExtensionsPath",
-                    self.root.join("MSBuild").display().to_string(),
+                    self.root.join("MSBuild").native_display().to_string(),
                 ),
                 (
                     "MSBuildExtensionsPath32",
-                    self.root.join("MSBuild").display().to_string(),
+                    self.root.join("MSBuild").native_display().to_string(),
                 ),
                 (
                     "ForceImportAfterCppDefaultProps",
                     self.root
                         .join("MSBuild/Hanamori.props")
-                        .display()
+                        .native_display()
                         .to_string(),
                 ),
                 (
                     "ForceImportAfterCppTargets",
                     self.root
                         .join("MSBuild/Hanamori.targets")
-                        .display()
+                        .native_display()
                         .to_string(),
                 ),
                 ("UseEnv", "true".into()),
@@ -199,7 +200,7 @@ impl ToolchainLayout {
 /// The SDK variables conventionally end with a separator, because consumers append a
 /// relative path to them.
 fn ensure_trailing_separator(path: &Path) -> String {
-    let mut value = path.display().to_string();
+    let mut value = path.native_display().to_string();
     if !value.ends_with(std::path::MAIN_SEPARATOR) {
         value.push(std::path::MAIN_SEPARATOR);
     }
@@ -235,8 +236,8 @@ pub fn detect_selected(
     if !tools_root.is_dir() {
         bail!(
             "no toolchain found in '{}': '{}' does not exist",
-            root.display(),
-            tools_root.display()
+            root.native_display(),
+            tools_root.native_display()
         );
     }
 
@@ -272,7 +273,7 @@ pub fn detect_selected(
                 [arch] => *arch,
                 [] => bail!(
                     "no supported compiler architecture found in {}",
-                    tools.display()
+                    tools.native_display()
                 ),
                 _ => bail!("multiple compiler architectures found; select --arch HOST/TARGET"),
             }
@@ -336,11 +337,13 @@ fn version_directories(root: &Path, segments: usize) -> Result<Vec<String>> {
     let entries = match std::fs::read_dir(root) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(error).with_context(|| format!("cannot list {}", root.display())),
+        Err(error) => {
+            return Err(error).with_context(|| format!("cannot list {}", root.native_display()))
+        }
     };
     let mut versions = Vec::new();
     for entry in entries {
-        let entry = entry.with_context(|| format!("cannot list {}", root.display()))?;
+        let entry = entry.with_context(|| format!("cannot list {}", root.native_display()))?;
         if entry.file_type()?.is_dir() {
             if let Ok(name) = entry.file_name().into_string() {
                 if valid_directory_version(&name, segments) {
@@ -374,7 +377,7 @@ pub fn verify(layout: &ToolchainLayout) -> Result<()> {
         if !valid {
             bail!(
                 "the installation is incomplete: required file is missing or empty at '{}'",
-                path.display()
+                path.native_display()
             );
         }
     }

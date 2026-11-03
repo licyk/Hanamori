@@ -1,5 +1,6 @@
 //! Shared filesystem operations.
 
+use crate::paths::PathExt;
 use anyhow::{bail, Context, Result};
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
@@ -64,7 +65,7 @@ pub fn ensure_safe_path(root: &Path, relative: &Path) -> Result<()> {
         match std::fs::symlink_metadata(&current) {
             Ok(metadata) if is_link(&metadata) => bail!(
                 "refusing installation path through a link: {}",
-                current.display()
+                current.native_display()
             ),
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}

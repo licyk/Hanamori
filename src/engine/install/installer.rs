@@ -7,6 +7,7 @@ use crate::download::transfer::{DownloadRequest, Downloader};
 use crate::engine::transaction::Transaction;
 use crate::engine::workspace::Workspace;
 use crate::env::{self, ToolchainLayout};
+use crate::paths::PathExt;
 use crate::state::toolchains::validate_key;
 use anyhow::{bail, Context, Result};
 
@@ -42,7 +43,7 @@ impl<'a> Installer<'a> {
 
     pub async fn run(mut self) -> Result<InstallResult> {
         self.options.validate()?;
-        self.options.install_directory = std::path::absolute(&self.options.install_directory)?;
+        self.options.install_directory = crate::paths::absolutize(&self.options.install_directory)?;
         let client = remote::build_client(self.options.proxy.as_ref())?;
         self.notify_progress(format!(
             "Fetching the release manifest from {}",
@@ -130,7 +131,7 @@ impl<'a> Installer<'a> {
         validate_key(&key)?;
         let managed = self.options.toolchains_directory.is_some();
         let final_root = match &self.options.toolchains_directory {
-            Some(directory) => std::path::absolute(directory.join(&key))?,
+            Some(directory) => crate::paths::absolutize(directory.join(&key))?,
             None => self.options.install_directory.clone(),
         };
         let transaction = if self.options.dry_run {
@@ -157,7 +158,7 @@ impl<'a> Installer<'a> {
                     )?;
                     self.notify_progress(format!(
                         "Using installed toolchain {}",
-                        final_root.display()
+                        final_root.native_display()
                     ));
                     return Ok(InstallResult {
                         architecture: self.options.architecture,

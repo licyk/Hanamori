@@ -1,4 +1,5 @@
 use crate::cli::self_uninstall::UninstallArgs;
+use crate::paths::PathExt;
 use crate::shell::{
     session::{self, Session},
     startup::records::Store,
@@ -52,7 +53,7 @@ pub(super) fn uninstall(
             tracing::info!(
                 "Executable removal scheduled after this process exits; it is not yet complete."
             );
-            tracing::info!("The helper reports completion or writes failure.txt beside {}. On failure, close processes using the executable and rerun that script. Restart this shell to discard its loaded hook.", script.display());
+            tracing::info!("The helper reports completion or writes failure.txt beside {}. On failure, close processes using the executable and rerun that script. Restart this shell to discard its loaded hook.", script.native_display());
         }
     }
     Ok(())
@@ -63,13 +64,13 @@ fn print_plan(plan: &Plan) {
     let mut rows = vec![[
         "Remove".to_owned(),
         "Executable".to_owned(),
-        plan.executable.display().to_string(),
+        plan.executable.native_display().to_string(),
     ]];
     if plan.backup.exists() {
         rows.push([
             "Remove".into(),
             "Upgrade backup".into(),
-            plan.backup.display().to_string(),
+            plan.backup.native_display().to_string(),
         ]);
     }
     #[cfg(windows)]
@@ -84,7 +85,7 @@ fn print_plan(plan: &Plan) {
         rows.push([
             "Remove".into(),
             "Recorded startup block".into(),
-            profile.requested.display().to_string(),
+            profile.requested.native_display().to_string(),
         ]);
     }
     if plan.startup.has_cmd() {
@@ -98,35 +99,35 @@ fn print_plan(plan: &Plan) {
         rows.push([
             "Remove".into(),
             "CMD helper".into(),
-            file.display().to_string(),
+            file.native_display().to_string(),
         ]);
     }
     for toolchain in &plan.toolchains {
         rows.push([
             "Remove".into(),
             "Entire owned toolchain".into(),
-            toolchain.root.display().to_string(),
+            toolchain.root.native_display().to_string(),
         ]);
     }
     for imported in &plan.imports {
         rows.push([
             "Preserve".into(),
             "Imported directory".into(),
-            imported.display().to_string(),
+            imported.native_display().to_string(),
         ]);
     }
     for file in &plan.metadata {
         rows.push([
             "Remove".into(),
             "Metadata / reference".into(),
-            file.display().to_string(),
+            file.native_display().to_string(),
         ]);
     }
     if plan.cache.is_none() {
         rows.push([
             "Preserve".into(),
             "Toolchains and manager data".into(),
-            plan.manager.display().to_string(),
+            plan.manager.native_display().to_string(),
         ]);
     }
     print!(
@@ -150,7 +151,11 @@ fn print_plan(plan: &Plan) {
                         .map(|entry| [
                             format!("{:?}", entry.outcome),
                             indicatif::HumanBytes(entry.bytes).to_string(),
-                            cache.cache_dir.join(&entry.path).display().to_string(),
+                            cache
+                                .cache_dir
+                                .join(&entry.path)
+                                .native_display()
+                                .to_string(),
                             entry.reason.clone().unwrap_or_default(),
                         ])
                         .collect()

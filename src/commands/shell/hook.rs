@@ -49,7 +49,7 @@ pub(super) fn hook_directory(target: HookTargetArgs) -> Result<Option<DirectoryT
             }
             Ok(DirectoryTarget {
                 architecture: target.arch,
-                path: std::path::absolute(path)?,
+                path: crate::paths::absolutize(path)?,
                 toolset: target.toolset,
                 sdk: target.sdk,
                 no_sdk: target.no_sdk,

@@ -1,4 +1,5 @@
 use crate::config::ResolvedConfig;
+use crate::paths::PathExt;
 use anyhow::{Context, Result};
 
 pub(super) fn clean_cache(dry_run: bool, json: bool, config: &ResolvedConfig) -> Result<()> {
@@ -15,7 +16,7 @@ pub(super) fn clean_cache(dry_run: bool, json: bool, config: &ResolvedConfig) ->
         print!(
             "{}",
             super::output::fields(&[
-                ("Cache", report.cache_dir.display().to_string()),
+                ("Cache", report.cache_dir.native_display().to_string()),
                 (
                     "Status",
                     if dry_run {
@@ -51,7 +52,7 @@ pub(super) fn clean_cache(dry_run: bool, json: bool, config: &ResolvedConfig) ->
                         .map(|entry| [
                             format!("{:?}", entry.outcome),
                             indicatif::HumanBytes(entry.bytes).to_string(),
-                            entry.path.display().to_string(),
+                            entry.path.native_display().to_string(),
                             entry.reason.clone().unwrap_or_default(),
                         ])
                         .collect()

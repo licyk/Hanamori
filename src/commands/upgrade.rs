@@ -1,4 +1,5 @@
 use crate::cli::upgrade::UpgradeArgs;
+use crate::paths::PathExt;
 use crate::shell::session;
 use crate::{
     config::ResolvedConfig,
@@ -42,7 +43,7 @@ pub(super) fn upgrade(
             super::output::fields(&[
                 ("Current version", report.current.to_string()),
                 ("Latest stable", report.latest.to_string()),
-                ("Executable", report.executable.display().to_string()),
+                ("Executable", report.executable.native_display().to_string()),
             ])
         );
     } else {
@@ -51,7 +52,7 @@ pub(super) fn upgrade(
             report.current,
             report.latest
         );
-        tracing::info!("Executable: {}", report.executable.display());
+        tracing::info!("Executable: {}", report.executable.native_display());
     }
     match report.status {
         Status::Available => super::report_status(
@@ -74,7 +75,7 @@ pub(super) fn upgrade(
             );
             tracing::info!(
                 "Previous executable retained at {} until the next update.",
-                report.backup.unwrap().display()
+                report.backup.unwrap().native_display()
             );
         }
     }

@@ -1,6 +1,7 @@
 //! Persistent CMD loader files. Publish complete immutable content before AutoRun.
 
 use crate::locking::FileLock;
+use crate::paths::PathExt;
 use crate::shell::target::DirectoryTarget;
 use anyhow::{ensure, Context, Result};
 use sha2::{Digest, Sha256};
@@ -67,12 +68,14 @@ fn ordinary(path: &Path, directory: bool) -> Result<bool> {
                         metadata.is_file()
                     },
                 "CMD initialization path has an unexpected type or link: {}",
-                path.display()
+                path.native_display()
             );
             Ok(true)
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(error).with_context(|| format!("cannot inspect {}", path.display())),
+        Err(error) => {
+            Err(error).with_context(|| format!("cannot inspect {}", path.native_display()))
+        }
     }
 }
 
@@ -142,7 +145,7 @@ impl Bundle {
                     .iter()
                     .any(|(name, _)| entry.file_name() == *name),
                 "CMD loader directory contains unknown content; it was preserved: {}",
-                self.directory.display()
+                self.directory.native_display()
             );
         }
         let mut complete = true;
@@ -152,7 +155,7 @@ impl Bundle {
                 ensure!(
                     fs::read(&path)? == *bytes,
                     "CMD loader file was modified; it was preserved: {}",
-                    path.display()
+                    path.native_display()
                 );
             } else {
                 complete = false;
@@ -230,7 +233,9 @@ pub fn initialize(
     let bundle = Bundle::new(&base, program, directory, auto_activate, use_on_cd)?;
     let loader = bundle.loader_path();
     let plan = UserPlan::new(Some(
-        loader.to_str().context("CMD loader path must be Unicode")?,
+        &loader
+            .native_text()
+            .context("CMD loader path must be Unicode")?,
     ))?;
     let changed = !bundle.complete()? || plan.plan().changed();
     publish_and_apply(&bundle, &plan, dry_run)?;
@@ -255,7 +260,7 @@ fn publish_and_apply(
     bundle.complete()?;
     if !dry_run {
         bundle.publish()?;
-        plan.apply().with_context(|| format!("CMD loader files were retained at {}; registry initialization did not complete; inspect and retry", bundle.directory().display()))?;
+        plan.apply().with_context(|| format!("CMD loader files were retained at {}; registry initialization did not complete; inspect and retry", bundle.directory().native_display()))?;
     }
     Ok(())
 }

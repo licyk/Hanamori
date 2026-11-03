@@ -157,7 +157,7 @@ fn external_references_and_cache_previews_keep_full_paths_and_details() {
     let manager = temp.path().join("manager");
     let root = temp.path().join("外部工具链 with spaces");
     toolchain(&root, "14.44.35207", None);
-    let root = root.canonicalize().unwrap();
+    let root = hanamori::paths::native(&root.canonicalize().unwrap());
     success(
         command(&manager)
             .args(["import", "--name", "external", "--dir"])

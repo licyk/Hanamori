@@ -96,7 +96,7 @@ fn stale_plans_lock_contention_and_readonly_files_do_not_overwrite() {
     let b = ProfilePlan::new(&path, Shell::Bash, Some("# second\n")).unwrap();
     let lock_path = temp.path().join(format!(
         ".hanamori-profile-{:x}.lock",
-        Sha256::digest(path_key(&a.target))
+        Sha256::digest(path_key(&a.target).digest_bytes())
     ));
     let lock = FileLock::acquire(&lock_path).unwrap();
     assert!(a.apply().is_err());

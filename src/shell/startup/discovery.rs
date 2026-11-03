@@ -1,5 +1,6 @@
 //! Read-only startup location discovery. Never load user profiles to find a path.
 
+use crate::paths::PathExt;
 use crate::shell::syntax::Shell;
 use anyhow::{bail, ensure, Context, Result};
 use serde::Deserialize;
@@ -47,7 +48,7 @@ fn query(executable: &OsStr, arguments: &[&str], timeout: Duration) -> Result<Ou
         command.env_remove("BASH_ENV").env_remove("ENV");
         // A different PowerShell edition must discover its own built-in modules.
         command.env_remove("PSModulePath");
-        let mut child = command.spawn().with_context(|| format!("cannot query shell executable {}; use --shell-executable or --profile", Path::new(executable).display()))?;
+        let mut child = command.spawn().with_context(|| format!("cannot query shell executable {}; use --shell-executable or --profile", Path::new(executable).native_display()))?;
         let stdout = child.stdout.take().context("missing shell stdout pipe")?;
         let stderr = child.stderr.take().context("missing shell stderr pipe")?;
         let result = tokio::time::timeout(timeout, async {
@@ -66,7 +67,7 @@ fn query(executable: &OsStr, arguments: &[&str], timeout: Duration) -> Result<Ou
                 }
             }
         };
-        ensure!(output.status.success(), "shell profile query failed for {} ({}); use --profile or check this executable with profiles disabled; stdout: {}; stderr: {}", Path::new(executable).display(), output.status, String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+        ensure!(output.status.success(), "shell profile query failed for {} ({}); use --profile or check this executable with profiles disabled; stdout: {}; stderr: {}", Path::new(executable).native_display(), output.status, String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
         Ok(output)
     })
 }
@@ -125,7 +126,7 @@ fn powershell(executable: &OsStr) -> Result<Location> {
         path: absolute(value.profile)?,
         description: format!(
             "{} (PowerShell {}, CurrentUserAllHosts, policy {})",
-            Path::new(executable).display(),
+            Path::new(executable).native_display(),
             value.version,
             value.policy
         ),
@@ -173,10 +174,10 @@ fn posix_query(shell: Shell, executable: &OsStr) -> Result<Location> {
     #[cfg(windows)]
     let path = PathBuf::from(std::str::from_utf8(bytes).context("MSYS profile path is not UTF-8")?);
     Ok(Location {
-        path: std::path::absolute(path)?,
+        path: crate::paths::absolutize(path)?,
         description: format!(
             "{} (user startup files disabled)",
-            Path::new(executable).display()
+            Path::new(executable).native_display()
         ),
         notices: Vec::new(),
     })
@@ -204,7 +205,7 @@ fn inherited_posix(
         ".zshrc"
     };
     Ok(Location {
-        path: std::path::absolute(directory.join(filename))?,
+        path: crate::paths::absolutize(directory.join(filename))?,
         description: if shell == Shell::Bash {
             "inherited HOME"
         } else {
@@ -232,7 +233,7 @@ pub fn discover(
             "--profile and --shell-executable cannot be used together"
         );
         return Ok(Location {
-            path: std::path::absolute(path)?,
+            path: crate::paths::absolutize(path)?,
             description: "explicit --profile".into(),
             notices: Vec::new(),
         });

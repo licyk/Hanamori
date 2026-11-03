@@ -1,5 +1,6 @@
 use crate::cli::doctor::DoctorArgs;
 use crate::config::{ConfigContext, ConfigOverrides, Scope};
+use crate::paths::PathExt;
 use crate::shell::session;
 use anyhow::Result;
 pub(super) fn doctor(
@@ -42,7 +43,7 @@ pub(super) fn doctor(
                     }
                     .to_owned()
                 ),
-                ("Manager", report.manager_dir.display().to_string()),
+                ("Manager", report.manager_dir.native_display().to_string()),
                 ("Issues", report.issues.len().to_string()),
             ])
         );

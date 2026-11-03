@@ -1,5 +1,6 @@
 //! Read-only configuration resolution. Business services receive explicit options.
 
+use crate::paths::{absolute, PathExt};
 use anyhow::{bail, Context, Result};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -201,7 +202,7 @@ impl ConfigContext {
         let mut diagnostics = Map::new();
         diagnostics.insert(
             "manager_dir".into(),
-            manager_dir.display(json!(manager_dir.value.to_string_lossy())),
+            manager_dir.display(json!(manager_dir.value.native_display().to_string())),
         );
         diagnostics.insert("log".into(), log.display(json!(log.value)));
         let log_filter = parse_log_filter(&log.value, log.source)?;
@@ -226,7 +227,7 @@ impl ConfigContext {
         };
         diagnostics.insert(
             "toolchains_dir".into(),
-            toolchains_dir.display(json!(toolchains_dir.value.to_string_lossy())),
+            toolchains_dir.display(json!(toolchains_dir.value.native_display().to_string())),
         );
         let install = if matches!(scope, Scope::Install | Scope::All) {
             let download_dir =
@@ -248,7 +249,7 @@ impl ConfigContext {
                 download_dir.display(json!(download_dir
                     .value
                     .as_ref()
-                    .map(|path| path.to_string_lossy()))),
+                    .map(|path| path.native_display().to_string()))),
             );
             diagnostics.insert(
                 "mirror".into(),
@@ -275,7 +276,7 @@ impl ConfigContext {
             let setting = resolver.path("cache_dir", overrides.cache_dir.as_deref(), "cache")?;
             diagnostics.insert(
                 "cache_dir".into(),
-                setting.display(json!(setting.value.to_string_lossy())),
+                setting.display(json!(setting.value.native_display().to_string())),
             );
             Some(setting.value)
         } else {
@@ -339,7 +340,9 @@ fn read_config(path: &Path) -> Result<Map<String, Value>> {
     let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Map::new()),
-        Err(error) => return Err(error).with_context(|| format!("cannot read {}", path.display())),
+        Err(error) => {
+            return Err(error).with_context(|| format!("cannot read {}", path.native_display()))
+        }
     };
     let value: Value = serde_json::from_slice(&bytes).context("invalid config.json syntax")?;
     let Value::Object(file) = value else {
@@ -465,20 +468,6 @@ fn require_absolute(path: &Path, field: &str) -> Result<()> {
         bail!("{field} must be an absolute path");
     }
     Ok(())
-}
-
-pub fn absolute(path: &Path, base: &Path) -> Result<PathBuf> {
-    if path.as_os_str().is_empty() {
-        bail!("path must not be empty");
-    }
-    // Joining does not expand '~', environment variables, or command substitutions.
-    let path = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        base.join(path)
-    };
-    require_absolute(&path, "resolved path")?;
-    Ok(path)
 }
 
 #[cfg(test)]

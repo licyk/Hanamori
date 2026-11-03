@@ -1,5 +1,6 @@
 //! Discover toolchains from disk; reference files express choices, never installation state.
 use crate::architecture::Architecture;
+use crate::paths::PathExt;
 use crate::{
     env::{self, ToolchainLayout},
     fs::atomic_write,
@@ -11,7 +12,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Reference {
     Managed {
@@ -20,6 +21,7 @@ pub enum Reference {
     External {
         #[serde(flatten)]
         architecture: Architecture,
+        #[serde(with = "crate::paths::serde")]
         path: PathBuf,
         toolset: String,
         sdk: Option<String>,
@@ -27,11 +29,43 @@ pub enum Reference {
     },
 }
 
+impl PartialEq for Reference {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Managed { key: left }, Self::Managed { key: right }) => left == right,
+            (
+                Self::External {
+                    architecture: left_arch,
+                    path: left_path,
+                    toolset: left_toolset,
+                    sdk: left_sdk,
+                    msbuild: left_msbuild,
+                },
+                Self::External {
+                    architecture: right_arch,
+                    path: right_path,
+                    toolset: right_toolset,
+                    sdk: right_sdk,
+                    msbuild: right_msbuild,
+                },
+            ) => {
+                left_arch == right_arch
+                    && crate::paths::same_path(left_path, right_path)
+                    && left_toolset == right_toolset
+                    && left_sdk == right_sdk
+                    && left_msbuild == right_msbuild
+            }
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Toolchain {
     #[serde(flatten)]
     pub architecture: Architecture,
     pub key: String,
+    #[serde(with = "crate::paths::serde")]
     pub path: PathBuf,
     pub managed: bool,
     pub toolset_version: String,
@@ -309,7 +343,7 @@ fn children(path: &Path) -> Result<Vec<PathBuf>> {
     match std::fs::read_dir(path) {
         Ok(entries) => entries.map(|e| Ok(e?.path())).collect(),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
-        Err(e) => Err(e).with_context(|| format!("cannot read {}", path.display())),
+        Err(e) => Err(e).with_context(|| format!("cannot read {}", path.native_display())),
     }
 }
 fn inspect(
@@ -403,14 +437,14 @@ pub fn unique(mut candidates: Vec<&Toolchain>) -> Result<&Toolchain> {
     candidates.sort_by(|a, b| {
         (
             a.architecture,
-            &a.path,
+            crate::paths::path_key(&a.path),
             &a.toolset_version,
             &a.sdk_version,
             &a.msbuild_version,
         )
             .cmp(&(
                 b.architecture,
-                &b.path,
+                crate::paths::path_key(&b.path),
                 &b.toolset_version,
                 &b.sdk_version,
                 &b.msbuild_version,
@@ -418,7 +452,7 @@ pub fn unique(mut candidates: Vec<&Toolchain>) -> Result<&Toolchain> {
     });
     candidates.dedup_by(|a, b| {
         a.architecture == b.architecture
-            && a.path == b.path
+            && crate::paths::same_path(&a.path, &b.path)
             && a.toolset_version == b.toolset_version
             && a.sdk_version == b.sdk_version
             && a.msbuild_version == b.msbuild_version
