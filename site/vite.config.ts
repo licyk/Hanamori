@@ -5,8 +5,10 @@ import { fumadocsMdx } from "fumadocs-mdx/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
+const base = process.env.VITE_BASE_PATH || "/";
+
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || "/",
+  base,
   server: {
     host: "127.0.0.1",
     port: 3000,
@@ -21,7 +23,14 @@ export default defineConfig({
     {
       name: "static-server-function-base-path",
       transform(code, id) {
-        if (!id.replaceAll("\\", "/").endsWith("/start-static-server-functions/dist/esm/staticFunctionMiddleware.js")) return;
+        if (
+          !id
+            .replaceAll("\\", "/")
+            .endsWith(
+              "/start-static-server-functions/dist/esm/staticFunctionMiddleware.js",
+            )
+        )
+          return;
         // This pinned middleware fetches its cache from /__tsr even on project sites.
         // Prefix client requests only; the emitted cache stays at the output root.
         return {
@@ -44,11 +53,19 @@ export default defineConfig({
           crawlLinks: true,
         },
       },
-      pages: [{ path: "/" }, { path: "/download" }, { path: "/docs" }, { path: "/api/search" }],
+      pages: [
+        { path: "/" },
+        { path: "/download" },
+        { path: "/docs" },
+        { path: "/api/search" },
+      ],
     }),
     react(),
     nitro({
       preset: "node-server",
+      // Vite's `base` rewrites the asset URLs but not where nitro serves the
+      // public directory from; left apart, everything under a prefix 404s.
+      baseURL: base,
     }),
   ],
   resolve: {
