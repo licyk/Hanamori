@@ -1,0 +1,1 @@
+export{t as fetchClient}from"./fetch-uVgeWi_9.js";
